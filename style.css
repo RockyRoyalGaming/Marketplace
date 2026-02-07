@@ -140,3 +140,42 @@ footer { text-align: center; margin-top: 30px; padding: 20px; border-top: 1px so
 .social-links a { color: #888; font-size: 1.4rem; margin: 0 12px; transition: color 0.3s; }
 .social-links a:hover { color: #4caf50; }
 footer p { color: #666; font-size: 0.8rem; }
+
+/* Sort Menu Styling (Glassmorphism) */
+.sort-dropdown {
+    display: none; /* Pehle chhupa rahega */
+    position: absolute;
+    top: 160px; /* Isse upar-niche adjust karein button ke hisab se */
+    right: 20px;
+    background: rgba(30, 30, 45, 0.7); /* Halka Dark Blue Transparent */
+    backdrop-filter: blur(15px); /* Piche ka dhundhla dikhega */
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 10px;
+    width: 200px;
+    z-index: 1000;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+.sort-dropdown div {
+    padding: 12px;
+    color: #e0e0e0;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.sort-dropdown div:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.sort-dropdown i { width: 20px; text-align: center; color: #a0a0ff; }
