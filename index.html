@@ -35,7 +35,19 @@
     <button onclick="toggleSort()" title="Filters"><i class="fas fa-sliders-h"></i></button>
 </div>
     </header>
-
+    
+<div id="sortMenu" class="sort-dropdown">
+    <div onclick="sortContent('default')">
+        <i class="fas fa-random"></i> Default
+    </div>
+    <div onclick="sortContent('recent')">
+        <i class="fas fa-clock"></i> Recently Added
+    </div>
+    <div onclick="sortContent('name')">
+        <i class="fas fa-sort-alpha-down"></i> Name (A-Z)
+    </div>
+</div>
+    
     <div class="container" id="itemsContainer">
         </div>
 
