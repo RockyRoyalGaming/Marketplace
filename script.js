@@ -183,3 +183,21 @@ function openModal(item) {
 }
 function closeModal() { modal.style.display = "none"; }
 window.onclick = function(e) { if (e.target == modal) closeModal(); }
+
+// Top Request Button Logic
+function focusRequestBar() {
+    const input = document.getElementById('requestInput');
+    
+    // 1. Smoothly wahan tak scroll karo
+    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    // 2. Box ko highlight karo taaki user ko dikhe
+    input.focus();
+    
+    // (Optional) Thoda sa animation glow dene ke liye
+    input.style.border = "2px solid #4caf50";
+    setTimeout(() => {
+        input.style.border = "1px solid rgba(255,255,255,0.1)";
+    }, 2000);
+}
+
