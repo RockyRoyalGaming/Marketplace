@@ -43,7 +43,7 @@ header {
 .discord-btn { color: #7289da; font-size: 1.2rem; text-decoration: none; }
 
 /* --- SEARCH & REQUEST BARS --- */
-.search-wrapper, .request-wrapper { position: relative; margin-bottom: 10px; }
+.search-wrapper, .request-wrapper { position: relative; margin-bottom: 15px; }
 .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #888; }
 
 input { 
@@ -57,8 +57,36 @@ input {
     font-size: 1rem;
 }
 .search-wrapper input { padding-left: 40px; }
-.request-wrapper { display: flex; gap: 10px; }
-.send-btn { background: #4caf50; color: white; border: none; padding: 0 15px; border-radius: 12px; font-size: 1.2rem; cursor: pointer; }
+
+/* --- YAHAN AAPKA NYA CODE AAYEGA --- */
+
+/* Send Button ko box ke andar lane ke liye */
+.request-wrapper {
+    position: relative;
+    margin-bottom: 15px;
+    display: block; /* Flex hata diya taaki button andar aa sake */
+}
+
+.request-wrapper input {
+    padding-right: 60px; /* Right side me jagah chhodna button ke liye */
+}
+
+.send-btn {
+    position: absolute;
+    right: 5px;       /* Box ke andar right side chipka diya */
+    top: 5px;
+    bottom: 5px;
+    background: #4caf50;
+    color: white;
+    border: none;
+    padding: 0 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
 /* --- FILTER BUTTONS (Glassmorphism) --- */
 .filters { 
