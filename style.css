@@ -1,15 +1,17 @@
 /* --- GLOBAL STYLES --- */
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
 
-/* Deep Space Background with Stars */
+/* Deep Space Background (Ye gayab ho gaya tha) */
 body {
     background: radial-gradient(circle at bottom, #1b2735 0%, #090a0f 100%);
     color: #e0e0e0;
     min-height: 100vh;
     background-attachment: fixed;
     padding-bottom: 20px;
+    position: relative; /* Zaroori hai taaron ke liye */
 }
-/* Stars Effect */
+
+/* Stars Effect (Taare) */
 body::before {
     content: "";
     position: fixed;
