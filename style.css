@@ -1,17 +1,15 @@
-/* --- RESET & BASIC SETUP --- */
+/* --- GLOBAL STYLES --- */
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
-/* Naya Deep Space Background */
+
+/* Deep Space Background with Stars */
 body {
     background: radial-gradient(circle at bottom, #1b2735 0%, #090a0f 100%);
     color: #e0e0e0;
     min-height: 100vh;
     background-attachment: fixed;
-    margin: 0; 
-    padding: 0; 
-    font-family: 'Poppins', sans-serif;
+    padding-bottom: 20px;
 }
-
-/* Taare (Stars) Effect */
+/* Stars Effect */
 body::before {
     content: "";
     position: fixed;
@@ -26,139 +24,85 @@ body::before {
     pointer-events: none;
 }
 
+html { scroll-behavior: smooth; }
+
 /* --- HEADER --- */
 header { 
     position: sticky; 
     top: 0; 
-    background: rgba(31, 31, 31, 0.95); 
-    padding: 15px; 
+    background: rgba(9, 10, 15, 0.9); 
+    padding: 15px 15px 5px 15px; 
     z-index: 100; 
-    backdrop-filter: blur(5px);
-    border-bottom: 1px solid #333;
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
 .navbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-.logo { font-size: 1.3rem; font-weight: bold; color: white; display: flex; align-items: center; gap: 8px; }
+.logo { font-size: 1.4rem; font-weight: bold; color: white; display: flex; align-items: center; gap: 8px; }
 .logo span { color: #4caf50; }
+.discord-btn { color: #7289da; font-size: 1.2rem; text-decoration: none; }
 
-.req-btn { 
-    background: #ff9800; 
-    border: none; 
-    padding: 8px 15px; 
-    color: white; 
-    border-radius: 20px; 
-    font-size: 0.9rem; 
-    cursor: pointer; 
-    display: flex; align-items: center; gap: 5px;
-    transition: transform 0.2s;
-}
-.req-btn:active { transform: scale(0.95); }
-
-/* --- SEARCH BAR --- */
-.search-wrapper { position: relative; margin-bottom: 15px; }
+/* --- SEARCH & REQUEST BARS --- */
+.search-wrapper, .request-wrapper { position: relative; margin-bottom: 10px; }
 .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #888; }
-.search-wrapper input { 
+
+input { 
     width: 100%; 
-    padding: 12px 12px 12px 40px; 
-    border-radius: 10px; 
-    border: 1px solid #333; 
-    background: #252525; 
+    padding: 12px; 
+    border-radius: 12px; 
+    border: 1px solid rgba(255,255,255,0.1); 
+    background: rgba(255,255,255,0.05); 
     color: white; 
     outline: none; 
     font-size: 1rem;
 }
-.search-wrapper input:focus { border-color: #4caf50; }
+.search-wrapper input { padding-left: 40px; }
+.request-wrapper { display: flex; gap: 10px; }
+.send-btn { background: #4caf50; color: white; border: none; padding: 0 15px; border-radius: 12px; font-size: 1.2rem; cursor: pointer; }
 
-/* --- FILTER BUTTONS --- */
-/* Naye Square Icons Wale Buttons */
+/* --- FILTER BUTTONS (Glassmorphism) --- */
 .filters { 
     display: flex; 
-    gap: 15px; 
-    justify-content: center; /* Beech me layega */
-    flex-wrap: wrap; /* Mobile pe 2 line me adjust ho jayega */
-    margin: 20px 0;
-    padding: 0 10px;
+    gap: 12px; 
+    justify-content: center; 
+    flex-wrap: wrap;
+    margin: 15px 0;
+    padding-bottom: 5px;
 }
-
 .filters button { 
-    background: rgba(255, 255, 255, 0.08); /* Halka transparent */
+    background: rgba(255, 255, 255, 0.08); 
     color: #aaa; 
     border: 1px solid rgba(255, 255, 255, 0.1); 
-    width: 50px;   /* Button ki choudaai */
-    height: 50px;  /* Button ki lambaai (Square banega) */
-    border-radius: 12px; /* Thode goal kone */
-    font-size: 1.3rem;
-    cursor: pointer;
+    width: 45px; height: 45px; 
+    border-radius: 12px; 
+    font-size: 1.2rem; 
+    cursor: pointer; 
     transition: all 0.3s ease;
     display: flex; align-items: center; justify-content: center;
 }
-
 .filters button:hover, .filters button.active { 
-    background: #ffffff; 
+    background: white; 
     color: #121212; 
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
-    transform: translateY(-3px); /* Thoda upar uthega */
-    border-color: white;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+    transform: translateY(-3px);
 }
 
-/* --- ITEM GRID --- */
-.container { 
-    display: grid; 
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
-    gap: 15px; 
-    padding: 15px; 
-}
-.card { 
-    background: #1e1e1e; 
-    border-radius: 12px; 
-    overflow: hidden; 
-    transition: transform 0.2s; 
-    cursor: pointer; 
-    border: 1px solid #333;
-}
-.card:active { transform: scale(0.98); }
-.card img { width: 100%; height: 140px; object-fit: cover; }
-.card-info { padding: 12px; }
-.card-title { font-size: 0.95rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: white; }
-.card-cat { font-size: 0.75rem; color: #4caf50; text-transform: uppercase; font-weight: bold; margin-top: 5px; }
-
-/* --- POP-UP MODAL --- */
-.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); align-items: center; justify-content: center; padding: 20px; }
-.modal-content { background: #252525; padding: 20px; border-radius: 15px; width: 100%; max-width: 400px; position: relative; animation: popUp 0.3s; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-@keyframes popUp { from {transform: scale(0.8); opacity: 0;} to {transform: scale(1); opacity: 1;} }
-.close { position: absolute; top: 10px; right: 20px; font-size: 28px; cursor: pointer; color: #aaa; }
-#modalImg { width: 100%; border-radius: 10px; margin-bottom: 15px; max-height: 200px; object-fit: cover; }
-.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-#modalTitle { font-size: 1.2rem; }
-.tag { background: #333; padding: 4px 8px; border-radius: 5px; font-size: 0.7rem; color: #4caf50; text-transform: uppercase; }
-#modalDesc { color: #ccc; font-size: 0.9rem; line-height: 1.5; margin-bottom: 20px; }
-.download-btn { display: flex; align-items: center; justify-content: center; gap: 8px; background: #4caf50; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; width: 100%; text-align: center; }
-
-/* --- FOOTER --- */
-footer { text-align: center; margin-top: 30px; padding: 20px; border-top: 1px solid #333; background: #1a1a1a; }
-.social-links { margin-bottom: 10px; }
-.social-links a { color: #888; font-size: 1.4rem; margin: 0 12px; transition: color 0.3s; }
-.social-links a:hover { color: #4caf50; }
-footer p { color: #666; font-size: 0.8rem; }
-
-/* Sort Menu Styling (Glassmorphism) */
+/* --- SORT MENU POPUP --- */
 .sort-dropdown {
-    display: none; /* Pehle chhupa rahega */
+    display: none;
     position: absolute;
-    top: 220px; /* Isse upar-niche adjust karein button ke hisab se */
+    top: 230px; /* Adjusted position */
     right: 20px;
-    background: rgba(30, 30, 45, 0.7); /* Halka Dark Blue Transparent */
-    backdrop-filter: blur(15px); /* Piche ka dhundhla dikhega */
-    -webkit-backdrop-filter: blur(15px);
+    background: rgba(30, 30, 45, 0.8);
+    backdrop-filter: blur(15px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
     padding: 10px;
     width: 200px;
     z-index: 1000;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     animation: fadeIn 0.3s ease;
 }
-
 @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
 .sort-dropdown div {
@@ -166,52 +110,43 @@ footer p { color: #666; font-size: 0.8rem; }
     color: #e0e0e0;
     cursor: pointer;
     font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    display: flex; align-items: center; gap: 10px;
     border-radius: 8px;
-    transition: background 0.2s;
 }
+.sort-dropdown div:hover { background: rgba(255,255,255,0.1); color: white; }
 
-.sort-dropdown div:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
+/* --- GRID ITEMS --- */
+.container { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
+    gap: 15px; 
+    padding: 15px; 
 }
-
-.sort-dropdown i { width: 20px; text-align: center; color: #a0a0ff; }
-
-/* Request Bar Styling */
-.request-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 10px; /* Search bar ke niche thoda gap */
+.card { 
+    background: rgba(30, 30, 30, 0.6); 
+    border-radius: 15px; 
+    overflow: hidden; 
+    border: 1px solid rgba(255,255,255,0.05);
+    transition: transform 0.2s; 
+    cursor: pointer; 
 }
+.card:active { transform: scale(0.98); }
+.card img { width: 100%; height: 140px; object-fit: cover; }
+.card-info { padding: 12px; }
+.card-title { font-size: 0.95rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: white; }
+.card-cat { font-size: 0.75rem; color: #4caf50; text-transform: uppercase; font-weight: bold; margin-top: 5px; }
 
-.request-wrapper input {
-    /* Search input jesa same style */
-    width: 100%;
-    padding: 12px 12px 12px 15px; /* Icon nahi hai to padding kam */
-    border-radius: 10px;
-    border: 1px solid #333;
-    background: #252525;
-    color: white;
-    outline: none;
-    font-size: 1rem;
-}
+/* --- MODAL --- */
+.modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); align-items: center; justify-content: center; padding: 20px; }
+.modal-content { background: #1e1e24; padding: 20px; border-radius: 20px; width: 100%; max-width: 400px; position: relative; animation: popUp 0.3s; border: 1px solid rgba(255,255,255,0.1); }
+@keyframes popUp { from {transform: scale(0.8); opacity: 0;} to {transform: scale(1); opacity: 1;} }
+.close { position: absolute; top: 15px; right: 20px; font-size: 28px; cursor: pointer; color: #aaa; }
+#modalImg { width: 100%; border-radius: 12px; margin-bottom: 15px; max-height: 220px; object-fit: cover; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.tag { background: rgba(76, 175, 80, 0.2); padding: 5px 10px; border-radius: 5px; font-size: 0.75rem; color: #4caf50; }
+.download-btn { display: flex; align-items: center; justify-content: center; gap: 8px; background: #4caf50; color: white; padding: 14px; text-decoration: none; border-radius: 12px; font-weight: bold; width: 100%; margin-top: 15px; }
 
-.send-btn {
-    background: #4caf50;
-    color: white;
-    border: none;
-    padding: 12px 15px;
-    border-radius: 10px;
-    cursor: pointer;
-    font-size: 1.1rem;
-    transition: transform 0.2s;
-}
-
-.send-btn:active {
-    transform: scale(0.95);
-}
-
+/* --- FOOTER --- */
+footer { text-align: center; margin-top: 30px; padding: 20px; border-top: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.3); }
+.social-links a { color: #888; font-size: 1.4rem; margin: 0 12px; }
+footer p { color: #555; font-size: 0.8rem; margin-top: 10px; }
