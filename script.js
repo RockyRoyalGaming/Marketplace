@@ -246,4 +246,3 @@ function sendToDiscord(userLink) {
         alert("Something went wrong!");
     });
 }
-});
