@@ -1,0 +1,100 @@
+/* --- RESET & BASIC SETUP --- */
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+body { background-color: #121212; color: #e0e0e0; padding-bottom: 20px; }
+
+/* --- HEADER --- */
+header { 
+    position: sticky; 
+    top: 0; 
+    background: rgba(31, 31, 31, 0.95); 
+    padding: 15px; 
+    z-index: 100; 
+    backdrop-filter: blur(5px);
+    border-bottom: 1px solid #333;
+}
+
+.navbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.logo { font-size: 1.3rem; font-weight: bold; color: white; display: flex; align-items: center; gap: 8px; }
+.logo span { color: #4caf50; }
+
+.req-btn { 
+    background: #ff9800; 
+    border: none; 
+    padding: 8px 15px; 
+    color: white; 
+    border-radius: 20px; 
+    font-size: 0.9rem; 
+    cursor: pointer; 
+    display: flex; align-items: center; gap: 5px;
+    transition: transform 0.2s;
+}
+.req-btn:active { transform: scale(0.95); }
+
+/* --- SEARCH BAR --- */
+.search-wrapper { position: relative; margin-bottom: 15px; }
+.search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #888; }
+.search-wrapper input { 
+    width: 100%; 
+    padding: 12px 12px 12px 40px; 
+    border-radius: 10px; 
+    border: 1px solid #333; 
+    background: #252525; 
+    color: white; 
+    outline: none; 
+    font-size: 1rem;
+}
+.search-wrapper input:focus { border-color: #4caf50; }
+
+/* --- FILTER BUTTONS --- */
+.filters { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
+.filters::-webkit-scrollbar { display: none; }
+.filters button { 
+    background: #333; 
+    color: #ccc; 
+    border: none; 
+    padding: 8px 18px; 
+    border-radius: 20px; 
+    white-space: nowrap; 
+    font-size: 0.9rem;
+}
+.filters button.active, .filters button:hover { background: #4caf50; color: white; }
+
+/* --- ITEM GRID --- */
+.container { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
+    gap: 15px; 
+    padding: 15px; 
+}
+.card { 
+    background: #1e1e1e; 
+    border-radius: 12px; 
+    overflow: hidden; 
+    transition: transform 0.2s; 
+    cursor: pointer; 
+    border: 1px solid #333;
+}
+.card:active { transform: scale(0.98); }
+.card img { width: 100%; height: 140px; object-fit: cover; }
+.card-info { padding: 12px; }
+.card-title { font-size: 0.95rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: white; }
+.card-cat { font-size: 0.75rem; color: #4caf50; text-transform: uppercase; font-weight: bold; margin-top: 5px; }
+
+/* --- POP-UP MODAL --- */
+.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); align-items: center; justify-content: center; padding: 20px; }
+.modal-content { background: #252525; padding: 20px; border-radius: 15px; width: 100%; max-width: 400px; position: relative; animation: popUp 0.3s; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+@keyframes popUp { from {transform: scale(0.8); opacity: 0;} to {transform: scale(1); opacity: 1;} }
+.close { position: absolute; top: 10px; right: 20px; font-size: 28px; cursor: pointer; color: #aaa; }
+#modalImg { width: 100%; border-radius: 10px; margin-bottom: 15px; max-height: 200px; object-fit: cover; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+#modalTitle { font-size: 1.2rem; }
+.tag { background: #333; padding: 4px 8px; border-radius: 5px; font-size: 0.7rem; color: #4caf50; text-transform: uppercase; }
+#modalDesc { color: #ccc; font-size: 0.9rem; line-height: 1.5; margin-bottom: 20px; }
+.download-btn { display: flex; align-items: center; justify-content: center; gap: 8px; background: #4caf50; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; width: 100%; text-align: center; }
+
+/* --- FOOTER --- */
+footer { text-align: center; margin-top: 30px; padding: 20px; border-top: 1px solid #333; background: #1a1a1a; }
+.social-links { margin-bottom: 10px; }
+.social-links a { color: #888; font-size: 1.4rem; margin: 0 12px; transition: color 0.3s; }
+.social-links a:hover { color: #4caf50; }
+footer p { color: #666; font-size: 0.8rem; }

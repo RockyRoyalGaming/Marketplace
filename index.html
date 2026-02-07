@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strike Mafia Marketplace</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <header>
+        <div class="navbar">
+            <div class="logo">
+                <i class="fas fa-cube"></i> Strike<span>Market</span>
+            </div>
+            <button onclick="openRequestForm()" class="req-btn">
+                <i class="fas fa-plus-circle"></i> Request
+            </button>
+        </div>
+        
+        <div class="search-wrapper">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" id="searchInput" placeholder="Search addons, maps..." onkeyup="searchItems()">
+        </div>
+
+        <div class="filters">
+            <button onclick="filterItems('all')" class="active">All</button>
+            <button onclick="filterItems('addon')">Addons</button>
+            <button onclick="filterItems('map')">Maps</button>
+            <button onclick="filterItems('texture')">Textures</button>
+            <button onclick="filterItems('skin')">Skins</button>
+        </div>
+    </header>
+
+    <div class="container" id="itemsContainer">
+        </div>
+
+    <div id="itemModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <img id="modalImg" src="" alt="">
+            <div class="modal-header">
+                <h2 id="modalTitle">Title</h2>
+                <span class="tag" id="modalTag">CATEGORY</span>
+            </div>
+            <p id="modalDesc">Description goes here...</p>
+            
+            <a id="modalLink" href="#" target="_blank" class="download-btn">
+                <i class="fas fa-download"></i> Download Now
+            </a>
+        </div>
+    </div>
+
+    <footer>
+        <div class="social-links">
+            <a href="#"><i class="fab fa-youtube"></i></a>
+            <a href="#"><i class="fab fa-discord"></i></a>
+            <a href="#"><i class="fab fa-instagram"></i></a>
+        </div>
+        <p>&copy; 2026 Strike Mafia. All rights reserved.</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

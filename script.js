@@ -1,0 +1,118 @@
+// --- DATABASE (Yahan apne items add/edit karo) ---
+const items = [
+    {
+        id: 1,
+        title: "Genshin Impact V4",
+        category: "addon",
+        image: "https://via.placeholder.com/400x250.png?text=Genshin+Addon",
+        description: "Explore the world of Teyvat with new characters, weapons, and powers in Minecraft Bedrock.",
+        link: "https://link-to-download.com/genshin"
+    },
+    {
+        id: 2,
+        title: "One Block Skyblock",
+        category: "map",
+        image: "https://via.placeholder.com/400x250.png?text=One+Block",
+        description: "Survival map starting with only one block. Break it to get resources and expand your island!",
+        link: "https://link-to-download.com/oneblock"
+    },
+    {
+        id: 3,
+        title: "RTX Shaders Mobile",
+        category: "texture",
+        image: "https://via.placeholder.com/400x250.png?text=RTX+Shaders",
+        description: "Realistic lighting and shadows optimized for mobile devices (RenderDragon compatible).",
+        link: "https://link-to-download.com/shaders"
+    },
+    {
+        id: 4,
+        title: "Naruto Skin Pack",
+        category: "skin",
+        image: "https://via.placeholder.com/400x250.png?text=Naruto+Skins",
+        description: "Over 50 anime skins from the Naruto series including Akatsuki members.",
+        link: "https://link-to-download.com/skins"
+    }
+];
+
+// --- SETUP ---
+const container = document.getElementById('itemsContainer');
+const modal = document.getElementById('itemModal');
+
+// --- DISPLAY ITEMS ---
+function displayItems(data) {
+    container.innerHTML = "";
+    if (data.length === 0) {
+        container.innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: #666;'>No items found.</p>";
+        return;
+    }
+
+    data.forEach(item => {
+        const card = document.createElement('div');
+        card.classList.add('card');
+        card.onclick = () => openModal(item);
+        
+        card.innerHTML = `
+            <img src="${item.image}" alt="${item.title}" loading="lazy">
+            <div class="card-info">
+                <div class="card-title">${item.title}</div>
+                <div class="card-cat"><i class="fas fa-tag"></i> ${item.category}</div>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+// Initial Load
+displayItems(items);
+
+// --- SEARCH FUNCTION ---
+function searchItems() {
+    const query = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = items.filter(item => 
+        item.title.toLowerCase().includes(query) || 
+        item.category.toLowerCase().includes(query)
+    );
+    displayItems(filtered);
+}
+
+// --- FILTER FUNCTION ---
+function filterItems(category) {
+    document.querySelectorAll('.filters button').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+
+    if (category === 'all') {
+        displayItems(items);
+    } else {
+        const filtered = items.filter(item => item.category === category);
+        displayItems(filtered);
+    }
+}
+
+// --- MODAL LOGIC (Pop-up) ---
+function openModal(item) {
+    document.getElementById('modalTitle').innerText = item.title;
+    document.getElementById('modalDesc').innerText = item.description;
+    document.getElementById('modalImg').src = item.image;
+    document.getElementById('modalTag').innerText = item.category.toUpperCase();
+    document.getElementById('modalLink').href = item.link;
+    
+    modal.style.display = "flex";
+}
+
+function closeModal() {
+    modal.style.display = "none";
+}
+
+// Close if clicked outside
+window.onclick = function(event) {
+    if (event.target == modal) {
+        closeModal();
+    }
+}
+
+// --- REQUEST BUTTON LOGIC ---
+function openRequestForm() {
+    // IMPORTANT: Yahan apna Google Form link paste karna
+    const googleFormLink = "https://docs.google.com/forms/d/e/1FAIpQLSdg8fzmwKqJjDPVLLG-rT741T6TmsIHpQJ7lADByUMAsyQ6eQ/viewform?usp=publish-editor";
+    window.open(googleFormLink, "_blank");
+}
