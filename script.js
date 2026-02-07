@@ -31,7 +31,15 @@ const items = [
         image: "https://via.placeholder.com/400x250.png?text=Naruto+Skins",
         description: "Over 50 anime skins from the Naruto series including Akatsuki members.",
         link: "https://link-to-download.com/skins"
-    }
+    },
+    {
+    id: 5,
+    title: "Star Wars Mashup",
+    category: "mashup",  // Ye important hai
+    image: "https://link-to-image.jpg",
+    description: "Star Wars world with skins and textures.",
+    link: "..."
+    },
 ];
 
 // --- SETUP ---
