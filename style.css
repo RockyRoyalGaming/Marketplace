@@ -145,7 +145,7 @@ footer p { color: #666; font-size: 0.8rem; }
 .sort-dropdown {
     display: none; /* Pehle chhupa rahega */
     position: absolute;
-    top: 160px; /* Isse upar-niche adjust karein button ke hisab se */
+    top: 220px; /* Isse upar-niche adjust karein button ke hisab se */
     right: 20px;
     background: rgba(30, 30, 45, 0.7); /* Halka Dark Blue Transparent */
     backdrop-filter: blur(15px); /* Piche ka dhundhla dikhega */
