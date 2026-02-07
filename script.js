@@ -11,7 +11,7 @@ const items = [
     {
         id: 2,
         title: "One Block Skyblock",
-        category: "map",
+        category: "world",
         image: "https://xforgeassets001.xboxlive.com/pf-namespace-b63a0803d3653643/267d0f7f-0848-4b2b-a248-29a4f3706218/Thumbnail_0.jpg",
         description: "Survival map starting with only one block. Break it to get resources and expand your island!",
         link: "https://link-to-download.com/oneblock"
