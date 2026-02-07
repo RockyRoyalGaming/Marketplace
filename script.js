@@ -176,4 +176,74 @@ window.addEventListener('click', function(e) {
     if (!e.target.closest('.sort-dropdown') && !e.target.closest('button[title="Filters"]')) {
         menu.style.display = 'none';
     }
+
+// --- REQUEST SYSTEM (Discord Integration) ---
+
+function sendRequest() {
+    const input = document.getElementById('requestInput');
+    const url = input.value.trim();
+
+    // 1. Check: Kya box khali hai?
+    if (url === "") {
+        alert("Please paste a link first!");
+        return;
+    }
+
+    // 2. VALIDATION: Sirf Minecraft Marketplace link allow karein
+    // (Jesa aapne screenshot me dikhaya tha)
+    if (!url.includes("minecraft.net")) {
+        alert("Only Send Minecraft Marketplace Links"); 
+        return;
+    }
+
+    // 3. Agar sab sahi hai, to Discord par bhejo
+    sendToDiscord(url);
+}
+
+function sendToDiscord(userLink) {
+    // Aapka Webhook URL yahan set kar diya hai
+    const webhookURL = "https://discord.com/api/webhooks/1469778264607293562/slHI5zB96puMgK6Zu2aymdqCZs1pAxLuOiG7F9wYOqw6tnFH4-Scax74aC79kAkpgEF2";
+
+    const message = {
+        content: null,
+        embeds: [
+            {
+                title: "🚀 New Mod Request!",
+                description: "User wants this added:",
+                color: 5763719, // Green Color
+                fields: [
+                    {
+                        name: "Link",
+                        value: userLink
+                    }
+                ],
+                footer: {
+                    text: "Strike Mafia Marketplace"
+                },
+                timestamp: new Date().toISOString()
+            }
+        ]
+    };
+
+    // Discord ko data bhejna
+    fetch(webhookURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(message)
+    })
+    .then(response => {
+        if (response.ok) {
+            // Success Message (Screenshot jesa)
+            alert("Request Sent Successfully!"); 
+            document.getElementById('requestInput').value = ""; // Box clear karein
+        } else {
+            console.error("Discord Error:", response.status);
+            alert("Error sending request. Check console.");
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert("Something went wrong!");
+    });
+}
 });
