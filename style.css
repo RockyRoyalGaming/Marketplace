@@ -1,6 +1,30 @@
 /* --- RESET & BASIC SETUP --- */
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
-body { background-color: #121212; color: #e0e0e0; padding-bottom: 20px; }
+/* Naya Deep Space Background */
+body {
+    background: radial-gradient(circle at bottom, #1b2735 0%, #090a0f 100%);
+    color: #e0e0e0;
+    min-height: 100vh;
+    background-attachment: fixed;
+    margin: 0; 
+    padding: 0; 
+    font-family: 'Poppins', sans-serif;
+}
+
+/* Taare (Stars) Effect */
+body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-image: 
+        radial-gradient(white 1px, transparent 1px),
+        radial-gradient(white 1px, transparent 1px);
+    background-size: 50px 50px, 100px 100px;
+    background-position: 0 0, 25px 25px;
+    opacity: 0.15;
+    z-index: -1;
+    pointer-events: none;
+}
 
 /* --- HEADER --- */
 header { 
@@ -46,18 +70,36 @@ header {
 .search-wrapper input:focus { border-color: #4caf50; }
 
 /* --- FILTER BUTTONS --- */
-.filters { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
-.filters::-webkit-scrollbar { display: none; }
-.filters button { 
-    background: #333; 
-    color: #ccc; 
-    border: none; 
-    padding: 8px 18px; 
-    border-radius: 20px; 
-    white-space: nowrap; 
-    font-size: 0.9rem;
+/* Naye Square Icons Wale Buttons */
+.filters { 
+    display: flex; 
+    gap: 15px; 
+    justify-content: center; /* Beech me layega */
+    flex-wrap: wrap; /* Mobile pe 2 line me adjust ho jayega */
+    margin: 20px 0;
+    padding: 0 10px;
 }
-.filters button.active, .filters button:hover { background: #4caf50; color: white; }
+
+.filters button { 
+    background: rgba(255, 255, 255, 0.08); /* Halka transparent */
+    color: #aaa; 
+    border: 1px solid rgba(255, 255, 255, 0.1); 
+    width: 50px;   /* Button ki choudaai */
+    height: 50px;  /* Button ki lambaai (Square banega) */
+    border-radius: 12px; /* Thode goal kone */
+    font-size: 1.3rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex; align-items: center; justify-content: center;
+}
+
+.filters button:hover, .filters button.active { 
+    background: #ffffff; 
+    color: #121212; 
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+    transform: translateY(-3px); /* Thoda upar uthega */
+    border-color: white;
+}
 
 /* --- ITEM GRID --- */
 .container { 
