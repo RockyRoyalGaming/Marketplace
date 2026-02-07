@@ -36,7 +36,7 @@ const items = [
     id: 5,
     title: "Star Wars Mashup",
     category: "mashup",  // Ye important hai
-    image: "https://link-to-image.jpg",
+    image: "https://xforgeassets001.xboxlive.com/pf-namespace-b63a0803d3653643/a69407fb-6802-4036-bd95-ecd431be7987/Star_Wars_Thumbnail_0.jpg",
     description: "Star Wars world with skins and textures.",
     link: "..."
     },
