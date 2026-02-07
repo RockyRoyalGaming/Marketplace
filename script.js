@@ -1,11 +1,11 @@
-// --- DATABASE (Yahan apne items add karo) ---
+// --- DATABASE ---
 // Categories: 'addon', 'world', 'texture', 'skin', 'mashup'
 const items = [
     {
         id: 1,
         title: "Genshin Impact V4",
         category: "addon",
-        image: "https://via.placeholder.com/400x250.png?text=Genshin+Addon", // Asli link dalo
+        image: "https://via.placeholder.com/400x250.png?text=Genshin+Addon",
         description: "Explore Teyvat in Minecraft with new weapons and characters.",
         link: "https://dl-link.com/genshin"
     },
@@ -60,7 +60,6 @@ function displayItems(data) {
         card.classList.add('card');
         card.onclick = () => openModal(item);
         
-        // Image error handler included
         card.innerHTML = `
             <img src="${item.image}" alt="${item.title}" onerror="this.src='https://via.placeholder.com/400x250?text=No+Image'">
             <div class="card-info">
@@ -71,8 +70,6 @@ function displayItems(data) {
         container.appendChild(card);
     });
 }
-
-// Initial Load
 displayItems(items);
 
 // --- SEARCH ---
@@ -88,7 +85,6 @@ function searchItems() {
 // --- FILTERS ---
 function filterItems(category) {
     document.querySelectorAll('.filters button').forEach(btn => btn.classList.remove('active'));
-    // Find button with matching title (logic adjustment for icon clicks)
     const activeBtn = document.querySelector(`.filters button[onclick="filterItems('${category}')"]`);
     if(activeBtn) activeBtn.classList.add('active');
 
@@ -100,50 +96,47 @@ function filterItems(category) {
     }
 }
 
-// --- SORT MENU LOGIC ---
+// --- SORT MENU ---
 function toggleSortMenu() {
     const menu = document.getElementById('sortMenu');
     menu.style.display = (menu.style.display === "block") ? "none" : "block";
 }
-
 function sortContent(type) {
     let sortedItems = [...items];
-    if (type === 'recent') {
-        sortedItems.sort((a, b) => b.id - a.id); // Newest ID first
-    } else if (type === 'name') {
-        sortedItems.sort((a, b) => a.title.localeCompare(b.title)); // A-Z
-    } else {
-        sortedItems.sort((a, b) => a.id - b.id); // Default
-    }
+    if (type === 'recent') sortedItems.sort((a, b) => b.id - a.id);
+    else if (type === 'name') sortedItems.sort((a, b) => a.title.localeCompare(b.title));
+    else sortedItems.sort((a, b) => a.id - b.id);
     displayItems(sortedItems);
     document.getElementById('sortMenu').style.display = "none";
 }
-
-// Close menu on outside click
 window.addEventListener('click', function(e) {
     if (!e.target.closest('.sort-dropdown') && !e.target.closest('button[title="Filters"]')) {
         document.getElementById('sortMenu').style.display = 'none';
     }
 });
 
+// --- HEADER REQUEST BUTTON LOGIC ---
+function focusRequestBar() {
+    const input = document.getElementById('requestInput');
+    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    input.focus();
+    input.style.border = "1px solid #4caf50";
+    setTimeout(() => { input.style.border = "1px solid rgba(255,255,255,0.1)"; }, 2000);
+}
+
 // --- DISCORD REQUEST SYSTEM ---
 function sendRequest() {
     const input = document.getElementById('requestInput');
     const url = input.value.trim();
 
-    if (url === "") {
-        alert("Please paste a link first!");
-        return;
-    }
-    if (!url.includes("minecraft.net")) {
-        alert("Only Send Minecraft Marketplace Links"); 
-        return;
-    }
+    if (url === "") { alert("Please paste a link first!"); return; }
+    if (!url.includes("minecraft.net")) { alert("Only Send Minecraft Marketplace Links"); return; }
+    
     sendToDiscord(url);
 }
 
 function sendToDiscord(userLink) {
-    // Your Webhook URL
+    // AAPKA WEBHOOK URL
     const webhookURL = "https://discord.com/api/webhooks/1469778264607293562/slHI5zB96puMgK6Zu2aymdqCZs1pAxLuOiG7F9wYOqw6tnFH4-Scax74aC79kAkpgEF2";
 
     const message = {
@@ -158,11 +151,9 @@ function sendToDiscord(userLink) {
     };
 
     fetch(webhookURL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(message)
-    })
-    .then(response => {
+    }).then(response => {
         if (response.ok) {
             alert("Request Sent Successfully!"); 
             document.getElementById('requestInput').value = "";
@@ -183,21 +174,3 @@ function openModal(item) {
 }
 function closeModal() { modal.style.display = "none"; }
 window.onclick = function(e) { if (e.target == modal) closeModal(); }
-
-// Top Request Button Logic
-function focusRequestBar() {
-    const input = document.getElementById('requestInput');
-    
-    // 1. Smoothly wahan tak scroll karo
-    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    
-    // 2. Box ko highlight karo taaki user ko dikhe
-    input.focus();
-    
-    // (Optional) Thoda sa animation glow dene ke liye
-    input.style.border = "2px solid #4caf50";
-    setTimeout(() => {
-        input.style.border = "1px solid rgba(255,255,255,0.1)";
-    }, 2000);
-}
-
