@@ -1,107 +1,185 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Strike Mafia Marketplace</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <meta property="og:title" content="Strike Market">
-    <meta property="og:description" content="Download best Minecraft PE Addons, Worlds, and Skins!">
-    <meta property="og:image" content="https://via.placeholder.com/1200x630.png?text=Strike+Market">
-    <meta name="theme-color" content="#090a0f">
-</head>
-<body>
+// --- DATABASE (Yahan apne items add karo) ---
+// Categories: 'addon', 'world', 'texture', 'skin', 'mashup'
+const items = [
+    {
+        id: 1,
+        title: "Genshin Impact V4",
+        category: "addon",
+        image: "https://via.placeholder.com/400x250.png?text=Genshin+Addon", // Asli link dalo
+        description: "Explore Teyvat in Minecraft with new weapons and characters.",
+        link: "https://dl-link.com/genshin"
+    },
+    {
+        id: 2,
+        title: "One Block Skyblock",
+        category: "world",
+        image: "https://via.placeholder.com/400x250.png?text=One+Block",
+        description: "Classic One Block survival. Break the block to expand!",
+        link: "https://dl-link.com/oneblock"
+    },
+    {
+        id: 3,
+        title: "RTX Shaders Mobile",
+        category: "texture",
+        image: "https://via.placeholder.com/400x250.png?text=RTX+Shaders",
+        description: "Realistic lighting for mobile devices (RenderDragon).",
+        link: "https://dl-link.com/shaders"
+    },
+    {
+        id: 4,
+        title: "Star Wars Mashup",
+        category: "mashup",
+        image: "https://via.placeholder.com/400x250.png?text=Star+Wars",
+        description: "Complete Star Wars experience with skins, world and textures.",
+        link: "https://dl-link.com/starwars"
+    },
+    {
+        id: 5,
+        title: "Naruto Skin Pack",
+        category: "skin",
+        image: "https://via.placeholder.com/400x250.png?text=Naruto+Skins",
+        description: "HD Skins from the anime Naruto.",
+        link: "https://dl-link.com/naruto"
+    }
+];
 
-    <header>
-        <div class="navbar">
-            <div class="logo">
-                <i class="fas fa-cube"></i> Strike<span>Market</span>
-            </div>
-            <a href="https://discord.gg/your-invite" target="_blank" class="discord-btn">
-                <i class="fab fa-discord"></i> Join
-            </a>
-        </div>
+// --- SETUP ---
+const container = document.getElementById('itemsContainer');
+const modal = document.getElementById('itemModal');
+
+// --- DISPLAY FUNCTION ---
+function displayItems(data) {
+    container.innerHTML = "";
+    if (data.length === 0) {
+        container.innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: #666; padding: 20px;'>No items found.</p>";
+        return;
+    }
+
+    data.forEach(item => {
+        const card = document.createElement('div');
+        card.classList.add('card');
+        card.onclick = () => openModal(item);
         
-        <div class="search-wrapper">
-            <i class="fas fa-search search-icon"></i>
-            <input type="text" id="searchInput" placeholder="Search addons, maps..." onkeyup="searchItems()">
-        </div>
-
-        <div class="search-wrapper request-wrapper">
-            <input type="text" id="requestInput" placeholder="Paste Minecraft Marketplace Link...">
-            <button onclick="sendRequest()" class="send-btn">
-                <i class="fas fa-paper-plane"></i>
-            </button>
-        </div>
-
-        <div class="filters">
-            <button onclick="filterItems('all')" class="active" title="All">
-                <i class="fas fa-infinity"></i>
-            </button>
-            <button onclick="filterItems('addon')" title="Addons">
-                <i class="fas fa-puzzle-piece"></i>
-            </button>
-            <button onclick="filterItems('world')" title="Worlds">
-                <i class="fas fa-globe"></i>
-            </button>
-            <button onclick="filterItems('texture')" title="Textures">
-                <i class="fas fa-image"></i>
-            </button>
-            <button onclick="filterItems('skin')" title="Skins">
-                <i class="fas fa-tshirt"></i>
-            </button>
-            <button onclick="filterItems('mashup')" title="Mashups">
-                <i class="fas fa-layer-group"></i>
-            </button>
-            <button onclick="toggleSortMenu()" title="Filters">
-                <i class="fas fa-sliders-h"></i>
-            </button>
-        </div>
-
-        <div id="sortMenu" class="sort-dropdown">
-            <div onclick="sortContent('default')">
-                <i class="fas fa-random"></i> Default
+        // Image error handler included
+        card.innerHTML = `
+            <img src="${item.image}" alt="${item.title}" onerror="this.src='https://via.placeholder.com/400x250?text=No+Image'">
+            <div class="card-info">
+                <div class="card-title">${item.title}</div>
+                <div class="card-cat"><i class="fas fa-tag"></i> ${item.category.toUpperCase()}</div>
             </div>
-            <div onclick="sortContent('recent')">
-                <i class="fas fa-clock"></i> Recently Added
-            </div>
-            <div onclick="sortContent('name')">
-                <i class="fas fa-sort-alpha-down"></i> Name (A-Z)
-            </div>
-        </div>
-    </header>
+        `;
+        container.appendChild(card);
+    });
+}
 
-    <div class="container" id="itemsContainer">
-        <div class="loading-spinner">Loading content...</div>
-    </div>
+// Initial Load
+displayItems(items);
 
-    <div id="itemModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
-            <img id="modalImg" src="" alt="">
-            <div class="modal-header">
-                <h2 id="modalTitle">Title</h2>
-                <span class="tag" id="modalTag">CATEGORY</span>
-            </div>
-            <p id="modalDesc">Description goes here...</p>
-            <a id="modalLink" href="#" target="_blank" class="download-btn">
-                <i class="fas fa-download"></i> Download Now
-            </a>
-        </div>
-    </div>
+// --- SEARCH ---
+function searchItems() {
+    const query = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = items.filter(item => 
+        item.title.toLowerCase().includes(query) || 
+        item.category.toLowerCase().includes(query)
+    );
+    displayItems(filtered);
+}
 
-    <footer>
-        <div class="social-links">
-            <a href="#"><i class="fab fa-youtube"></i></a>
-            <a href="#"><i class="fab fa-discord"></i></a>
-            <a href="#"><i class="fab fa-instagram"></i></a>
-        </div>
-        <p>&copy; 2026 Strike Mafia. All rights reserved.</p>
-    </footer>
+// --- FILTERS ---
+function filterItems(category) {
+    document.querySelectorAll('.filters button').forEach(btn => btn.classList.remove('active'));
+    // Find button with matching title (logic adjustment for icon clicks)
+    const activeBtn = document.querySelector(`.filters button[onclick="filterItems('${category}')"]`);
+    if(activeBtn) activeBtn.classList.add('active');
 
-    <script src="script.js"></script>
-</body>
-</html>
+    if (category === 'all') {
+        displayItems(items);
+    } else {
+        const filtered = items.filter(item => item.category === category);
+        displayItems(filtered);
+    }
+}
+
+// --- SORT MENU LOGIC ---
+function toggleSortMenu() {
+    const menu = document.getElementById('sortMenu');
+    menu.style.display = (menu.style.display === "block") ? "none" : "block";
+}
+
+function sortContent(type) {
+    let sortedItems = [...items];
+    if (type === 'recent') {
+        sortedItems.sort((a, b) => b.id - a.id); // Newest ID first
+    } else if (type === 'name') {
+        sortedItems.sort((a, b) => a.title.localeCompare(b.title)); // A-Z
+    } else {
+        sortedItems.sort((a, b) => a.id - b.id); // Default
+    }
+    displayItems(sortedItems);
+    document.getElementById('sortMenu').style.display = "none";
+}
+
+// Close menu on outside click
+window.addEventListener('click', function(e) {
+    if (!e.target.closest('.sort-dropdown') && !e.target.closest('button[title="Filters"]')) {
+        document.getElementById('sortMenu').style.display = 'none';
+    }
+});
+
+// --- DISCORD REQUEST SYSTEM ---
+function sendRequest() {
+    const input = document.getElementById('requestInput');
+    const url = input.value.trim();
+
+    if (url === "") {
+        alert("Please paste a link first!");
+        return;
+    }
+    if (!url.includes("minecraft.net")) {
+        alert("Only Send Minecraft Marketplace Links"); 
+        return;
+    }
+    sendToDiscord(url);
+}
+
+function sendToDiscord(userLink) {
+    // Your Webhook URL
+    const webhookURL = "https://discord.com/api/webhooks/1469778264607293562/slHI5zB96puMgK6Zu2aymdqCZs1pAxLuOiG7F9wYOqw6tnFH4-Scax74aC79kAkpgEF2";
+
+    const message = {
+        embeds: [{
+            title: "🚀 New Mod Request!",
+            description: "User wants this added:",
+            color: 5763719,
+            fields: [{ name: "Link", value: userLink }],
+            footer: { text: "Strike Market Request" },
+            timestamp: new Date().toISOString()
+        }]
+    };
+
+    fetch(webhookURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(message)
+    })
+    .then(response => {
+        if (response.ok) {
+            alert("Request Sent Successfully!"); 
+            document.getElementById('requestInput').value = "";
+        } else {
+            alert("Error sending request.");
+        }
+    });
+}
+
+// --- MODAL ---
+function openModal(item) {
+    document.getElementById('modalTitle').innerText = item.title;
+    document.getElementById('modalDesc').innerText = item.description;
+    document.getElementById('modalImg').src = item.image;
+    document.getElementById('modalTag').innerText = item.category.toUpperCase();
+    document.getElementById('modalLink').href = item.link;
+    modal.style.display = "flex";
+}
+function closeModal() { modal.style.display = "none"; }
+window.onclick = function(e) { if (e.target == modal) closeModal(); }
