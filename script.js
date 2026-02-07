@@ -124,3 +124,16 @@ function openRequestForm() {
     const googleFormLink = "https://docs.google.com/forms/d/e/1FAIpQLSdg8fzmwKqJjDPVLLG-rT741T6TmsIHpQJ7lADByUMAsyQ6eQ/viewform?usp=publish-editor";
     window.open(googleFormLink, "_blank");
 }
+
+// Sort/Filter Button Logic
+let isAscending = true;
+
+function toggleSort() {
+    // Items ko naam (A-Z) ke hisab se ulta-seedha karega
+    isAscending = !isAscending;
+    const sortedItems = [...items].sort((a, b) => {
+        return isAscending ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title);
+    });
+    displayItems(sortedItems);
+    alert(isAscending ? "Sorted A-Z" : "Sorted Z-A");
+}
