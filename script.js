@@ -137,3 +137,43 @@ function toggleSort() {
     displayItems(sortedItems);
     alert(isAscending ? "Sorted A-Z" : "Sorted Z-A");
 }
+
+// --- SORT MENU LOGIC ---
+
+// 1. Menu kholne/band karne ke liye
+function toggleSortMenu() {
+    const menu = document.getElementById('sortMenu');
+    if (menu.style.display === "block") {
+        menu.style.display = "none";
+    } else {
+        menu.style.display = "block";
+    }
+}
+
+// 2. Items ko Sort karne ke liye
+function sortContent(type) {
+    let sortedItems = [...items]; // Original list ki copy
+
+    if (type === 'recent') {
+        // IDs ke hisab se ulta (Newest First)
+        sortedItems.sort((a, b) => b.id - a.id);
+    } else if (type === 'name') {
+        // A se Z naam ke hisab se
+        sortedItems.sort((a, b) => a.title.localeCompare(b.title));
+    } else {
+        // Default (Jesa database me hai)
+        sortedItems.sort((a, b) => a.id - b.id);
+    }
+
+    displayItems(sortedItems); // Nayi list dikhao
+    document.getElementById('sortMenu').style.display = "none"; // Menu band karo
+}
+
+// Screen par kahin aur click karne par menu band ho jaye
+window.addEventListener('click', function(e) {
+    const menu = document.getElementById('sortMenu');
+    // Agar click button ya menu par nahi hua, toh band kardo
+    if (!e.target.closest('.sort-dropdown') && !e.target.closest('button[title="Filters"]')) {
+        menu.style.display = 'none';
+    }
+});
