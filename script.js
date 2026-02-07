@@ -4,7 +4,7 @@ const items = [
         id: 1,
         title: "Genshin Impact V4",
         category: "addon",
-        image: "https://via.placeholder.com/400x250.png?text=Genshin+Addon",
+        image: "https://xforgeassets002.xboxlive.com/pf-namespace-b63a0803d3653643/e598289b-6e2d-46cc-aef6-1def89890316/Thumbnail_0.jpg",
         description: "Explore the world of Teyvat with new characters, weapons, and powers in Minecraft Bedrock.",
         link: "https://link-to-download.com/genshin"
     },
