@@ -6,40 +6,29 @@ body {
     background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%);
     color: #e0e0e0;
     min-height: 100vh;
-    overflow-x: hidden; /* Side scroll band */
+    overflow-x: hidden;
     position: relative;
 }
 
-/* 2. CANVAS SETTING (Taare Ispe banenge) */
+/* 2. CANVAS SETTING (Taare ispar banenge) */
 #starfield {
-    position: fixed; /* Screen par chipka rahega */
+    position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
-    z-index: -1; /* Sab content ke piche */
-    pointer-events: none; /* Click aar-paar ho sake */
+    z-index: -1; /* Sabse piche */
+    pointer-events: none;
 }
 
 html { scroll-behavior: smooth; }
 
-/* 3. HEADER (Transparent wala - Black bar hatane ke liye) */
+/* 3. HEADER (Transparent - Black Bar Fixed) */
 header { 
     position: sticky; top: 0; 
-    /* Halka transparent taaki piche taare dikhein */
+    /* Opacity 0.75 kar di hai taaki piche ke taare dikhein */
     background: rgba(9, 10, 15, 0.75); 
     padding: 15px 15px 5px 15px; 
     z-index: 100; 
-    backdrop-filter: blur(12px); /* Glass effect */
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-}
-
-/* --- ISKE NICHE "HEADER" KA CODE HONA CHAHIYE --- */
-
-/* --- HEADER --- */
-header { 
-    position: sticky; top: 0; 
-    background: rgba(9, 10, 15, 0.95); /* Thoda dark background header ke liye */
-    padding: 15px 15px 5px 15px; 
-    z-index: 100; 
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(12px); /* Glass Blur Effect */
+    -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
@@ -58,21 +47,19 @@ header {
 
 input { 
     width: 100%; padding: 12px; 
-    padding-left: 15px;  /* Text Left se start */
-    padding-right: 50px; /* Right side jagah icons ke liye */
+    padding-left: 15px;  
+    padding-right: 50px; 
     border-radius: 12px; 
     border: 1px solid rgba(255,255,255,0.1); 
     background: rgba(255,255,255,0.05); 
     color: white; outline: none; font-size: 1rem;
 }
 
-/* Search Icon Right Side */
 .search-icon { 
     position: absolute; right: 15px; top: 50%; transform: translateY(-50%); 
     color: #888; font-size: 1.1rem; pointer-events: none;
 }
 
-/* Request Button Right Side */
 .request-wrapper input { padding-right: 60px; }
 .send-btn {
     position: absolute; right: 5px; top: 5px; bottom: 5px;
@@ -81,35 +68,32 @@ input {
     display: flex; align-items: center; justify-content: center;
 }
 
-/* --- FILTERS --- */
+/* --- FILTERS (Glass Effect) --- */
 .filters { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 15px 0; padding-bottom: 5px; }
 .filters button { 
-    background: rgba(255, 255, 255, 0.08); color: #aaa; 
-    border: 1px solid rgba(255, 255, 255, 0.1); 
+    background: rgba(255, 255, 255, 0.05); 
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    color: #aaa; border: 1px solid rgba(255, 255, 255, 0.1); 
     width: 45px; height: 45px; border-radius: 12px; 
     font-size: 1.2rem; cursor: pointer; transition: all 0.3s ease;
     display: flex; align-items: center; justify-content: center;
 }
 .filters button:hover, .filters button.active { 
-    background: white; color: #121212; 
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.3); transform: translateY(-3px);
+    background: rgba(255, 255, 255, 0.2); color: white; 
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2); transform: translateY(-3px);
 }
 
-/* --- SORT MENU (Position Fixed) --- */
+/* --- SORT MENU (Glass Effect & Fixed Pos) --- */
 .sort-dropdown {
-    display: none; 
-    position: absolute; 
-    top: 265px; /* <--- Ye adjust kiya hai taaki menu button ke niche khule */
-    right: 20px;
-    background: rgba(30, 30, 45, 0.95); 
-    backdrop-filter: blur(15px);
-    border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;
+    display: none; position: absolute; top: 265px; right: 20px;
+    background: rgba(30, 30, 45, 0.65); /* Glass Background */
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px;
     padding: 10px; width: 200px; z-index: 1000;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
     animation: fadeIn 0.3s ease;
 }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-
 .sort-dropdown div { padding: 12px; color: #e0e0e0; cursor: pointer; display: flex; align-items: center; gap: 10px; border-radius: 8px; }
 .sort-dropdown div:hover { background: rgba(255,255,255,0.1); color: white; }
 
@@ -138,51 +122,3 @@ input {
 /* --- FOOTER --- */
 footer { text-align: center; margin-top: 30px; padding: 20px; border-top: 1px solid rgba(255,255,255,0.05); }
 footer p { color: #555; font-size: 0.8rem; }
-
-/* --- GLASSMROPHISM (Dhundhla Effect) --- */
-
-/* 1. Sort Menu Popup (Jo options khulte hain) */
-.sort-dropdown {
-    display: none; 
-    position: absolute; 
-    top: 265px; 
-    right: 20px;
-    
-    /* Ye hai wo magic code */
-    background: rgba(30, 30, 45, 0.65); /* Halka transparent dark color */
-    backdrop-filter: blur(20px);         /* Piche ka sab dhundhla (Blur) */
-    -webkit-backdrop-filter: blur(20px); /* Safari/iPhone ke liye */
-    
-    border: 1px solid rgba(255, 255, 255, 0.15); /* Patla sa white border */
-    border-radius: 16px;
-    padding: 10px; 
-    width: 200px; 
-    z-index: 1000;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.5); /* Gehra saaya (Shadow) */
-    animation: fadeIn 0.3s ease;
-}
-
-/* 2. Filter Buttons (Jo upar icons hain) */
-.filters button { 
-    background: rgba(255, 255, 255, 0.05); /* Bahut halka white */
-    backdrop-filter: blur(10px);            /* Isme bhi blur */
-    -webkit-backdrop-filter: blur(10px);
-    
-    color: #aaa; 
-    border: 1px solid rgba(255, 255, 255, 0.1); 
-    width: 45px; height: 45px; 
-    border-radius: 12px; 
-    font-size: 1.2rem; 
-    cursor: pointer; 
-    transition: all 0.3s ease;
-    display: flex; align-items: center; justify-content: center;
-}
-
-/* Hover Effect (Jab ungli rakho to chamke) */
-.filters button:hover, .filters button.active { 
-    background: rgba(255, 255, 255, 0.2); 
-    color: white; 
-    border-color: rgba(255, 255, 255, 0.4);
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
-    transform: translateY(-3px);
-}
