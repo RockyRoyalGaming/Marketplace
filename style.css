@@ -150,3 +150,76 @@ footer p { color: #555; font-size: 0.8rem; }
     color: white;
     box-shadow: 0 0 20px rgba(255, 255, 255, 0.25);
 }
+
+/* --- 1. SORT MENU FIX (Chota aur Niche) --- */
+.sort-dropdown {
+    /* Position adjust ki hai taaki thoda niche aur sahi jagah dikhe */
+    top: 210px !important;  
+    right: 15px !important;
+    
+    /* Size chota kiya */
+    width: 160px !important; 
+    
+    /* Dark Premium Look (Reference Jaisa) */
+    background: #1e1e24 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 12px !important;
+    padding: 5px !important;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8) !important;
+}
+
+/* Menu Items */
+.sort-dropdown div {
+    font-size: 0.85rem !important; /* Font chota */
+    padding: 10px 12px !important;
+    color: #bbb !important;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+.sort-dropdown div:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: white !important;
+}
+
+/* --- 2. MULTI-DOWNLOAD BUTTONS (World/Skin Style) --- */
+/* Ye container buttons ko ek ke niche ek rakhega */
+.buttons-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+/* Button ka design (Dark Grey Jaisa Screenshot me tha) */
+.dwn-option-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Icon left, Arrow right */
+    
+    background: rgba(255, 255, 255, 0.08); /* Dark Glassy */
+    color: #e0e0e0;
+    text-decoration: none;
+    padding: 12px 15px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border: 1px solid rgba(255,255,255,0.05);
+    transition: all 0.2s;
+}
+
+/* Hover Effect */
+.dwn-option-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+/* Left side icon aur text ko sath rakhne ke liye */
+.btn-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Icons ke color */
+.btn-left i { color: #aaa; }
+.fa-external-link-alt { font-size: 0.8rem; color: #666; }
