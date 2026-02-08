@@ -122,3 +122,31 @@ input {
 /* --- FOOTER --- */
 footer { text-align: center; margin-top: 30px; padding: 20px; border-top: 1px solid rgba(255,255,255,0.05); }
 footer p { color: #555; font-size: 0.8rem; }
+
+/* --- RESTORE GLASS EFFECT (Dhundhla Pan Wapas layen) --- */
+
+/* 1. Sort Menu Dropdown */
+.sort-dropdown {
+    /* Agar position bigad gayi ho to ise adjust karein */
+    top: 180px; /* Header ke hisab se adjust karein */
+    
+    background: rgba(30, 30, 45, 0.70) !important; /* Thoda gehra transparent */
+    backdrop-filter: blur(20px) !important;         /* Strong Blur */
+    -webkit-backdrop-filter: blur(20px) !important; /* iPhone fix */
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+}
+
+/* 2. Filter Buttons */
+.filters button {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+.filters button:hover, .filters button.active {
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.25);
+}
