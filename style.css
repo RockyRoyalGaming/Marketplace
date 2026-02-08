@@ -223,3 +223,33 @@ footer p { color: #555; font-size: 0.8rem; }
 /* Icons ke color */
 .btn-left i { color: #aaa; }
 .fa-external-link-alt { font-size: 0.8rem; color: #666; }
+
+/* --- MULTI-DOWNLOAD BUTTONS --- */
+.buttons-container {
+    display: flex;
+    flex-direction: column; /* Button ek ke niche ek aayenge */
+    gap: 10px; /* Beech me gap */
+    margin-top: 20px;
+}
+
+/* Naye buttons ka design */
+.dynamic-dwn-btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: linear-gradient(45deg, #4caf50, #45a049); /* Green Gradient */
+    color: white;
+    padding: 14px;
+    text-decoration: none;
+    border-radius: 12px;
+    font-weight: 600;
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+    transition: transform 0.2s;
+}
+.dynamic-dwn-btn:hover {
+    transform: translateY(-2px); /* Hover karne par thoda uthega */
+    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+/* Agar resource pack jesa kuch ho to alag rang (Optional) */
+.btn-secondary {
+    background: linear-gradient(45deg, #2196F3, #1976D2); /* Blue Gradient */
+    box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+}
