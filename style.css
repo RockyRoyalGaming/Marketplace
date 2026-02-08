@@ -14,26 +14,24 @@ body {
 #starfield {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
-    z-index: -1; /* Sabse piche */
+    z-index: -1;
     pointer-events: none;
 }
 
 html { scroll-behavior: smooth; }
 
-/* 3. HEADER (Transparent - Black Bar Fixed) */
+/* --- HEADER (Sticky & Glassy) --- */
 header { 
     position: sticky; top: 0; 
-    /* Opacity 0.75 kar di hai taaki piche ke taare dikhein */
-    background: rgba(9, 10, 15, 0.75); 
-    padding: 15px 15px 5px 15px; 
-    z-index: 100; 
-    backdrop-filter: blur(12px); /* Glass Blur Effect */
-    -webkit-backdrop-filter: blur(12px);
+    background: rgba(9, 10, 15, 0.75); /* Transparent Dark */
+    padding: 15px; 
+    z-index: 1000; 
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
-.navbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-.logo { font-size: 1.4rem; font-weight: bold; color: white; display: flex; align-items: center; gap: 8px; }
+.navbar { display: flex; justify-content: space-between; align-items: center; }
+.logo { font-size: 1.4rem; font-weight: 700; color: white; display: flex; align-items: center; gap: 8px; }
 .logo span { color: #4caf50; }
 
 .header-req-btn {
@@ -42,214 +40,112 @@ header {
     display: flex; align-items: center; gap: 5px;
 }
 
-/* --- SEARCH & REQUEST BARS (Icons Right Side) --- */
+/* --- CONTROLS SECTION (Scrollable) --- */
+.controls-container { padding: 15px; max-width: 800px; margin: 0 auto; }
+
 .search-wrapper, .request-wrapper { position: relative; margin-bottom: 15px; }
 
+/* Input Styling */
 input { 
-    width: 100%; padding: 12px; 
-    padding-left: 15px;  
-    padding-right: 50px; 
-    border-radius: 12px; 
+    width: 100%; padding: 14px; 
+    padding-left: 15px; padding-right: 50px; /* Right padding icons ke liye */
+    border-radius: 14px; 
     border: 1px solid rgba(255,255,255,0.1); 
     background: rgba(255,255,255,0.05); 
     color: white; outline: none; font-size: 1rem;
 }
 
+/* Search Icon (Right Side) */
 .search-icon { 
     position: absolute; right: 15px; top: 50%; transform: translateY(-50%); 
     color: #888; font-size: 1.1rem; pointer-events: none;
 }
 
+/* Request Button (Right Side) */
 .request-wrapper input { padding-right: 60px; }
 .send-btn {
-    position: absolute; right: 5px; top: 5px; bottom: 5px;
+    position: absolute; right: 6px; top: 6px; bottom: 6px;
     background: #4caf50; color: white; border: none; padding: 0 15px;
-    border-radius: 8px; cursor: pointer; font-size: 1.1rem;
+    border-radius: 10px; cursor: pointer; font-size: 1.1rem;
     display: flex; align-items: center; justify-content: center;
 }
 
 /* --- FILTERS (Glass Effect) --- */
-.filters { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 15px 0; padding-bottom: 5px; }
+.filters { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 10px; }
 .filters button { 
     background: rgba(255, 255, 255, 0.05); 
     backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
     color: #aaa; border: 1px solid rgba(255, 255, 255, 0.1); 
-    width: 45px; height: 45px; border-radius: 12px; 
+    width: 48px; height: 48px; border-radius: 14px; 
     font-size: 1.2rem; cursor: pointer; transition: all 0.3s ease;
     display: flex; align-items: center; justify-content: center;
 }
 .filters button:hover, .filters button.active { 
     background: rgba(255, 255, 255, 0.2); color: white; 
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2); transform: translateY(-3px);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.15); transform: translateY(-3px);
 }
 
-/* --- SORT MENU (Glass Effect & Fixed Pos) --- */
+/* --- SORT MENU (Premium Dark) --- */
 .sort-dropdown {
-    display: none; position: absolute; top: 265px; right: 20px;
-    background: rgba(30, 30, 45, 0.65); /* Glass Background */
-    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px;
-    padding: 10px; width: 200px; z-index: 1000;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-    animation: fadeIn 0.3s ease;
+    display: none; position: absolute; 
+    top: 280px; right: 20px; /* Adjusted Position */
+    width: 170px;
+    background: #1e1e24; /* Solid Dark */
+    border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;
+    padding: 6px; z-index: 900;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    animation: fadeIn 0.2s ease;
 }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-.sort-dropdown div { padding: 12px; color: #e0e0e0; cursor: pointer; display: flex; align-items: center; gap: 10px; border-radius: 8px; }
-.sort-dropdown div:hover { background: rgba(255,255,255,0.1); color: white; }
+
+.sort-dropdown div { 
+    padding: 10px; color: #ccc; cursor: pointer; font-size: 0.9rem;
+    display: flex; align-items: center; gap: 10px; border-radius: 8px; 
+}
+.sort-dropdown div:hover { background: rgba(255,255,255,0.08); color: white; }
 
 /* --- GRID ITEMS --- */
-.container { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; padding: 15px; }
+.container { 
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
+    gap: 15px; padding: 15px; max-width: 1200px; margin: 0 auto; 
+}
 .card { 
-    background: rgba(30, 30, 30, 0.6); border-radius: 15px; overflow: hidden; 
+    background: rgba(30, 30, 30, 0.6); border-radius: 16px; overflow: hidden; 
     border: 1px solid rgba(255,255,255,0.05); transition: transform 0.2s; cursor: pointer; 
 }
 .card:active { transform: scale(0.98); }
-.card img { width: 100%; height: 140px; object-fit: cover; }
+.card img { width: 100%; height: 130px; object-fit: cover; }
 .card-info { padding: 12px; }
-.card-title { font-size: 0.95rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: white; }
-.card-cat { font-size: 0.75rem; color: #4caf50; text-transform: uppercase; font-weight: bold; margin-top: 5px; }
+.card-title { font-size: 0.9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: white; }
+.card-cat { font-size: 0.7rem; color: #4caf50; font-weight: 700; margin-top: 4px; text-transform: uppercase; }
 
-/* --- MODAL --- */
+/* --- MODAL (Popup) --- */
 .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); align-items: center; justify-content: center; padding: 20px; }
-.modal-content { background: #1e1e24; padding: 20px; border-radius: 20px; width: 100%; max-width: 400px; position: relative; animation: popUp 0.3s; border: 1px solid rgba(255,255,255,0.1); }
+.modal-content { 
+    background: #18181b; padding: 25px; border-radius: 24px; width: 100%; max-width: 380px; 
+    position: relative; animation: popUp 0.3s; border: 1px solid rgba(255,255,255,0.1); 
+}
 @keyframes popUp { from {transform: scale(0.8); opacity: 0;} to {transform: scale(1); opacity: 1;} }
-.close { position: absolute; top: 15px; right: 20px; font-size: 28px; cursor: pointer; color: #aaa; }
-#modalImg { width: 100%; border-radius: 12px; margin-bottom: 15px; max-height: 220px; object-fit: cover; }
+.close { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #888; }
+#modalImg { width: 100%; border-radius: 16px; margin-bottom: 15px; height: 200px; object-fit: cover; }
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.tag { background: rgba(76, 175, 80, 0.2); padding: 5px 10px; border-radius: 5px; font-size: 0.75rem; color: #4caf50; }
-.download-btn { display: flex; align-items: center; justify-content: center; gap: 8px; background: #4caf50; color: white; padding: 14px; text-decoration: none; border-radius: 12px; font-weight: bold; width: 100%; margin-top: 15px; }
+#modalTitle { font-size: 1.2rem; }
+.tag { background: rgba(76, 175, 80, 0.2); padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; color: #4caf50; font-weight: bold;}
+#modalDesc { color: #aaa; font-size: 0.9rem; line-height: 1.5; margin-bottom: 20px; }
 
-/* --- FOOTER --- */
-footer { text-align: center; margin-top: 30px; padding: 20px; border-top: 1px solid rgba(255,255,255,0.05); }
-footer p { color: #555; font-size: 0.8rem; }
-
-/* --- RESTORE GLASS EFFECT (Dhundhla Pan Wapas layen) --- */
-
-/* 1. Sort Menu Dropdown */
-.sort-dropdown {
-    /* Agar position bigad gayi ho to ise adjust karein */
-    top: 180px; /* Header ke hisab se adjust karein */
-    
-    background: rgba(30, 30, 45, 0.70) !important; /* Thoda gehra transparent */
-    backdrop-filter: blur(20px) !important;         /* Strong Blur */
-    -webkit-backdrop-filter: blur(20px) !important; /* iPhone fix */
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    box-shadow: 0 15px 40px rgba(0,0,0,0.6);
-}
-
-/* 2. Filter Buttons */
-.filters button {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    transition: all 0.3s ease;
-}
-.filters button:hover, .filters button.active {
-    background: rgba(255, 255, 255, 0.25);
-    color: white;
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.25);
-}
-
-/* --- 1. SORT MENU FIX (Chota aur Niche) --- */
-.sort-dropdown {
-    /* Position adjust ki hai taaki thoda niche aur sahi jagah dikhe */
-    top: 210px !important;  
-    right: 15px !important;
-    
-    /* Size chota kiya */
-    width: 160px !important; 
-    
-    /* Dark Premium Look (Reference Jaisa) */
-    background: #1e1e24 !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 12px !important;
-    padding: 5px !important;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.8) !important;
-}
-
-/* Menu Items */
-.sort-dropdown div {
-    font-size: 0.85rem !important; /* Font chota */
-    padding: 10px 12px !important;
-    color: #bbb !important;
-    border-radius: 8px;
-    transition: background 0.2s;
-}
-.sort-dropdown div:hover {
-    background: rgba(255, 255, 255, 0.05) !important;
-    color: white !important;
-}
-
-/* --- 2. MULTI-DOWNLOAD BUTTONS (World/Skin Style) --- */
-/* Ye container buttons ko ek ke niche ek rakhega */
-.buttons-container {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 20px;
-}
-
-/* Button ka design (Dark Grey Jaisa Screenshot me tha) */
+/* --- MULTI-DOWNLOAD BUTTONS STYLE --- */
+.buttons-container { display: flex; flex-direction: column; gap: 10px; }
 .dwn-option-btn {
-    display: flex;
-    align-items: center;
-    justify-content: space-between; /* Icon left, Arrow right */
-    
-    background: rgba(255, 255, 255, 0.08); /* Dark Glassy */
-    color: #e0e0e0;
-    text-decoration: none;
-    padding: 12px 15px;
-    border-radius: 10px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    border: 1px solid rgba(255,255,255,0.05);
-    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(255, 255, 255, 0.08); /* Glassy Grey */
+    color: #e0e0e0; text-decoration: none;
+    padding: 14px 16px; border-radius: 12px;
+    font-size: 0.95rem; font-weight: 500;
+    border: 1px solid rgba(255,255,255,0.05); transition: all 0.2s;
 }
+.dwn-option-btn:hover { background: rgba(255, 255, 255, 0.15); transform: translateY(-2px); }
+.btn-left { display: flex; align-items: center; gap: 12px; }
+.btn-left i { color: #888; width: 20px; text-align: center; }
 
-/* Hover Effect */
-.dwn-option-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    transform: translateY(-2px);
-}
-
-/* Left side icon aur text ko sath rakhne ke liye */
-.btn-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-/* Icons ke color */
-.btn-left i { color: #aaa; }
-.fa-external-link-alt { font-size: 0.8rem; color: #666; }
-
-/* --- MULTI-DOWNLOAD BUTTONS --- */
-.buttons-container {
-    display: flex;
-    flex-direction: column; /* Button ek ke niche ek aayenge */
-    gap: 10px; /* Beech me gap */
-    margin-top: 20px;
-}
-
-/* Naye buttons ka design */
-.dynamic-dwn-btn {
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    background: linear-gradient(45deg, #4caf50, #45a049); /* Green Gradient */
-    color: white;
-    padding: 14px;
-    text-decoration: none;
-    border-radius: 12px;
-    font-weight: 600;
-    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
-    transition: transform 0.2s;
-}
-.dynamic-dwn-btn:hover {
-    transform: translateY(-2px); /* Hover karne par thoda uthega */
-    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
-}
-/* Agar resource pack jesa kuch ho to alag rang (Optional) */
-.btn-secondary {
-    background: linear-gradient(45deg, #2196F3, #1976D2); /* Blue Gradient */
-    box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
-}
+/* Footer */
+footer { text-align: center; margin-top: 40px; padding: 20px; color: #555; font-size: 0.8rem; }
