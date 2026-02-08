@@ -1,47 +1,35 @@
 /* --- GLOBAL STYLES --- */
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
 
-/* ANIMATED BACKGROUND (Moving Colors) */
+/* 1. DARK BASE (Canvas ke piche ka rang) */
 body {
-    /* 3 Dark Colors: Deep Blue, Purple, Black */
-    background: linear-gradient(-45deg, #0f0c29, #302b63, #24243e, #000000);
-    background-size: 400% 400%;
-    animation: gradientBG 15s ease infinite; /* 15 second me rang badlega */
+    background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%);
     color: #e0e0e0;
     min-height: 100vh;
+    overflow-x: hidden; /* Side scroll band */
     position: relative;
-    overflow-x: hidden;
 }
 
-/* Animation Logic */
-@keyframes gradientBG {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
-
-/* TWINKLING STARS (Chamakte Taare) */
-body::before {
-    content: "";
-    position: fixed;
+/* 2. CANVAS SETTING (Taare Ispe banenge) */
+#starfield {
+    position: fixed; /* Screen par chipka rahega */
     top: 0; left: 0; width: 100%; height: 100%;
-    background-image: 
-        radial-gradient(white 2px, transparent 2px),
-        radial-gradient(rgba(255,255,255,0.5) 1px, transparent 1px);
-    background-size: 50px 50px, 100px 100px;
-    background-position: 0 0, 25px 25px;
-    opacity: 0.2;
-    z-index: -1;
-    pointer-events: none;
-    animation: twinkle 5s infinite;
-}
-@keyframes twinkle {
-    0% { opacity: 0.2; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(1.1); }
-    100% { opacity: 0.2; transform: scale(1); }
+    z-index: -1; /* Sab content ke piche */
+    pointer-events: none; /* Click aar-paar ho sake */
 }
 
 html { scroll-behavior: smooth; }
+
+/* 3. HEADER (Transparent wala - Black bar hatane ke liye) */
+header { 
+    position: sticky; top: 0; 
+    /* Halka transparent taaki piche taare dikhein */
+    background: rgba(9, 10, 15, 0.75); 
+    padding: 15px 15px 5px 15px; 
+    z-index: 100; 
+    backdrop-filter: blur(12px); /* Glass effect */
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
 
 /* --- ISKE NICHE "HEADER" KA CODE HONA CHAHIYE --- */
 
