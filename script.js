@@ -1,46 +1,48 @@
-// --- 1. DATABASE (Items with Multiple Links) ---
+// --- 1. DATABASE (Corrected Buttons) ---
 const items = [
     {
         id: 1,
-        title: "Dragon Ball Z Addon",
+        title: "FarmCraft Add-on",
         category: "addon",
-        image: "https://via.placeholder.com/400x250.png?text=DBZ",
-        description: "Experience the power of Saiyans in Minecraft.",
-        // LINKS ARRAY (Multiple Buttons)
+        image: "https://via.placeholder.com/400x250.png?text=FarmCraft",
+        description: "Experience farming like never before with new tractors and crops.",
+        // CASE 1: Simple Addon (Sirf 1 Button: "Addon")
         links: [
-            { type: "Behavior Pack", url: "#", icon: "fa-cogs" },
-            { type: "Resource Pack", url: "#", icon: "fa-image" }
+            { type: "Addon", url: "https://dl-link.com/farmcraft", icon: "fa-puzzle-piece" }
         ]
     },
     {
         id: 2,
-        title: "One Block World",
+        title: "Dragon Ball Z",
         category: "world",
-        image: "https://via.placeholder.com/400x250.png?text=One+Block",
-        description: "Classic survival map with a bonus skin pack.",
+        image: "https://via.placeholder.com/400x250.png?text=DBZ",
+        description: "Full DBZ World experience with custom skins.",
+        // CASE 2: World + Skin (2 Buttons)
         links: [
-            { type: "Download World", url: "#", icon: "fa-globe" },
-            { type: "Bonus Skin", url: "#", icon: "fa-tshirt" }
+            { type: "World", url: "https://dl-link.com/dbz-world", icon: "fa-globe" },
+            { type: "Skin", url: "https://dl-link.com/dbz-skin", icon: "fa-tshirt" }
         ]
     },
     {
         id: 3,
-        title: "RTX Shaders",
-        category: "texture",
-        image: "https://via.placeholder.com/400x250.png?text=RTX",
-        description: "Realistic lighting for RenderDragon.",
+        title: "Genshin Impact V4",
+        category: "addon",
+        image: "https://via.placeholder.com/400x250.png?text=Genshin",
+        description: "Explore Teyvat in Minecraft.",
+        // Addon hai to sirf ek button
         links: [
-            { type: "Download Shaders", url: "#", icon: "fa-magic" }
+            { type: "Addon", url: "#", icon: "fa-puzzle-piece" }
         ]
     },
     {
         id: 4,
-        title: "Star Wars Mashup",
-        category: "mashup",
-        image: "https://via.placeholder.com/400x250.png?text=Star+Wars",
-        description: "Full mashup pack with world and skins.",
+        title: "RTX Shaders Mobile",
+        category: "texture",
+        image: "https://via.placeholder.com/400x250.png?text=RTX",
+        description: "Realistic lighting for RenderDragon.",
+        // Texture hai to "Texture" button
         links: [
-            { type: "Mashup Pack", url: "#", icon: "fa-layer-group" }
+            { type: "Texture", url: "#", icon: "fa-image" }
         ]
     },
     {
@@ -49,8 +51,9 @@ const items = [
         category: "skin",
         image: "https://via.placeholder.com/400x250.png?text=Naruto",
         description: "HD Skins from Naruto Anime.",
+        // Skin hai to "Skin" button
         links: [
-            { type: "Download Skins", url: "#", icon: "fa-user" }
+            { type: "Skin", url: "#", icon: "fa-tshirt" }
         ]
     }
 ];
@@ -122,7 +125,7 @@ window.addEventListener('click', function(e) {
     }
 });
 
-// --- 5. MODAL LOGIC (Multi-Buttons) ---
+// --- 5. MODAL LOGIC (Button Style Fix) ---
 const btnContainer = document.getElementById('downloadButtonsContainer');
 
 function openModal(item) {
@@ -134,21 +137,21 @@ function openModal(item) {
     // Clear old buttons
     btnContainer.innerHTML = "";
 
-    // Generate New Buttons
+    // Generate Buttons
     if (item.links && item.links.length > 0) {
         item.links.forEach(link => {
             const a = document.createElement('a');
-            a.className = "dwn-option-btn"; // CSS Class
+            a.className = "dwn-option-btn"; 
             a.href = link.url;
             a.target = "_blank";
 
-            // HTML Structure: Icon+Text ...... Arrow
+            // HTML Structure: [Icon + Type Name] ........... [Arrow Icon]
             a.innerHTML = `
                 <div class="btn-left">
                     <i class="fas ${link.icon || 'fa-download'}"></i>
                     <span>${link.type}</span>
                 </div>
-                <i class="fas fa-chevron-right" style="font-size: 0.8rem; color:#666;"></i>
+                <i class="fas fa-external-link-alt" style="font-size: 0.9rem; color:#888;"></i>
             `;
             btnContainer.appendChild(a);
         });
