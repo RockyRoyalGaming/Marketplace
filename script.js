@@ -1,4 +1,4 @@
-// --- 1. DATABASE (Corrected Buttons) ---
+// --- 1. DATABASE (Items List) ---
 const items = [
     {
         id: 1,
@@ -6,7 +6,7 @@ const items = [
         category: "addon",
         image: "https://via.placeholder.com/400x250.png?text=FarmCraft",
         description: "Experience farming like never before with new tractors and crops.",
-        // CASE 1: Simple Addon (Sirf 1 Button: "Addon")
+        // Addon: Sirf ek button
         links: [
             { type: "Addon", url: "https://dl-link.com/farmcraft", icon: "fa-puzzle-piece" }
         ]
@@ -16,8 +16,8 @@ const items = [
         title: "Dragon Ball Z",
         category: "world",
         image: "https://via.placeholder.com/400x250.png?text=DBZ",
-        description: "Full DBZ World experience with custom skins.",
-        // CASE 2: World + Skin (2 Buttons)
+        description: "Full DBZ World experience with custom skins and powers.",
+        // World: World + Skin Buttons
         links: [
             { type: "World", url: "https://dl-link.com/dbz-world", icon: "fa-globe" },
             { type: "Skin", url: "https://dl-link.com/dbz-skin", icon: "fa-tshirt" }
@@ -25,13 +25,13 @@ const items = [
     },
     {
         id: 3,
-        title: "Genshin Impact V4",
-        category: "addon",
-        image: "https://via.placeholder.com/400x250.png?text=Genshin",
-        description: "Explore Teyvat in Minecraft.",
-        // Addon hai to sirf ek button
+        title: "Star Wars Mashup",
+        category: "mashup", /* <-- Ye raha Mashup Item */
+        image: "https://via.placeholder.com/400x250.png?text=Star+Wars",
+        description: "Complete Star Wars experience including World, Skins, and Textures.",
+        // Mashup: Mashup Pack Button
         links: [
-            { type: "Addon", url: "#", icon: "fa-puzzle-piece" }
+            { type: "Mashup Pack", url: "#", icon: "fa-layer-group" }
         ]
     },
     {
@@ -40,7 +40,7 @@ const items = [
         category: "texture",
         image: "https://via.placeholder.com/400x250.png?text=RTX",
         description: "Realistic lighting for RenderDragon.",
-        // Texture hai to "Texture" button
+        // Texture: Texture Button
         links: [
             { type: "Texture", url: "#", icon: "fa-image" }
         ]
@@ -51,9 +51,19 @@ const items = [
         category: "skin",
         image: "https://via.placeholder.com/400x250.png?text=Naruto",
         description: "HD Skins from Naruto Anime.",
-        // Skin hai to "Skin" button
+        // Skin: Skin Button
         links: [
             { type: "Skin", url: "#", icon: "fa-tshirt" }
+        ]
+    },
+    {
+        id: 6,
+        title: "Jurassic World",
+        category: "mashup", /* <-- Ek aur Mashup example */
+        image: "https://via.placeholder.com/400x250.png?text=Jurassic",
+        description: "Explore the park with dinosaurs. Includes map and skins.",
+        links: [
+            { type: "Mashup Pack", url: "#", icon: "fa-layer-group" }
         ]
     }
 ];
@@ -125,7 +135,7 @@ window.addEventListener('click', function(e) {
     }
 });
 
-// --- 5. MODAL LOGIC (Button Style Fix) ---
+// --- 5. MODAL LOGIC (Buttons Fixed) ---
 const btnContainer = document.getElementById('downloadButtonsContainer');
 
 function openModal(item) {
