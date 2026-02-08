@@ -174,3 +174,55 @@ function openModal(item) {
 }
 function closeModal() { modal.style.display = "none"; }
 window.onclick = function(e) { if (e.target == modal) closeModal(); }
+
+/* --- PREMIUM ANIMATED STARFIELD (JavaScript Logic) --- */
+const canvas = document.getElementById('starfield');
+const ctx = canvas.getContext('2d');
+
+let width, height, stars;
+
+function initStars() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+
+    stars = [];
+    // Mobile par 100 taare, PC par 300 (Performance ke liye)
+    const numStars = width < 768 ? 100 : 300; 
+
+    for (let i = 0; i < numStars; i++) {
+        stars.push({
+            x: Math.random() * width,
+            y: Math.random() * height,
+            radius: Math.random() * 1.5, // Taare ka size
+            opacity: Math.random(),
+            speed: Math.random() * 0.05 // Chamakne ki speed
+        });
+    }
+}
+
+function animateStars() {
+    ctx.clearRect(0, 0, width, height);
+    
+    stars.forEach(star => {
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;
+        ctx.fill();
+
+        // Twinkle Effect (Chamak kam-jyada)
+        star.opacity += star.speed;
+        if (star.opacity > 1 || star.opacity < 0.1) {
+            star.speed = -star.speed;
+        }
+    });
+    requestAnimationFrame(animateStars);
+}
+
+// Resize hone par taare adjust karein
+window.addEventListener('resize', initStars);
+
+// Start Animation
+initStars();
+animateStars();
