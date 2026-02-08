@@ -5,14 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Strike Mafia Marketplace</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <meta name="theme-color" content="#090a0f">
 </head>
 <body>
+
     <canvas id="starfield"></canvas>
 
-        <header>
+    <header>
         <div class="navbar">
             <div class="logo">
                 <i class="fas fa-cube"></i> Strike<span>Market</span>
@@ -23,11 +24,11 @@
         </div>
     </header>
 
-    <div style="padding: 10px 15px;">
+    <div class="controls-container">
         
         <div class="search-wrapper">
-            <i class="fas fa-search search-icon"></i>
             <input type="text" id="searchInput" placeholder="Search addons, maps..." onkeyup="searchItems()">
+            <i class="fas fa-search search-icon"></i>
         </div>
 
         <div class="request-wrapper">
@@ -62,13 +63,16 @@
         <div class="modal-content">
             <span class="close" onclick="closeModal()">&times;</span>
             <img id="modalImg" src="" alt="">
+            
             <div class="modal-header">
                 <h2 id="modalTitle">Title</h2>
                 <span class="tag" id="modalTag">CATEGORY</span>
+            </div>
+            
             <p id="modalDesc">Description goes here...</p>
 
-<div id="downloadButtonsContainer" class="buttons-container">
-    </div>
+            <div id="downloadButtonsContainer" class="buttons-container">
+                </div>
         </div>
     </div>
 
