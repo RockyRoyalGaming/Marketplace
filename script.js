@@ -1,29 +1,42 @@
 // --- 1. DATABASE (Yahan apne items add karein) ---
+// --- 1. DATABASE (New Format with Multiple Links) ---
 const items = [
     {
         id: 1,
-        title: "Genshin Impact V4",
+        title: "Genshin Impact V4 (Full Pack)",
         category: "addon",
         image: "https://via.placeholder.com/400x250.png?text=Genshin+Addon",
-        description: "Explore Teyvat in Minecraft with new weapons and characters.",
-        link: "https://dl-link.com/genshin"
+        description: "Includes Behavior Pack and Resource Pack separately.",
+        // YAHAN DEKHO: Ab 'link' nahi, 'links' array hai
+        links: [
+            { label: "Download Behavior Pack", url: "https://dl-link.com/genshin-bp" },
+            { label: "Download Resource Pack", url: "https://dl-link.com/genshin-rp", type: "secondary" }
+        ]
     },
     {
         id: 2,
-        title: "One Block Skyblock",
+        title: "One Block World + Skin",
         category: "world",
         image: "https://via.placeholder.com/400x250.png?text=One+Block",
-        description: "Classic One Block survival. Break the block to expand!",
-        link: "https://dl-link.com/oneblock"
+        description: "Classic One Block survival map and a bonus skin.",
+        links: [
+            { label: "Download World (.mcworld)", url: "https://dl-link.com/oneblock-world" },
+            { label: "Download Bonus Skin", url: "https://dl-link.com/skin", type: "secondary" }
+        ]
     },
+    // Jisme sirf ek link ho, use aise likhein:
     {
         id: 3,
-        title: "RTX Shaders Mobile",
+        title: "Simple Texture Pack",
         category: "texture",
-        image: "https://via.placeholder.com/400x250.png?text=RTX+Shaders",
-        description: "Realistic lighting for mobile devices (RenderDragon).",
-        link: "https://dl-link.com/shaders"
+        image: "https://via.placeholder.com/400x250.png?text=Texture",
+        description: "Just a simple texture pack.",
+        links: [
+            { label: "Download Texture Pack", url: "https://dl-link.com/texture" }
+        ]
     },
+    // ... baaki items bhi isi format me ...
+];
     {
         id: 4,
         title: "Star Wars Mashup",
