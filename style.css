@@ -150,3 +150,51 @@ input {
 /* --- FOOTER --- */
 footer { text-align: center; margin-top: 30px; padding: 20px; border-top: 1px solid rgba(255,255,255,0.05); }
 footer p { color: #555; font-size: 0.8rem; }
+
+/* --- GLASSMROPHISM (Dhundhla Effect) --- */
+
+/* 1. Sort Menu Popup (Jo options khulte hain) */
+.sort-dropdown {
+    display: none; 
+    position: absolute; 
+    top: 265px; 
+    right: 20px;
+    
+    /* Ye hai wo magic code */
+    background: rgba(30, 30, 45, 0.65); /* Halka transparent dark color */
+    backdrop-filter: blur(20px);         /* Piche ka sab dhundhla (Blur) */
+    -webkit-backdrop-filter: blur(20px); /* Safari/iPhone ke liye */
+    
+    border: 1px solid rgba(255, 255, 255, 0.15); /* Patla sa white border */
+    border-radius: 16px;
+    padding: 10px; 
+    width: 200px; 
+    z-index: 1000;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5); /* Gehra saaya (Shadow) */
+    animation: fadeIn 0.3s ease;
+}
+
+/* 2. Filter Buttons (Jo upar icons hain) */
+.filters button { 
+    background: rgba(255, 255, 255, 0.05); /* Bahut halka white */
+    backdrop-filter: blur(10px);            /* Isme bhi blur */
+    -webkit-backdrop-filter: blur(10px);
+    
+    color: #aaa; 
+    border: 1px solid rgba(255, 255, 255, 0.1); 
+    width: 45px; height: 45px; 
+    border-radius: 12px; 
+    font-size: 1.2rem; 
+    cursor: pointer; 
+    transition: all 0.3s ease;
+    display: flex; align-items: center; justify-content: center;
+}
+
+/* Hover Effect (Jab ungli rakho to chamke) */
+.filters button:hover, .filters button.active { 
+    background: rgba(255, 255, 255, 0.2); 
+    color: white; 
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+    transform: translateY(-3px);
+}
