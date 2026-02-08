@@ -12,7 +12,7 @@
 <body>
     <canvas id="starfield"></canvas>
 
-    <header>
+        <header>
         <div class="navbar">
             <div class="logo">
                 <i class="fas fa-cube"></i> Strike<span>Market</span>
@@ -21,6 +21,9 @@
                 <i class="fas fa-plus-circle"></i> Request
             </button>
         </div>
+    </header>
+
+    <div style="padding: 10px 15px;">
         
         <div class="search-wrapper">
             <i class="fas fa-search search-icon"></i>
@@ -43,13 +46,13 @@
             <button onclick="filterItems('mashup')" title="Mashups"><i class="fas fa-layer-group"></i></button>
             <button onclick="toggleSortMenu()" title="Filters"><i class="fas fa-sliders-h"></i></button>
         </div>
+    </div>
 
-        <div id="sortMenu" class="sort-dropdown">
-            <div onclick="sortContent('default')"><i class="fas fa-random"></i> Default</div>
-            <div onclick="sortContent('recent')"><i class="fas fa-clock"></i> Recently Added</div>
-            <div onclick="sortContent('name')"><i class="fas fa-sort-alpha-down"></i> Name (A-Z)</div>
-        </div>
-    </header>
+    <div id="sortMenu" class="sort-dropdown">
+        <div onclick="sortContent('default')"><i class="fas fa-random"></i> Default</div>
+        <div onclick="sortContent('recent')"><i class="fas fa-clock"></i> Recently Added</div>
+        <div onclick="sortContent('name')"><i class="fas fa-sort-alpha-down"></i> Name (A-Z)</div>
+    </div>
 
     <div class="container" id="itemsContainer">
         <div class="loading-spinner">Loading content...</div>
