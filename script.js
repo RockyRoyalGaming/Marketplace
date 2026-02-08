@@ -1,5 +1,4 @@
-// --- DATABASE ---
-// Categories: 'addon', 'world', 'texture', 'skin', 'mashup'
+// --- 1. DATABASE (Yahan apne items add karein) ---
 const items = [
     {
         id: 1,
@@ -43,15 +42,14 @@ const items = [
     }
 ];
 
-// --- SETUP ---
+// --- 2. SETUP & DISPLAY ---
 const container = document.getElementById('itemsContainer');
 const modal = document.getElementById('itemModal');
 
-// --- DISPLAY FUNCTION ---
 function displayItems(data) {
     container.innerHTML = "";
     if (data.length === 0) {
-        container.innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: #666; padding: 20px;'>No items found.</p>";
+        container.innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: #aaa; padding: 20px;'>No items found.</p>";
         return;
     }
 
@@ -70,9 +68,10 @@ function displayItems(data) {
         container.appendChild(card);
     });
 }
+// Pehli baar load karne ke liye
 displayItems(items);
 
-// --- SEARCH ---
+// --- 3. SEARCH FUNCTION ---
 function searchItems() {
     const query = document.getElementById('searchInput').value.toLowerCase();
     const filtered = items.filter(item => 
@@ -82,9 +81,12 @@ function searchItems() {
     displayItems(filtered);
 }
 
-// --- FILTERS ---
+// --- 4. FILTER FUNCTION ---
 function filterItems(category) {
+    // Sab buttons se active class hatao
     document.querySelectorAll('.filters button').forEach(btn => btn.classList.remove('active'));
+    
+    // Jis button par click kiya use active karo
     const activeBtn = document.querySelector(`.filters button[onclick="filterItems('${category}')"]`);
     if(activeBtn) activeBtn.classList.add('active');
 
@@ -96,47 +98,64 @@ function filterItems(category) {
     }
 }
 
-// --- SORT MENU ---
+// --- 5. SORT MENU LOGIC ---
 function toggleSortMenu() {
     const menu = document.getElementById('sortMenu');
+    // Agar khula hai to band karo, band hai to kholo
     menu.style.display = (menu.style.display === "block") ? "none" : "block";
 }
+
 function sortContent(type) {
     let sortedItems = [...items];
-    if (type === 'recent') sortedItems.sort((a, b) => b.id - a.id);
-    else if (type === 'name') sortedItems.sort((a, b) => a.title.localeCompare(b.title));
-    else sortedItems.sort((a, b) => a.id - b.id);
+    if (type === 'recent') {
+        sortedItems.sort((a, b) => b.id - a.id); // Naya pehle
+    } else if (type === 'name') {
+        sortedItems.sort((a, b) => a.title.localeCompare(b.title)); // A-Z
+    } else {
+        sortedItems.sort((a, b) => a.id - b.id); // Default ID se
+    }
     displayItems(sortedItems);
     document.getElementById('sortMenu').style.display = "none";
 }
+
+// Menu ke bahar click karne par band hona chahiye
 window.addEventListener('click', function(e) {
     if (!e.target.closest('.sort-dropdown') && !e.target.closest('button[title="Filters"]')) {
         document.getElementById('sortMenu').style.display = 'none';
     }
 });
 
-// --- HEADER REQUEST BUTTON LOGIC ---
+// --- 6. HEADER REQUEST BUTTON (Scroll Down) ---
 function focusRequestBar() {
     const input = document.getElementById('requestInput');
-    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    input.focus();
-    input.style.border = "1px solid #4caf50";
-    setTimeout(() => { input.style.border = "1px solid rgba(255,255,255,0.1)"; }, 2000);
+    if(input) {
+        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        input.focus();
+        input.style.border = "1px solid #4caf50";
+        setTimeout(() => { input.style.border = "1px solid rgba(255,255,255,0.1)"; }, 2000);
+    }
 }
 
-// --- DISCORD REQUEST SYSTEM ---
+// --- 7. DISCORD REQUEST SYSTEM ---
 function sendRequest() {
     const input = document.getElementById('requestInput');
     const url = input.value.trim();
 
-    if (url === "") { alert("Please paste a link first!"); return; }
-    if (!url.includes("minecraft.net")) { alert("Only Send Minecraft Marketplace Links"); return; }
+    if (url === "") {
+        alert("Please paste a link first!");
+        return;
+    }
+    // Validation
+    if (!url.includes("minecraft.net")) {
+        alert("Only Send Minecraft Marketplace Links"); 
+        return;
+    }
     
     sendToDiscord(url);
 }
 
 function sendToDiscord(userLink) {
-    // AAPKA WEBHOOK URL
+    // Aapka Webhook URL
     const webhookURL = "https://discord.com/api/webhooks/1469778264607293562/slHI5zB96puMgK6Zu2aymdqCZs1pAxLuOiG7F9wYOqw6tnFH4-Scax74aC79kAkpgEF2";
 
     const message = {
@@ -151,19 +170,22 @@ function sendToDiscord(userLink) {
     };
 
     fetch(webhookURL, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(message)
-    }).then(response => {
+    })
+    .then(response => {
         if (response.ok) {
             alert("Request Sent Successfully!"); 
             document.getElementById('requestInput').value = "";
         } else {
             alert("Error sending request.");
         }
-    });
+    })
+    .catch(error => console.error('Error:', error));
 }
 
-// --- MODAL ---
+// --- 8. MODAL (Download Popup) ---
 function openModal(item) {
     document.getElementById('modalTitle').innerText = item.title;
     document.getElementById('modalDesc').innerText = item.description;
@@ -175,104 +197,55 @@ function openModal(item) {
 function closeModal() { modal.style.display = "none"; }
 window.onclick = function(e) { if (e.target == modal) closeModal(); }
 
-/* --- PREMIUM ANIMATED STARFIELD (JavaScript Logic) --- */
+
+// --- 9. PREMIUM STARFIELD BACKGROUND (Canvas Logic) ---
 const canvas = document.getElementById('starfield');
-const ctx = canvas.getContext('2d');
 
-let width, height, stars;
+// Sirf tabhi chalega jab HTML me <canvas id="starfield"> hoga
+if (canvas) {
+    const ctx = canvas.getContext('2d');
+    let width, height, stars;
 
-function initStars() {
-    width = window.innerWidth;
-    height = window.innerHeight;
-    canvas.width = width;
-    canvas.height = height;
+    function initStars() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
 
-    stars = [];
-    // Mobile par 100 taare, PC par 300 (Performance ke liye)
-    const numStars = width < 768 ? 100 : 300; 
+        stars = [];
+        // Mobile par kam taare, PC par jyada
+        const numStars = width < 768 ? 150 : 350; 
 
-    for (let i = 0; i < numStars; i++) {
-        stars.push({
-            x: Math.random() * width,
-            y: Math.random() * height,
-            radius: Math.random() * 1.5, // Taare ka size
-            opacity: Math.random(),
-            speed: Math.random() * 0.05 // Chamakne ki speed
-        });
-    }
-}
-
-function animateStars() {
-    ctx.clearRect(0, 0, width, height);
-    
-    stars.forEach(star => {
-        ctx.beginPath();
-        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;
-        ctx.fill();
-
-        // Twinkle Effect (Chamak kam-jyada)
-        star.opacity += star.speed;
-        if (star.opacity > 1 || star.opacity < 0.1) {
-            star.speed = -star.speed;
+        for (let i = 0; i < numStars; i++) {
+            stars.push({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                radius: Math.random() * 1.5,
+                opacity: Math.random(),
+                speed: Math.random() * 0.02 + 0.005
+            });
         }
-    });
-    requestAnimationFrame(animateStars);
-}
-
-// Resize hone par taare adjust karein
-window.addEventListener('resize', initStars);
-
-// Start Animation
-initStars();
-animateStars();
-
-/* --- ANIMATED STARFIELD (Random Stars) --- */
-const canvas = document.getElementById('starfield');
-const ctx = canvas.getContext('2d');
-
-let width, height, stars;
-
-function initStars() {
-    width = window.innerWidth;
-    height = window.innerHeight;
-    canvas.width = width;
-    canvas.height = height;
-
-    stars = [];
-    // Mobile par kam taare, PC par jyada
-    const numStars = width < 768 ? 150 : 350; 
-
-    for (let i = 0; i < numStars; i++) {
-        stars.push({
-            x: Math.random() * width,
-            y: Math.random() * height,
-            radius: Math.random() * 1.5,
-            opacity: Math.random(),
-            speed: Math.random() * 0.02 + 0.005
-        });
     }
+
+    function animateStars() {
+        ctx.clearRect(0, 0, width, height);
+        
+        stars.forEach(star => {
+            ctx.beginPath();
+            ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;
+            ctx.fill();
+
+            // Twinkle Logic
+            star.opacity += star.speed;
+            if (star.opacity > 1 || star.opacity < 0.1) {
+                star.speed = -star.speed;
+            }
+        });
+        requestAnimationFrame(animateStars);
+    }
+
+    window.addEventListener('resize', initStars);
+    initStars();
+    animateStars();
 }
-
-function animateStars() {
-    ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = "white";
-    
-    stars.forEach(star => {
-        ctx.beginPath();
-        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;
-        ctx.fill();
-
-        // Twinkle Logic
-        star.opacity += star.speed;
-        if (star.opacity > 1 || star.opacity < 0.1) {
-            star.speed = -star.speed;
-        }
-    });
-    requestAnimationFrame(animateStars);
-}
-
-window.addEventListener('resize', initStars);
-initStars();
-animateStars();
