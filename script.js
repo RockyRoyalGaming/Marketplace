@@ -50,10 +50,10 @@ const items = [
     },
     {
         id: 4,
-        title: "RTX Shaders Mobile",
+        title: "Realism Visuals",
         category: "texture",
-        image: "https://via.placeholder.com/400x250.png?text=RTX",
-        description: "Realistic lighting for RenderDragon.",
+        image: "https://xforgeassets002.xboxlive.com/pf-namespace-b63a0803d3653643/cff099cb-5d80-4743-ba4e-a149796db238/Realism_Visuals_Thumbnail_0.jpg",
+        description: "Fine-tuned for vanilla. Realistic shading and custom player animations. + Real lighting, water, and block materials +Vibrant biome shades +Realistic player animations +Complementary to vanilla textures",
         // Texture: Texture Button
         links: [
             { type: "Texture", url: "#", icon: "fa-image" }
