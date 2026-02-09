@@ -1,6 +1,20 @@
 // --- 1. DATABASE (Items List) ---
 const items = [
          {
+        id: 11,  // Number badhate rahein (pichla 11 tha to ye 12)
+        title: "Health Bars 1.1 Add-On",
+        category: "addon", // Options: 'addon', 'world', 'skin', 'texture', 'mashup'
+        image: "https://i.postimg.cc/T2zPVCRf/image-12-(30).jpg", // Photo ka link
+        description: "Ever wondered how tough a Warden really is? Wonder no more! With the Health Bars Add-On, every mob and player gets their very own Health Bar. Gauge the fight and strategise your next move at a glance!",
+        links: [
+            // Agar Addon hai to bas ye line rakhein:
+            { type: "Addon", url: "https://linkpays.in/MeNBy", icon: "fa-puzzle-piece" }
+            
+            // Agar World + Skin hai to niche wali line bhi use karein:
+            // { type: "Skin", url: "LINK_HERE", icon: "fa-tshirt" }
+        ]
+    },
+         {
         id: 10,  // Number badhate rahein (pichla 9 tha to ye 10)
         title: "Forest Craft Add-On 4.0",
         category: "addon", // Options: 'addon', 'world', 'skin', 'texture', 'mashup'
