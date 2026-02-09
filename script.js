@@ -20,11 +20,7 @@ const items = [
         category: "addon",
         image: "https://xforgeassets002.xboxlive.com/pf-namespace-b63a0803d3653643/ccca9e5a-b363-47d4-b75d-b8622d28cb15/zenith_thumbnail_0.jpg",
         description: "Discover Toothless and other beloved dragons in your Minecraft Worlds! Become a dragon rider with this Add-On based on Universal Pictures’ live-action reimagining of DreamWorks Animation’s How to Train Your Dragon.
-Take off into the skies, learn each dragon's personality, and bond with them to unlock unique abilities. Embark on an iconic adventure with your new dragon! New: - Added Baby Dragons!
-
-- Added texture variants for dragons
-
-- Added a Toothless per player toggle",
+Take off into the skies, learn each dragon's personality, and bond with them to unlock unique abilities. Embark on an iconic adventure with your new dragon!",
         // Addon: Sirf ek button
         links: [
             { type: "Addon", url: "https://linkpays.in/fXMhJX", icon: "fa-puzzle-piece" }
