@@ -61,13 +61,13 @@ const items = [
     },
     {
         id: 5,
-        title: "Naruto Skin Pack",
+        title: "Bee Farmer",
         category: "skin",
-        image: "https://via.placeholder.com/400x250.png?text=Naruto",
-        description: "HD Skins from Naruto Anime.",
+        image: "https://xforgeassets002.xboxlive.com/pf-namespace-b63a0803d3653643/f6efebd9-5e5a-4452-a5da-4116164af024/BeeFarmer_Thumbnail_0.jpg",
+        description: "Ready to harvest honey! ,From hardworking farmers to buzzing bees, this collection brings the countryside to life with bright colors and cheerful vibes.,- Includes 12 unique skins, one is free to try!,- Mix of farmers, beekeepers, and even a friendly bee or two.,- Perfect for building farms, tending bees, or just hanging out with friends.",
         // Skin: Skin Button
         links: [
-            { type: "Skin", url: "#", icon: "fa-tshirt" }
+            { type: "Skin", url: "https://linkpays.in/vQHtOc", icon: "fa-tshirt" }
         ]
     },
     {
