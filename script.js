@@ -29,12 +29,12 @@ const items = [
         id: 2,
         title: "Dragon Ball Z",
         category: "world",
-        image: "https://via.placeholder.com/400x250.png?text=DBZ",
-        description: "Full DBZ World experience with custom skins and powers.",
+        image: "https://xforgeassets002.xboxlive.com/pf-namespace-b63a0803d3653643/c3f0a98e-f39b-4f40-944e-854395bb2f59/dragon_ball_z_thumbnail_0.jpg",
+        description: "Battle as your favorite Dragon Ball Z character in this explosive DLC! Master iconic moves, battle in legendary arenas from the series, and see who dominates the battlefield.",
         // World: World + Skin Buttons
         links: [
-            { type: "World", url: "https://dl-link.com/dbz-world", icon: "fa-globe" },
-            { type: "Skin", url: "https://dl-link.com/dbz-skin", icon: "fa-tshirt" }
+            { type: "World", url: "https://linkpays.in/z3ehlv", icon: "fa-globe" },
+            { type: "Skin", url: "https://gofile.io/d/LmRxXL", icon: "fa-tshirt" }
         ]
     },
     {
