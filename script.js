@@ -56,7 +56,7 @@ const items = [
         description: "Fine-tuned for vanilla. Realistic shading and custom player animations. + Real lighting, water, and block materials +Vibrant biome shades +Realistic player animations +Complementary to vanilla textures",
         // Texture: Texture Button
         links: [
-            { type: "Texture", url: "#", icon: "fa-image" }
+            { type: "Texture", url: "https://linkpays.in/ToXtj", icon: "fa-image" }
         ]
     },
     {
