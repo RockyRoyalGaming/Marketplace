@@ -1,5 +1,19 @@
 // --- 1. DATABASE (Items List) ---
 const items = [
+        {
+        id: 7,  // Number badhate rahein (pichla 6 tha to ye 7)
+        title: "Bluey's House",
+        category: "addon", // Options: 'addon', 'world', 'skin', 'texture', 'mashup'
+        image: "https://xforgeassets002.xboxlive.com/pf-namespace-b63a0803d3653643/345ffd83-2bc6-4990-86a5-6e79888ab6d4/BLUEY_Thumbnail_0.jpg", // Photo ka link
+        description: "Get ready for heaps of fun with Bluey, Bingo, Mum, and Dad! Step inside Bluey’s Family home and play games like I-Spy, Hide and Seek, and Ragdoll. Find the Family’s favourite items to unlock even more games and surprises!",
+        links: [
+            // Agar Addon hai to bas ye line rakhein:
+            { type: "World", url: "https://linkpays.in/HOApOgEm", icon: "fa-globe" }
+            
+            // Agar World + Skin hai to niche wali line bhi use karein:
+            // { type: "Skin", url: "LINK_HERE", icon: "fa-tshirt" }
+        ]
+    },
     {
         id: 1,
         title: "FarmCraft Add-on",
