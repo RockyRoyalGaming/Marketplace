@@ -32,7 +32,7 @@ const items = [
         id: 9,  // Number badhate rahein (pichla 9 tha to ye 10)
         title: "Stranger Things",
         category: "world", // Options: 'addon', 'world', 'skin', 'texture', 'mashup'
-        image: "<a href='https://postimg.cc/Lq5qcwg3' target='_blank'><img src='https://i.postimg.cc/Lq5qcwg3/image-12-(28).jpg' border='0' alt='image-12-(28)'></a>", // Photo ka link
+        image: "https://i.postimg.cc/SK7WMpy3/image_12_(28).jpg", // Photo ka link
         description: "*sniff, sniff* Do you smell waffles? It must be Netflix's Stranger Things DLC, just in time for the epic series finale! Join “The Party” and play as your favorite character, like Will, Dustin, Mike, or Eleven. characters' unique abilities will help you solve puzzles and vanquish foes. Hop on your bike and head to the Dressing Room for your free Hellfire Club T-shirt!",
         links: [
             // Agar Addon hai to bas ye line rakhein:
