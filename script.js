@@ -1,6 +1,20 @@
 // --- 1. DATABASE (Items List) ---
 const items = [
          {
+        id: 10,  // Number badhate rahein (pichla 9 tha to ye 10)
+        title: "Forest Craft Add-On 4.0",
+        category: "addon", // Options: 'addon', 'world', 'skin', 'texture', 'mashup'
+        image: "https://i.postimg.cc/5yQ7JfGm/image-12-(29).jpg", // Photo ka link
+        description: "Forest Craft Add-On 4.0 adds 30 Trees to your Survival world. Chop new trees, harvest fruit, cook new foods and build with 28 new wood types!",
+        links: [
+            // Agar Addon hai to bas ye line rakhein:
+            { type: "Addon", url: "https://linkpays.in/d6yftsfw", icon: "fa-puzzle-piece" }
+            
+            // Agar World + Skin hai to niche wali line bhi use karein:
+            // { type: "Skin", url: "LINK_HERE", icon: "fa-tshirt" }
+        ]
+    },
+         {
         id: 9,  // Number badhate rahein (pichla 9 tha to ye 10)
         title: "Stranger Things",
         category: "world", // Options: 'addon', 'world', 'skin', 'texture', 'mashup'
