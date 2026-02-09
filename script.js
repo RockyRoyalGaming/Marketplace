@@ -39,13 +39,13 @@ const items = [
     },
     {
         id: 3,
-        title: "Star Wars Mashup",
+        title: "STAR WARS",
         category: "mashup", /* <-- Ye raha Mashup Item */
-        image: "https://via.placeholder.com/400x250.png?text=Star+Wars",
-        description: "Complete Star Wars experience including World, Skins, and Textures.",
+        image: "https://xforgeassets001.xboxlive.com/pf-namespace-b63a0803d3653643/a69407fb-6802-4036-bd95-ecd431be7987/Star_Wars_Thumbnail_0.jpg",
+        description: "Complete Star Wars experience including World, Skins, and Textures.Explore the galaxy in this epic STAR WARS Mash-up, featuring characters and locations from the original trilogy and The Mandalorian series. This is the way!",
         // Mashup: Mashup Pack Button
         links: [
-            { type: "Mashup Pack", url: "#", icon: "fa-layer-group" }
+            { type: "Mashup Pack", url: "https://linkpays.in/cfcDc", icon: "fa-layer-group" }
         ]
     },
     {
