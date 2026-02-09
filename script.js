@@ -72,12 +72,12 @@ const items = [
     },
     {
         id: 6,
-        title: "Jurassic World",
+        title: "Dinosaur Biomes",
         category: "mashup", /* <-- Ek aur Mashup example */
-        image: "https://via.placeholder.com/400x250.png?text=Jurassic",
-        description: "Explore the park with dinosaurs. Includes map and skins.",
+        image: "https://xforgeassets002.xboxlive.com/pf-namespace-b63a0803d3653643/8d5f7d0a-1830-4848-81c1-42886404987d/DinosaurMashup_Thumbnail_0.jpg",
+        description: "- Custom Biomes themed from the Jurassic age!- Dinosaurs are tamable and ridable!- 15+ New Dinosaurs- 18+ New utility tools- 7 Jurassic aged Weapons- 7 Jurassic aged Armor Sets- 9 dinosaur themed materials- A new wandering trader, This item uses random start areas for any new world. Endless possibilities!",
         links: [
-            { type: "Mashup Pack", url: "#", icon: "fa-layer-group" }
+            { type: "Mashup Pack", url: "https://linkpays.in/ikxkR1", icon: "fa-layer-group" }
         ]
     }
 ];
