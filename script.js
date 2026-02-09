@@ -1,5 +1,19 @@
 // --- 1. DATABASE (Items List) ---
 const items = [
+         {
+        id: 8,  // Number badhate rahein (pichla 7 tha to ye 8)
+        title: "Angry Birds",
+        category: "world", // Options: 'addon', 'world', 'skin', 'texture', 'mashup'
+        image: "https://xforgeassets002.xboxlive.com/pf-namespace-b63a0803d3653643/203ff9c0-97e4-4c61-9518-54bf6c53208f/angrybirds_Thumbnail_0.jpg", // Photo ka link
+        description: "The Pigs are back to their old tricks, and it's up to you to stop them! Playing as Red, Chuck, Bomb, and other members of The Flock, your mission is to rescue your friends, save the eggs, and stop the pesky Pigs' grand plans. With each rescued bird, you'll unlock a new playable character with unique skills to help you pop more Pigs and topple more towers!",
+        links: [
+            // Agar Addon hai to bas ye line rakhein:
+            { type: "World", url: "https://linkpays.in/YsHu", icon: "fa-globe" },
+            { type: "Skin", url: "https://gofile.io/d/UQdYoa", icon: "fa-tshirt" }
+            // Agar World + Skin hai to niche wali line bhi use karein:
+            // { type: "Skin", url: "LINK_HERE", icon: "fa-tshirt" }
+        ]
+    },
         {
         id: 7,  // Number badhate rahein (pichla 6 tha to ye 7)
         title: "Bluey's House",
