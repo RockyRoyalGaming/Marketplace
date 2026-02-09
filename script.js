@@ -1,6 +1,20 @@
 // --- 1. DATABASE (Items List) ---
 const items = [
          {
+        id: 9,  // Number badhate rahein (pichla 9 tha to ye 10)
+        title: "Stranger Things",
+        category: "world", // Options: 'addon', 'world', 'skin', 'texture', 'mashup'
+        image: "https://postimg.cc/gallery/y1WyK6w", // Photo ka link
+        description: "*sniff, sniff* Do you smell waffles? It must be Netflix's Stranger Things DLC, just in time for the epic series finale! Join “The Party” and play as your favorite character, like Will, Dustin, Mike, or Eleven. characters' unique abilities will help you solve puzzles and vanquish foes. Hop on your bike and head to the Dressing Room for your free Hellfire Club T-shirt!",
+        links: [
+            // Agar Addon hai to bas ye line rakhein:
+            { type: "World", url: "https://linkpays.in/nXrWN8y", icon: "fa-globe" },
+            { type: "Skin", url: "https://www.mediafire.com/file/ok4rs6ns52z7hpn/Stranger_Things_%2528skin_pack%2529_RockyRoyalGaming.mcpack/file", icon: "fa-tshirt" }
+            // Agar World + Skin hai to niche wali line bhi use karein:
+            // { type: "Skin", url: "LINK_HERE", icon: "fa-tshirt" }
+        ]
+    },
+         {
         id: 8,  // Number badhate rahein (pichla 7 tha to ye 8)
         title: "Angry Birds",
         category: "world", // Options: 'addon', 'world', 'skin', 'texture', 'mashup'
