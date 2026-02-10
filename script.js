@@ -1,41 +1,37 @@
 // --- 1. DATABASE (Items List) ---
 const items = [
-        {
-        id: 102, // Hamesha naya aur unique number dein
+    // NAYA ITEM (Multiple Images Example)
+    {
+        id: 102, 
         title: "NAYA ITEM KA NAAM",
-        category: "world", // Options: 'addon', 'world', 'skin', 'texture', 'mashup'
-        
-        // --- MULTIPLE IMAGES SECTION ---
-        // Yahan apni saari photos ke links dalein (Comma lagana na bhulein)
+        category: "world",
+        // Multiple Images
         images: [
-            "https://link-to-image-1.jpg", // Pehli photo (Thumbnail banegi)
-            "https://link-to-image-2.jpg", // Dusri photo
-            "https://link-to-image-3.jpg"  // Tisri photo
+            "https://via.placeholder.com/400x250.png?text=Image+1", // Pehli Photo
+            "https://via.placeholder.com/400x250.png?text=Image+2", // Dusri Photo
+            "https://via.placeholder.com/400x250.png?text=Image+3"
         ],
-        
-        // Description (Enter dabakar nayi line likh sakte hain)
-        description: `Yahan description likhein.
+        description: `Ye ek naya item hai.
 • Feature 1
-• Feature 2`,
-        
+• Feature 2
+• Feature 3`,
         links: [
-            { type: "Download", url: "LINK_HERE", icon: "fa-download" }
+            { type: "Download", url: "#", icon: "fa-download" }
         ]
-    }, // <--- YE COMMA (,) MAT BHULNA
+    }, // <--- Comma lagana na bhulein
+
+    // PURANE ITEMS
     {
         id: 14,
         title: "Actions & Stuff 1.9.1",
         category: "texture",
+        // Single Image support
         image: "https://xforgeassets001.xboxlive.com/pf-namespace-b63a0803d3653643/bb31b676-ab14-4019-b302-8c0069ddd36b/actionsandstuff_Thumbnail_0.jpg",
-        /* YAHAN DEKHEIN: ( ` ) Backticks use kiye hain taaki list bana sakein */
-        description: `The Animation Pack You Didn't Know You Needed: Bring your world to life with new animations, particles, textures, and more!
-
-• Player Animations (1st & 3rd Person)
+        description: `The Animation Pack You Didn't Know You Needed!
+• Player Animations
 • New & Improved Mob Animations
 • 3D Item Models
 • Custom Armour
-• A Complete & Faithful Texture Overhaul
-• Compatible with Vanilla textures, or your own texture packs
 • Now with 100% more Vibrant Visuals`,
         links: [
             { type: "Texture", url: "https://devuploads.com/2y27j0ya5mb8", icon: "fa-image" },
@@ -47,7 +43,7 @@ const items = [
         title: "Fungus Infection Add-On",
         category: "addon",
         image: "https://i.imgur.com/DygmgaK.jpeg",
-        description: "The Fungus Infection Add-On can take over your Survival World! It Includes: 20+ Fungus Monsters, Biomes, and Items.",
+        description: "The Fungus Infection Add-On can take over your Survival World! Includes 20+ Fungus Monsters, Biomes, and Items.",
         links: [
             { type: "Addon", url: "https://devuploads.com/e85g5tuj06kw", icon: "fa-puzzle-piece" }
         ]
@@ -180,6 +176,11 @@ const items = [
 // --- 2. SETUP & DISPLAY ---
 const container = document.getElementById('itemsContainer');
 const modal = document.getElementById('itemModal');
+const readMoreBtn = document.getElementById('readMoreBtn');
+const descElement = document.getElementById('modalDesc');
+
+let currentImgList = [];
+let currentImgIdx = 0;
 
 function displayItems(data) {
     container.innerHTML = "";
@@ -193,8 +194,17 @@ function displayItems(data) {
         card.classList.add('card');
         card.onclick = () => openModal(item);
         
+        // --- SMART THUMBNAIL LOGIC ---
+        // Agar 'images' list hai to pehli photo lo, nahi to 'image' lo
+        let thumbUrl = "https://via.placeholder.com/400x250?text=No+Image";
+        if (item.images && item.images.length > 0) {
+            thumbUrl = item.images[0];
+        } else if (item.image) {
+            thumbUrl = item.image;
+        }
+
         card.innerHTML = `
-            <img src="${item.image}" alt="${item.title}" onerror="this.src='https://via.placeholder.com/400x250?text=No+Image'">
+            <img src="${thumbUrl}" alt="${item.title}" onerror="this.src='https://via.placeholder.com/400x250?text=No+Image'">
             <div class="card-info">
                 <div class="card-title">${item.title}</div>
                 <div class="card-cat"><i class="fas fa-tag"></i> ${item.category.toUpperCase()}</div>
@@ -244,50 +254,52 @@ window.addEventListener('click', function(e) {
     }
 });
 
-// --- 5. MODAL LOGIC (With Read More & Slider) ---
+// --- 5. MODAL LOGIC (Complete) ---
 const btnContainer = document.getElementById('downloadButtonsContainer');
-const readMoreBtn = document.getElementById('readMoreBtn');
-const descElement = document.getElementById('modalDesc');
 
 function openModal(item) {
-    // 1. Basic Details Set Karo
     document.getElementById('modalTitle').innerText = item.title;
     document.getElementById('modalTag').innerText = item.category.toUpperCase();
     
-    // Description Set Karo (New Lines ke sath)
-    descElement.innerHTML = item.description ? item.description.replace(/\n/g, '<br>') : "No description.";
+    // Description Logic
+    const descText = item.description ? item.description.replace(/\n/g, '<br>') : "No description.";
+    descElement.innerHTML = descText;
 
     // --- READ MORE LOGIC ---
-    // Pehle reset karein
-    descElement.classList.remove('expanded');
-    readMoreBtn.style.display = "none";
-    readMoreBtn.innerText = "Read more...";
+    if (readMoreBtn) { // Check if button exists in HTML to prevent crash
+        descElement.classList.remove('expanded');
+        readMoreBtn.style.display = "none";
+        readMoreBtn.innerText = "Read more...";
+        
+        // Timeout to allow browser to calculate height
+        setTimeout(() => {
+            if (descElement.scrollHeight > 85) {
+                readMoreBtn.style.display = "block";
+            }
+        }, 10);
+    }
 
-    // Check karein ki content lamba hai kya? (85px se jyada)
-    // Thoda timeout zaroori hai taaki browser height calculate kar sake
-    setTimeout(() => {
-        if (descElement.scrollHeight > 85) {
-            readMoreBtn.style.display = "block"; // Button dikhao
-        }
-    }, 10);
-
-    // 2. IMAGE SLIDER SETUP
+    // --- SLIDER LOGIC ---
     const imgElement = document.getElementById('modalImg');
+    
+    // Decide Image Source
     if (item.images && item.images.length > 0) {
         currentImgList = item.images;
     } else {
-        currentImgList = [item.image];
+        currentImgList = [item.image || "https://via.placeholder.com/400x250"];
     }
+    
     currentImgIdx = 0;
     updateModalImage();
 
-    // Slider Buttons Inject (Prev/Next)
+    // Reset Buttons
     const existingBtns = document.querySelectorAll('.slider-btn');
     existingBtns.forEach(btn => btn.remove());
 
+    // Add Buttons if Multiple Images
     if (currentImgList.length > 1) {
-        const sliderContainer = imgElement.parentElement; 
-        sliderContainer.style.position = 'relative'; 
+        const sliderContainer = imgElement.parentElement;
+        sliderContainer.style.position = 'relative';
 
         const prevBtn = document.createElement('button');
         prevBtn.className = 'slider-btn prev-btn';
@@ -307,10 +319,10 @@ function openModal(item) {
             const topPos = (imgElement.offsetHeight / 2) + "px";
             prevBtn.style.top = topPos;
             nextBtn.style.top = topPos;
-        }, 50); 
+        }, 50);
     }
 
-    // 3. GENERATE DOWNLOAD BUTTONS
+    // --- DOWNLOAD BUTTONS ---
     btnContainer.innerHTML = "";
     if (item.links && item.links.length > 0) {
         item.links.forEach(link => {
@@ -334,27 +346,42 @@ function openModal(item) {
     modal.style.display = "flex";
 }
 
-// --- NEW FUNCTION: Read More Toggle ---
+// --- HELPER FUNCTIONS ---
+function changeImage(direction) {
+    currentImgIdx += direction;
+    if (currentImgIdx >= currentImgList.length) currentImgIdx = 0;
+    if (currentImgIdx < 0) currentImgIdx = currentImgList.length - 1;
+    updateModalImage();
+}
+
+function updateModalImage() {
+    const imgElement = document.getElementById('modalImg');
+    imgElement.src = currentImgList[currentImgIdx];
+    imgElement.onerror = function() { this.src = 'https://via.placeholder.com/400x250?text=Error'; };
+}
+
 function toggleReadMore() {
     if (descElement.classList.contains('expanded')) {
-        // Agar khula hai to band karo
         descElement.classList.remove('expanded');
         readMoreBtn.innerText = "Read more...";
     } else {
-        // Agar band hai to kholo
         descElement.classList.add('expanded');
         readMoreBtn.innerText = "Read less";
     }
 }
 
+function closeModal() { modal.style.display = "none"; }
+window.onclick = function(e) { if (e.target == modal) closeModal(); }
 
 // --- 6. DISCORD REQUEST ---
 function focusRequestBar() {
     const input = document.getElementById('requestInput');
-    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    input.focus();
-    input.style.border = "1px solid #4caf50";
-    setTimeout(() => { input.style.border = "1px solid rgba(255,255,255,0.1)"; }, 2000);
+    if(input) {
+        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        input.focus();
+        input.style.border = "1px solid #4caf50";
+        setTimeout(() => { input.style.border = "1px solid rgba(255,255,255,0.1)"; }, 2000);
+    }
 }
 
 function sendRequest() {
@@ -363,7 +390,6 @@ function sendRequest() {
     if (url === "") { alert("Please paste a link first!"); return; }
     if (!url.includes("minecraft.net")) { alert("Only Minecraft Marketplace Links!"); return; }
     
-    // Webhook Logic
     const webhookURL = "https://discord.com/api/webhooks/1469778264607293562/slHI5zB96puMgK6Zu2aymdqCZs1pAxLuOiG7F9wYOqw6tnFH4-Scax74aC79kAkpgEF2";
     fetch(webhookURL, {
         method: "POST", headers: { "Content-Type": "application/json" },
