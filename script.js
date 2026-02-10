@@ -8,7 +8,7 @@ const items = [
         description: "The Animation Pack You Didn't Know You Needed: Bring your world to life with new animations, particles, textures, and more!",
         links: [
             // Agar Addon hai to bas ye line rakhein:
-            { type: "TexturePack", url: "https://devuploads.com/2y27j0ya5mb8", icon: "fa-image" }
+            { type: "Texture", url: "https://devuploads.com/2y27j0ya5mb8", icon: "fa-image" }
             { type: "Skin", url: "https://devuploads.com/m5ivdmhn4v2j", icon: "fa-tshirt" }
             // Agar World + Skin hai to niche wali line bhi use karein:
             // { type: "Skin", url: "LINK_HERE", icon: "fa-tshirt" }
