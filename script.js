@@ -1,5 +1,27 @@
 // --- 1. DATABASE (Items List) ---
 const items = [
+        {
+        id: 102, // Hamesha naya aur unique number dein
+        title: "NAYA ITEM KA NAAM",
+        category: "world", // Options: 'addon', 'world', 'skin', 'texture', 'mashup'
+        
+        // --- MULTIPLE IMAGES SECTION ---
+        // Yahan apni saari photos ke links dalein (Comma lagana na bhulein)
+        images: [
+            "https://link-to-image-1.jpg", // Pehli photo (Thumbnail banegi)
+            "https://link-to-image-2.jpg", // Dusri photo
+            "https://link-to-image-3.jpg"  // Tisri photo
+        ],
+        
+        // Description (Enter dabakar nayi line likh sakte hain)
+        description: `Yahan description likhein.
+• Feature 1
+• Feature 2`,
+        
+        links: [
+            { type: "Download", url: "LINK_HERE", icon: "fa-download" }
+        ]
+    }, // <--- YE COMMA (,) MAT BHULNA
     {
         id: 14,
         title: "Actions & Stuff 1.9.1",
