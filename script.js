@@ -5,9 +5,18 @@ const items = [
         title: "Actions & Stuff 1.9.1",
         category: "texture",
         image: "https://xforgeassets001.xboxlive.com/pf-namespace-b63a0803d3653643/bb31b676-ab14-4019-b302-8c0069ddd36b/actionsandstuff_Thumbnail_0.jpg",
-        description: "The Animation Pack You Didn't Know You Needed: Bring your world to life with new animations, particles, textures, and more!",
+        /* YAHAN DEKHEIN: ( ` ) Backticks use kiye hain taaki list bana sakein */
+        description: `The Animation Pack You Didn't Know You Needed: Bring your world to life with new animations, particles, textures, and more!
+
+• Player Animations (1st & 3rd Person)
+• New & Improved Mob Animations
+• 3D Item Models
+• Custom Armour
+• A Complete & Faithful Texture Overhaul
+• Compatible with Vanilla textures, or your own texture packs
+• Now with 100% more Vibrant Visuals`,
         links: [
-            { type: "Texture", url: "https://devuploads.com/2y27j0ya5mb8", icon: "fa-image" }, // <--- Yahan Comma lagaya hai
+            { type: "Texture", url: "https://devuploads.com/2y27j0ya5mb8", icon: "fa-image" },
             { type: "Skin", url: "https://devuploads.com/m5ivdmhn4v2j", icon: "fa-tshirt" }
         ]
     },
@@ -16,7 +25,7 @@ const items = [
         title: "Fungus Infection Add-On",
         category: "addon",
         image: "https://i.imgur.com/DygmgaK.jpeg",
-        description: "The Fungus Infection Add-On can take over your Survival World! Includes 20+ Fungus Monsters, Biomes, and Items.",
+        description: "The Fungus Infection Add-On can take over your Survival World! It Includes: 20+ Fungus Monsters, Biomes, and Items.",
         links: [
             { type: "Addon", url: "https://devuploads.com/e85g5tuj06kw", icon: "fa-puzzle-piece" }
         ]
@@ -213,12 +222,15 @@ window.addEventListener('click', function(e) {
     }
 });
 
-// --- 5. MODAL LOGIC (Buttons Fixed) ---
+// --- 5. MODAL LOGIC (New Lines & Lists Support) ---
 const btnContainer = document.getElementById('downloadButtonsContainer');
 
 function openModal(item) {
     document.getElementById('modalTitle').innerText = item.title;
-    document.getElementById('modalDesc').innerText = item.description;
+    
+    // FIX: ( \n ) ko HTML ke <br> me badal rahe hain
+    document.getElementById('modalDesc').innerHTML = item.description.replace(/\n/g, '<br>');
+    
     document.getElementById('modalImg').src = item.image;
     document.getElementById('modalTag').innerText = item.category.toUpperCase();
 
