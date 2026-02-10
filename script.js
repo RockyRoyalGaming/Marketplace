@@ -1,6 +1,34 @@
 // --- 1. DATABASE (Items List) ---
 const items = [
          {
+        id: 12,  // Number badhate rahein (pichla 11 tha to ye 12)
+        title: "PETS Add-On",
+        category: "addon", // Options: 'addon', 'world', 'skin', 'texture', 'mashup'
+        image: "https://i.imgur.com/VMRhvz0.jpeg", // Photo ka link
+        description: "Love brainrot Add-Ons? In this pack we add T.O.N.S of them as PETS on YOUR world! Craft 50+ brainrot pets that EVOLVE, BATTLE, and that you can RIDE! (- 96 Brainrot Pets! , - Use Add-Ons on YOUR worlds! , - Compatible with other Add-Ons)",
+        links: [
+            // Agar Addon hai to bas ye line rakhein:
+            { type: "Addon", url: "https://devuploads.com/u5qxftp31ryu", icon: "fa-puzzle-piece" }
+            
+            // Agar World + Skin hai to niche wali line bhi use karein:
+            // { type: "Skin", url: "LINK_HERE", icon: "fa-tshirt" }
+        ]
+    },
+  {
+        id: 13,  // Number badhate rahein (pichla 14 tha to ye 15)
+        title: "Fungus Infection Add-On",
+        category: "addon", // Options: 'addon', 'world', 'skin', 'texture', 'mashup'
+        image: "https://i.imgur.com/DygmgaK.jpeg", // Photo ka link
+        description: "The Fungus Infection Add-On can take over your Survival World! It Includes: (- 20+ Fungus Monsters with evolutions, - 3 Monster evolution stages, - The Fungus outbreak Biome that infect Vanilla blocks, - New infected Fungal Blocks, Plants, and Trees, - New Fungus Themed Armor Sets and Weapons and Items) Add-On’s make your world more fun!",
+        links: [
+            // Agar Addon hai to bas ye line rakhein:
+            { type: "Addon", url: "https://devuploads.com/e85g5tuj06kw", icon: "fa-puzzle-piece" }
+            
+            // Agar World + Skin hai to niche wali line bhi use karein:
+            // { type: "Skin", url: "LINK_HERE", icon: "fa-tshirt" }
+        ]
+    },
+         {
         id: 11,  // Number badhate rahein (pichla 11 tha to ye 12)
         title: "Health Bars 1.1 Add-On",
         category: "addon", // Options: 'addon', 'world', 'skin', 'texture', 'mashup'
