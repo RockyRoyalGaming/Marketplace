@@ -1,20 +1,6 @@
 // --- 1. DATABASE (Items List) ---
 const items = [
          {
-        id: 14,  // Number badhate rahein (pichla 14 tha to ye 15)
-        title: "Actions & Stuff 1.9.1",
-        category: "texture", // Options: 'addon', 'world', 'skin', 'texture', 'mashup'
-        image: "https://xforgeassets001.xboxlive.com/pf-namespace-b63a0803d3653643/bb31b676-ab14-4019-b302-8c0069ddd36b/actionsandstuff_Thumbnail_0.jpg", // Photo ka link
-        description: "The Animation Pack You Didn't Know You Needed: Bring your world to life with new animations, particles, textures, and more!",
-        links: [
-            // Agar Addon hai to bas ye line rakhein:
-            { type: "Texture", url: "https://devuploads.com/2y27j0ya5mb8", icon: "fa-image" }
-            { type: "Skin", url: "https://devuploads.com/m5ivdmhn4v2j", icon: "fa-tshirt" }
-            // Agar World + Skin hai to niche wali line bhi use karein:
-            // { type: "Skin", url: "LINK_HERE", icon: "fa-tshirt" }
-        ]
-    },
-         {
         id: 13,  // Number badhate rahein (pichla 14 tha to ye 15)
         title: "Fungus Infection Add-On",
         category: "addon", // Options: 'addon', 'world', 'skin', 'texture', 'mashup'
