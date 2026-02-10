@@ -173,3 +173,32 @@ footer { text-align: center; margin-top: 40px; padding: 20px; color: #555; font-
 .slider-btn:hover { background: rgba(76, 175, 80, 0.8); } /* Green on hover */
 .prev-btn { left: 10px; }
 .next-btn { right: 10px; }
+
+/* --- READ MORE FEATURE --- */
+#modalDesc {
+    /* Default state: Sirf thoda sa dikhega */
+    max-height: 80px; /* Lagbhag 3-4 lines */
+    overflow: hidden; /* Baaki content chupa rahega */
+    transition: max-height 0.4s ease; /* Smooth animation */
+    position: relative;
+}
+
+/* Jab button dabayenge tab ye class lagegi */
+#modalDesc.expanded {
+    max-height: 1000px; /* Pura content dikhane ke liye kaafi height */
+}
+
+/* Button Design */
+#readMoreBtn {
+    background: none;
+    border: none;
+    color: #4caf50; /* Green color */
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 0;
+    margin-bottom: 15px;
+    margin-top: 5px;
+    display: none; /* JS decide karega ki dikhana hai ya nahi */
+}
+#readMoreBtn:hover { text-decoration: underline; }
