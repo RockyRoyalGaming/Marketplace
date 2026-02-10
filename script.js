@@ -222,30 +222,80 @@ window.addEventListener('click', function(e) {
     }
 });
 
-// --- 5. MODAL LOGIC (New Lines & Lists Support) ---
+// --- 5. MODAL LOGIC (With Read More & Slider) ---
 const btnContainer = document.getElementById('downloadButtonsContainer');
+const readMoreBtn = document.getElementById('readMoreBtn');
+const descElement = document.getElementById('modalDesc');
 
 function openModal(item) {
+    // 1. Basic Details Set Karo
     document.getElementById('modalTitle').innerText = item.title;
-    
-    // FIX: ( \n ) ko HTML ke <br> me badal rahe hain
-    document.getElementById('modalDesc').innerHTML = item.description.replace(/\n/g, '<br>');
-    
-    document.getElementById('modalImg').src = item.image;
     document.getElementById('modalTag').innerText = item.category.toUpperCase();
+    
+    // Description Set Karo (New Lines ke sath)
+    descElement.innerHTML = item.description ? item.description.replace(/\n/g, '<br>') : "No description.";
 
-    // Clear old buttons
+    // --- READ MORE LOGIC ---
+    // Pehle reset karein
+    descElement.classList.remove('expanded');
+    readMoreBtn.style.display = "none";
+    readMoreBtn.innerText = "Read more...";
+
+    // Check karein ki content lamba hai kya? (85px se jyada)
+    // Thoda timeout zaroori hai taaki browser height calculate kar sake
+    setTimeout(() => {
+        if (descElement.scrollHeight > 85) {
+            readMoreBtn.style.display = "block"; // Button dikhao
+        }
+    }, 10);
+
+    // 2. IMAGE SLIDER SETUP
+    const imgElement = document.getElementById('modalImg');
+    if (item.images && item.images.length > 0) {
+        currentImgList = item.images;
+    } else {
+        currentImgList = [item.image];
+    }
+    currentImgIdx = 0;
+    updateModalImage();
+
+    // Slider Buttons Inject (Prev/Next)
+    const existingBtns = document.querySelectorAll('.slider-btn');
+    existingBtns.forEach(btn => btn.remove());
+
+    if (currentImgList.length > 1) {
+        const sliderContainer = imgElement.parentElement; 
+        sliderContainer.style.position = 'relative'; 
+
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'slider-btn prev-btn';
+        prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+        prevBtn.onclick = (e) => { e.stopPropagation(); changeImage(-1); };
+
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'slider-btn next-btn';
+        nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+        nextBtn.onclick = (e) => { e.stopPropagation(); changeImage(1); };
+
+        imgElement.insertAdjacentElement('afterend', prevBtn);
+        imgElement.insertAdjacentElement('afterend', nextBtn);
+        
+        // Center buttons vertically
+        setTimeout(() => {
+            const topPos = (imgElement.offsetHeight / 2) + "px";
+            prevBtn.style.top = topPos;
+            nextBtn.style.top = topPos;
+        }, 50); 
+    }
+
+    // 3. GENERATE DOWNLOAD BUTTONS
     btnContainer.innerHTML = "";
-
-    // Generate Buttons
     if (item.links && item.links.length > 0) {
         item.links.forEach(link => {
             const a = document.createElement('a');
             a.className = "dwn-option-btn"; 
             a.href = link.url;
             a.target = "_blank";
-
-            // HTML Structure: [Icon + Type Name] ........... [Arrow Icon]
             a.innerHTML = `
                 <div class="btn-left">
                     <i class="fas ${link.icon || 'fa-download'}"></i>
@@ -261,8 +311,20 @@ function openModal(item) {
 
     modal.style.display = "flex";
 }
-function closeModal() { modal.style.display = "none"; }
-window.onclick = function(e) { if (e.target == modal) closeModal(); }
+
+// --- NEW FUNCTION: Read More Toggle ---
+function toggleReadMore() {
+    if (descElement.classList.contains('expanded')) {
+        // Agar khula hai to band karo
+        descElement.classList.remove('expanded');
+        readMoreBtn.innerText = "Read more...";
+    } else {
+        // Agar band hai to kholo
+        descElement.classList.add('expanded');
+        readMoreBtn.innerText = "Read less";
+    }
+}
+
 
 // --- 6. DISCORD REQUEST ---
 function focusRequestBar() {
