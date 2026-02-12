@@ -1,5 +1,41 @@
 // --- 1. DATABASE (Items List) ---
 const items = [
+        {
+        id: 20, // Hamesha naya number dein (Pichle wale se alag)
+        title: "200 Mobs",
+        category: "world", // Options: 'addon', 'world', 'skin', 'texture', 'mashup'
+        
+        // --- 1. CAROUSEL IMAGES (Jitni chahein utni daalein) ---
+        // Note: Pehli image hi thumbnail banegi.
+        images: [
+            "https://github.com/RockyRoyalGaming/images/raw/refs/heads/main/1.png", 
+            "https://github.com/RockyRoyalGaming/images/raw/refs/heads/main/2.png",
+"https://github.com/RockyRoyalGaming/images/raw/refs/heads/main/3.png", "https://github.com/RockyRoyalGaming/images/raw/refs/heads/main/4.png", "https://github.com/RockyRoyalGaming/images/raw/refs/heads/main/5.png",
+            "https://github.com/RockyRoyalGaming/images/raw/refs/heads/main/6.png" // Last wale me comma (,) nahi lagana
+        ],
+
+        // --- 2. PANORAMA IMAGE (Optional) ---
+        // Agar panorama nahi hai to is line ko hata dein ya khali chhod dein ("")
+        panorama: "https://github.com/RockyRoyalGaming/images/raw/refs/heads/main/0panorama.png",
+
+        // --- 3. DESCRIPTION ---
+        description: `Encounter Dinosaurs, Zombies, Dragons, Tigers & Sharks in a vast world with hundreds of Mobs! The deserts, oceans and jungles are all brimming with adorable or dangerous life that's all yours to explore!
+
++ 53 Sea life Mobs
++ 40 Zoo animals
++ 33 Dinosaurs!
++ 29 Dragons!
++ 25 Zombies and Skeletons!
++ 11 New Ultra Mobs!
++ 15+ Boss Mobs!`,
+
+        // --- 4. DOWNLOAD LINKS ---
+        links: [
+            { type: "World", url: "https://linkpays.in/MsyFq8", icon: "fa-globe" },
+            // Agar dusra button chahiye:
+            // { type: "Skin", url: "LINK_HERE", icon: "fa-tshirt" }
+        ]
+    }, // <--- YE COMMA (,) BAHUT ZAROORI HAI!
     // --- ITEM 103: PANORAMA EXAMPLE ---
     {
         id: 103,
