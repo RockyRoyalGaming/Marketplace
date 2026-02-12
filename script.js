@@ -355,9 +355,6 @@ const descElement = document.getElementById('modalDesc');
 const panoramaSection = document.getElementById('panoramaSection');
 const panoramaImg = document.getElementById('modalPanoramaImg');
 
-let currentImgList = [];
-let currentImgIdx = 0;
-
 function displayItems(data) {
     container.innerHTML = "";
     if (data.length === 0) {
@@ -370,7 +367,6 @@ function displayItems(data) {
         card.classList.add('card');
         card.onclick = () => openModal(item);
         
-        // Smart Thumbnail
         let thumbUrl = "https://via.placeholder.com/400x250?text=No+Image";
         if (item.images && item.images.length > 0) thumbUrl = item.images[0];
         else if (item.image) thumbUrl = item.image;
@@ -390,27 +386,20 @@ displayItems(items);
 // --- 3. SEARCH & FILTERS ---
 function searchItems() {
     const query = document.getElementById('searchInput').value.toLowerCase();
-    const filtered = items.filter(item => 
-        item.title.toLowerCase().includes(query) || item.category.toLowerCase().includes(query)
-    );
+    const filtered = items.filter(item => item.title.toLowerCase().includes(query) || item.category.toLowerCase().includes(query));
     displayItems(filtered);
 }
-
 function filterItems(category) {
     document.querySelectorAll('.filters button').forEach(btn => btn.classList.remove('active'));
     const activeBtn = document.querySelector(`.filters button[onclick="filterItems('${category}')"]`);
     if(activeBtn) activeBtn.classList.add('active');
-
     if (category === 'all') displayItems(items);
     else displayItems(items.filter(item => item.category === category));
 }
-
-// --- 4. SORT MENU ---
 function toggleSortMenu() {
     const menu = document.getElementById('sortMenu');
     menu.style.display = (menu.style.display === "block") ? "none" : "block";
 }
-
 function sortContent(type) {
     let sortedItems = [...items];
     if (type === 'recent') sortedItems.sort((a, b) => b.id - a.id);
@@ -419,25 +408,24 @@ function sortContent(type) {
     displayItems(sortedItems);
     document.getElementById('sortMenu').style.display = "none";
 }
-
 window.addEventListener('click', function(e) {
     if (!e.target.closest('.sort-dropdown') && !e.target.closest('button[title="Filters"]')) {
         document.getElementById('sortMenu').style.display = 'none';
     }
 });
 
-// --- 5. MODAL LOGIC (FIXED: Vertical Buttons & Panorama Logic) ---
+// --- 5. MODAL LOGIC (SWIPE CAROUSEL + DOTS) ---
 const btnContainer = document.getElementById('downloadButtonsContainer');
+const track = document.getElementById('carouselTrack');
+const dotsContainer = document.getElementById('carouselDots');
 
 function openModal(item) {
     document.getElementById('modalTitle').innerText = item.title;
     document.getElementById('modalTag').innerText = item.category.toUpperCase();
     
-    // Description Logic
+    // Description
     const descText = item.description ? item.description.replace(/\n/g, '<br>') : "No description.";
     descElement.innerHTML = descText;
-
-    // Read More
     if (readMoreBtn) {
         descElement.classList.remove('expanded');
         readMoreBtn.style.display = "none";
@@ -447,37 +435,48 @@ function openModal(item) {
         }, 10);
     }
 
-    // --- SLIDER LOGIC ---
-    const imgElement = document.getElementById('modalImg');
-    if (item.images && item.images.length > 0) currentImgList = item.images;
-    else currentImgList = [item.image || "https://via.placeholder.com/400x250"];
-    
-    currentImgIdx = 0;
-    updateModalImage();
+    // --- CAROUSEL LOGIC START ---
+    if (track) {
+        track.innerHTML = ""; // Clear old images
+        if(dotsContainer) dotsContainer.innerHTML = ""; // Clear old dots
+        
+        let imagesList = [];
+        if (item.images && item.images.length > 0) imagesList = item.images;
+        else imagesList = [item.image || "https://via.placeholder.com/400x250"];
 
-    // Setup Slider Buttons (Modern Side Bars)
-    const existingBtns = document.querySelectorAll('.slider-btn');
-    existingBtns.forEach(btn => btn.remove());
+        // 1. Inject Images
+        imagesList.forEach((imgUrl, index) => {
+            const img = document.createElement('img');
+            img.src = imgUrl;
+            img.classList.add('carousel-img'); // CSS class se styling milegi
+            track.appendChild(img);
 
-    if (currentImgList.length > 1) {
-        // We inject these into the slider container defined in HTML now
-        const sliderContainer = document.getElementById('sliderContainer');
-        
-        const prevBtn = document.createElement('button');
-        prevBtn.className = 'slider-btn prev-btn';
-        prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
-        prevBtn.onclick = (e) => { e.stopPropagation(); changeImage(-1); };
-        
-        const nextBtn = document.createElement('button');
-        nextBtn.className = 'slider-btn next-btn';
-        nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
-        nextBtn.onclick = (e) => { e.stopPropagation(); changeImage(1); };
-        
-        sliderContainer.appendChild(prevBtn);
-        sliderContainer.appendChild(nextBtn);
+            // 2. Inject Dots (Sirf tab agar 1 se jyada image ho)
+            if (imagesList.length > 1 && dotsContainer) {
+                const dot = document.createElement('div');
+                dot.classList.add('dot');
+                if (index === 0) dot.classList.add('active'); // Pehla dot active
+                dotsContainer.appendChild(dot);
+            }
+        });
+
+        // 3. Scroll Listener (Dots update karne ke liye)
+        track.onscroll = () => {
+            if (imagesList.length <= 1) return;
+            const scrollPosition = track.scrollLeft;
+            const width = track.offsetWidth;
+            // Calculate current index based on scroll position
+            const index = Math.round(scrollPosition / width); 
+            
+            // Update Dots
+            const dots = document.querySelectorAll('.dot');
+            dots.forEach(d => d.classList.remove('active'));
+            if(dots[index]) dots[index].classList.add('active');
+        };
     }
+    // --- CAROUSEL LOGIC END ---
 
-    // --- DOWNLOAD BUTTONS (BACK TO VERTICAL STYLE) ---
+    // Download Buttons (Wahi purana list style)
     btnContainer.innerHTML = "";
     if (item.links && item.links.length > 0) {
         item.links.forEach(link => {
@@ -485,8 +484,6 @@ function openModal(item) {
             a.className = "dwn-option-btn"; 
             a.href = link.url;
             a.target = "_blank";
-            
-            // OLD STYLE HTML (Arrow Right)
             a.innerHTML = `
                 <div class="btn-left">
                     <i class="fas ${link.icon || 'fa-download'}"></i>
@@ -500,7 +497,7 @@ function openModal(item) {
         btnContainer.innerHTML = "<p style='color:#666; font-size:0.9rem;'>No links.</p>";
     }
 
-    // --- PANORAMA LOGIC ---
+    // Panorama
     if (item.panorama && panoramaSection) {
         panoramaImg.src = item.panorama;
         panoramaSection.style.display = "block"; 
@@ -513,18 +510,12 @@ function openModal(item) {
     modal.style.display = "flex";
 }
 
-// --- HELPER FUNCTIONS ---
-function changeImage(direction) {
-    currentImgIdx += direction;
-    if (currentImgIdx >= currentImgList.length) currentImgIdx = 0;
-    if (currentImgIdx < 0) currentImgIdx = currentImgList.length - 1;
-    updateModalImage();
-}
-
-function updateModalImage() {
-    const imgElement = document.getElementById('modalImg');
-    imgElement.src = currentImgList[currentImgIdx];
-    imgElement.onerror = function() { this.src = 'https://via.placeholder.com/400x250?text=Error'; };
+// Arrow Buttons function (Desktop ke liye)
+function scrollCarousel(direction) {
+    if(track) {
+        const width = track.offsetWidth;
+        track.scrollBy({ left: width * direction, behavior: 'smooth' });
+    }
 }
 
 function toggleReadMore() {
@@ -536,21 +527,11 @@ function toggleReadMore() {
         readMoreBtn.innerText = "Read less";
     }
 }
-
 function closeModal() { modal.style.display = "none"; }
 window.onclick = function(e) { if (e.target == modal) closeModal(); }
 
-// --- 6. DISCORD REQUEST ---
-function focusRequestBar() {
-    const input = document.getElementById('requestInput');
-    if(input) {
-        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        input.focus();
-        input.style.border = "1px solid #4caf50";
-        setTimeout(() => { input.style.border = "1px solid rgba(255,255,255,0.1)"; }, 2000);
-    }
-}
-
+// Focus & Send Request
+function focusRequestBar() { document.getElementById('requestInput')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
 function sendRequest() {
     const input = document.getElementById('requestInput');
     const url = input.value.trim();
@@ -560,19 +541,11 @@ function sendRequest() {
     const webhookURL = "https://discord.com/api/webhooks/1469778264607293562/slHI5zB96puMgK6Zu2aymdqCZs1pAxLuOiG7F9wYOqw6tnFH4-Scax74aC79kAkpgEF2";
     fetch(webhookURL, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            embeds: [{
-                title: "🚀 New Request", description: "Link:", 
-                fields: [{ name: "URL", value: url }], color: 5763719
-            }]
-        })
-    }).then(res => {
-        if(res.ok) { alert("Sent!"); input.value = ""; }
-        else alert("Error.");
-    });
+        body: JSON.stringify({ embeds: [{ title: "🚀 New Request", description: "Link:", fields: [{ name: "URL", value: url }], color: 5763719 }] })
+    }).then(res => { if(res.ok) { alert("Sent!"); input.value = ""; } else alert("Error."); });
 }
 
-// --- 7. PREMIUM STARFIELD (Canvas Animation) ---
+// Starfield
 const canvas = document.getElementById('starfield');
 if (canvas) {
     const ctx = canvas.getContext('2d');
