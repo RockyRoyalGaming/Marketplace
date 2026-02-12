@@ -63,7 +63,10 @@
     <div id="itemModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal()">&times;</span>
-            <img id="modalImg" src="" alt="">
+            
+            <div class="slider-container" id="sliderContainer">
+                <img id="modalImg" src="" alt="">
+                </div>
             
             <div class="modal-header">
                 <h2 id="modalTitle">Title</h2>
@@ -74,28 +77,26 @@
             <button id="readMoreBtn" onclick="toggleReadMore()">Read more...</button>
 
             <div id="downloadButtonsContainer" class="buttons-container">
-                <div id="panoramaSection" class="panorama-section" style="display: none;">
-                <span class="panorama-label"><i class="fas fa-vr-cardboard"></i> World Panorama View</span>
+                </div>
+
+            <div id="panoramaSection" class="panorama-section" style="display: none;">
+                <span class="panorama-label"><i class="fas fa-vr-cardboard"></i> World Panorama View (Scroll)</span>
                 <div class="panorama-container">
                    <img id="modalPanoramaImg" class="panorama-img" src="" alt="World Panorama">
                 </div>
             </div>
 
-</div>
-        </div>
-                </div>
         </div>
     </div>
-
     <footer>
         <p>&copy; 2026 Strike Mafia. All rights reserved.</p>
     </footer>
 
     <script src="script.js"></script>
     <script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js');
-  }
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+      }
     </script>
 </body>
 </html>
