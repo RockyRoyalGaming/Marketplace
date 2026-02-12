@@ -62,20 +62,17 @@
 
     <div id="itemModal" class="modal">
         <div class="modal-content">
-                      <div class="carousel-container">
-                <div class="carousel-track" id="carouselTrack">
-                    </div>
+            
+            <span class="close" onclick="closeModal()">&times;</span>
+
+            <div class="carousel-container">
+                <div class="carousel-track" id="carouselTrack"></div>
                 
-                <div class="carousel-dots" id="carouselDots">
-                    </div>
+                <div class="carousel-dots" id="carouselDots"></div>
                 
                 <button class="nav-btn prev" onclick="scrollCarousel(-1)">&#10094;</button>
                 <button class="nav-btn next" onclick="scrollCarousel(1)">&#10095;</button>
-                        </div>
-            <span class="close" onclick="closeModal()">&times;</span>
-            
-            <div class="slider-container" id="sliderContainer">
-                </div>
+            </div>
             
             <div class="modal-header">
                 <h2 id="modalTitle">Title</h2>
@@ -97,12 +94,14 @@
 
         </div>
     </div>
+
     <footer>
         <p>&copy; 2026 Strike Mafia. All rights reserved.</p>
     </footer>
 
     <script src="script.js"></script>
     <script>
+      // Service Worker Registration for PWA
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js');
       }
