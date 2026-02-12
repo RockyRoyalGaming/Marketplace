@@ -6,12 +6,14 @@ const items = [
         title: "Epic Cyberpunk City",
         category: "world",
         images: [
-            "https://i.imgur.com/8P6q7kH.jpeg", // Main Thumbnail
+            "https://raw.githubusercontent.com/RockyRoyalGaming/Marketplace/refs/heads/Image3cuttrope/1.png", // Main Thumbnail
         ],
         // NEW FIELD: Panorama Image Link (Bahut chaudi image honi chahiye)
-        panorama: "https://i.imgur.com/L1fL5lQ.jpeg", 
+        panorama: "https://raw.githubusercontent.com/RockyRoyalGaming/Marketplace/refs/heads/Image3cuttrope/panorama0.png", 
 
-        description: "Explore a massive futuristic city with neon lights and flying cars. Features a full panorama view!",
+        description: 'Explore a massive futuristic city with neon lights and flying cars. Features a full panorama view!
+              1
+              2',
         links: [
             { type: "Download World", url: "#", icon: "fa-globe" },
             { type: "Cyber Skin", url: "#", icon: "fa-tshirt" }
