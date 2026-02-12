@@ -1,5 +1,42 @@
 // --- 1. DATABASE (Items List) ---
 const items = [
+            {
+        id: 21, // Hamesha naya number dein (Pichle wale se alag)
+        title: "Airplanes Add-On 2.0",
+        category: "addon", // Options: 'addon', 'world', 'skin', 'texture', 'mashup'
+        
+        // --- 1. CAROUSEL IMAGES (Jitni chahein utni daalein) ---
+        // Note: Pehli image hi thumbnail banegi.
+        images: [
+            "https://github.com/RockyRoyalGaming/images/raw/refs/heads/Plane/1.png",            "https://github.com/RockyRoyalGaming/images/raw/refs/heads/Plane/2.png",
+"https://github.com/RockyRoyalGaming/images/raw/refs/heads/Plane/3.png", "https://github.com/RockyRoyalGaming/images/raw/refs/heads/Plane/4.png", "https://github.com/RockyRoyalGaming/images/raw/refs/heads/Plane/5.png",       "https://github.com/RockyRoyalGaming/images/raw/refs/heads/Plane/6.png", "https://github.com/RockyRoyalGaming/images/raw/refs/heads/Plane/7.png",       "https://github.com/RockyRoyalGaming/images/raw/refs/heads/Plane/8.png", "https://github.com/RockyRoyalGaming/images/raw/refs/heads/Plane/9.png",       "https://github.com/RockyRoyalGaming/images/raw/refs/heads/Plane/10.png", "https://github.com/RockyRoyalGaming/images/raw/refs/heads/Plane/11.png" // Last wale me comma (,) nahi lagana
+        ],
+
+        // --- 2. PANORAMA IMAGE (Optional) ---
+        // Agar panorama nahi hai to is line ko hata dein ya khali chhod dein ("")
+        panorama: "https://github.com/RockyRoyalGaming/images/raw/refs/heads/Plane/0panorama.png",
+
+        // --- 3. DESCRIPTION ---
+        description: `take off with the Airplanes Add-On!
+
++ 21 Planes & 18 additional Vehicles
++ Fully-Fledged Factory Machinery
++ Realistic Flight Mechanics
++ Easy Customization & full color spectrum choices
+
+♻️Changelog:
+Version: 1.1.10 Hover Update
+- Added 9 new hovering & flying vehicles with full customization
+- Added a workable tractor beam to the new UFO
+- Added new "Sewing Machine" to make balloon cloth`,
+
+        // --- 4. DOWNLOAD LINKS ---
+        links: [
+            { type: "Addon", url: "https://linkpays.in/Y6L2LP4X", icon: "fa-puzzle-piece" },
+            // Agar dusra button chahiye:
+            // { type: "Skin", url: "LINK_HERE", icon: "fa-tshirt" }
+        ]
+    }, // <--- YE COMMA (,) BAHUT ZAROORI HAI!
         {
         id: 20, // Hamesha naya number dein (Pichle wale se alag)
         title: "200 Mobs",
