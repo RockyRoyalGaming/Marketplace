@@ -1,5 +1,45 @@
 // --- 1. DATABASE (Items List) ---
 const items = [
+                {
+        id: 21, // Hamesha naya number dein (Pichle wale se alag)
+        title: "RealismCraft 2.3",
+        category: "mashup", // Options: 'addon', 'world', 'skin', 'texture', 'mashup'
+        
+        // --- 1. CAROUSEL IMAGES (Jitni chahein utni daalein) ---
+        // Note: Pehli image hi thumbnail banegi.
+        images: [
+            "https://github.com/RockyRoyalGaming/images/raw/refs/heads/RC/1.png",            "https://github.com/RockyRoyalGaming/images/raw/refs/heads/RC/2.png",
+"https://github.com/RockyRoyalGaming/images/raw/refs/heads/RC/3.png", "https://github.com/RockyRoyalGaming/images/raw/refs/heads/RC/4.png", "https://github.com/RockyRoyalGaming/images/raw/refs/heads/RC/5.png",       "https://github.com/RockyRoyalGaming/images/raw/refs/heads/RC/6.png", "https://github.com/RockyRoyalGaming/images/raw/refs/heads/RC/7.png",       "https://github.com/RockyRoyalGaming/images/raw/refs/heads/RC/8.png", "https://github.com/RockyRoyalGaming/images/raw/refs/heads/RC/9.png", "https://github.com/RockyRoyalGaming/images/raw/refs/heads/RC/10.png" // Last wale me comma (,) nahi lagana
+        ],
+
+        // --- 2. PANORAMA IMAGE (Optional) ---
+        // Agar panorama nahi hai to is line ko hata dein ya khali chhod dein ("")
+        panorama: "https://github.com/RockyRoyalGaming/images/raw/refs/heads/RC/0panorama.png",
+
+        // --- 3. DESCRIPTION ---
+        description: `Experience a new game with Realism Craft: Custom vibrant visuals, world-gen, new mobs, items & blocks.
+
++ Custom biomes & structures
++ Custom animations & sounds
++ Vibrant Visuals, VFX, dynamic lights & better sky
++ New boss, companions, animals & monsters
++ New ores, tools, weapons & armor
++ New utility, storage & decorative blocks
+
+♻️Changelog:
+Update 2.3: Mounts of Mayhem
++ Added sub-packs to disable 3D tools, animated foliage, or both
++ Added support for Mounts of Mayhem game drop
++ Added the Viridium Spear
++ Many more improvements and fixes…`,
+
+        // --- 4. DOWNLOAD LINKS ---
+        links: [
+            { type: "Mashup", url: "https://linkpays.in/Bsss", icon: "fa-layer-group" },
+            // Agar dusra button chahiye:
+            // { type: "Skin", url: "LINK_HERE", icon: "fa-tshirt" }
+        ]
+    }, // <--- YE COMMA (,) BAHUT ZAROORI HAI!
             {
         id: 21, // Hamesha naya number dein (Pichle wale se alag)
         title: "Airplanes Add-On 2.0",
