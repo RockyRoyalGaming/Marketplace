@@ -124,23 +124,75 @@ input {
 .btn-left { display: flex; align-items: center; gap: 12px; }
 .btn-left i { color: #888; width: 20px; text-align: center; }
 
-/* --- NEW SLIDER ARROWS (Modern Side Bars) --- */
-.slider-container { position: relative; width: 100%; border-radius: 16px; overflow: hidden; margin-bottom: 15px; }
-.slider-btn {
-    position: absolute; top: 0; bottom: 0;
-    width: 45px;
-    background: rgba(0,0,0,0.3);
-    color: white; border: none; cursor: pointer;
-    font-size: 1.2rem;
-    display: flex; align-items: center; justify-content: center;
-    opacity: 0; transition: all 0.3s;
-    backdrop-filter: blur(4px);
+/* --- NEW CAROUSEL (Swipe + Dots) --- */
+.carousel-container {
+    position: relative;
+    width: 100%;
+    height: 220px; /* Slider ki height */
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    background: #000;
 }
-.slider-container:hover .slider-btn { opacity: 1; }
-.slider-btn:hover { background: rgba(76, 175, 80, 0.6); }
 
-.prev-btn { left: 0; }
-.next-btn { right: 0; }
+/* Track (Jisme saari photos hongi) */
+.carousel-track {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    overflow-x: auto; /* Scroll allow karein */
+    scroll-behavior: smooth;
+    scroll-snap-type: x mandatory; /* Snap effect */
+    /* Scrollbar chupane ke liye */
+    scrollbar-width: none; 
+}
+.carousel-track::-webkit-scrollbar { display: none; }
+
+/* Image Style */
+.carousel-img {
+    flex: 0 0 100%; /* Har photo puri choudai legi */
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Photo fit ho jayegi */
+    scroll-snap-align: center; /* Center me chipkegi */
+}
+
+/* DOTS (Niche wale bindu) */
+.carousel-dots {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    z-index: 10;
+    background: rgba(0,0,0,0.3); /* Halka background taaki dikhe */
+    padding: 5px 10px;
+    border-radius: 20px;
+}
+.dot {
+    width: 8px;
+    height: 8px;
+    background: rgba(255,255,255,0.4);
+    border-radius: 50%;
+    transition: all 0.3s;
+}
+.dot.active {
+    background: #fff;
+    transform: scale(1.3);
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+
+/* Navigation Arrows (Transparent) */
+.nav-btn {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    background: transparent; color: rgba(255,255,255,0.6);
+    border: none; font-size: 2rem; cursor: pointer; padding: 10px;
+    z-index: 5;
+}
+.nav-btn:hover { color: white; }
+.prev { left: 0; }
+.next { right: 0; }
 
 /* --- READ MORE --- */
 #modalDesc { max-height: 80px; overflow: hidden; transition: max-height 0.4s ease; position: relative; }
