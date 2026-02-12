@@ -128,11 +128,13 @@ input {
 .carousel-container {
     position: relative;
     width: 100%;
-    height: 220px; /* Slider ki height */
+    /* height: 230px; <-- HATA DIYA */
+    aspect-ratio: 16 / 9; /* <-- NAYA: Ye hai YouTube video ka size */
     border-radius: 16px;
     overflow: hidden;
     margin-bottom: 15px;
-    background: #000;
+    background: #000; /* Agar image load hone me time lage to kala dikhe */
+    border: 1px solid rgba(255,255,255,0.05);
 }
 
 /* Track (Jisme saari photos hongi) */
@@ -154,8 +156,7 @@ input {
     flex: 0 0 100%;
     width: 100%;
     height: 100%;
-    object-fit: contain; /* <--- Ab puri photo dikhegi */
-    background: #000;    /* Khali jagah par kala rang rahega */
+    object-fit: cover; /* <-- Vapis 'cover' kar diya, ab ye 16:9 box ko pura bharega */
     scroll-snap-align: center;
 }
 
