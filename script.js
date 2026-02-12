@@ -1,5 +1,22 @@
 // --- 1. DATABASE (Items List) ---
 const items = [
+      // --- NEW EXAMPLE WITH PANORAMA ---
+    {
+        id: 103,
+        title: "Epic Cyberpunk City",
+        category: "world",
+        images: [
+            "https://i.imgur.com/8P6q7kH.jpeg", // Main Thumbnail
+        ],
+        // NEW FIELD: Panorama Image Link (Bahut chaudi image honi chahiye)
+        panorama: "https://i.imgur.com/L1fL5lQ.jpeg", 
+
+        description: "Explore a massive futuristic city with neon lights and flying cars. Features a full panorama view!",
+        links: [
+            { type: "Download World", url: "#", icon: "fa-globe" },
+            { type: "Cyber Skin", url: "#", icon: "fa-tshirt" }
+        ]
+    },
       {
         id: 19, 
         title: "Cut the Rope",
