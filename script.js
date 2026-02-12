@@ -1,5 +1,79 @@
 // --- 1. DATABASE (Items List) ---
 const items = [
+            {
+        id: 17, 
+        title: "WITHER APOCALYPSE 1.1",
+        category: "addon",
+        // Multiple Images
+        images: [
+            "https://raw.githubusercontent.com/RockyRoyalGaming/Marketplace/9bfdbb406bbd71a4a6b4ab0db2dea5f7e2486ad4/image_13%20(13).jpg", // Pehli Photo
+            "https://i.imgur.com/VJCknTb.jpeg",
+            "https://i.imgur.com/oiL5S4q.jpeg",
+            "https://i.imgur.com/8IiPZlU.jpeg",
+            "https://i.imgur.com/0JUVOxa.jpeg",
+            "https://i.imgur.com/3RppNki.jpeg",
+            "https://i.imgur.com/rwejOy2.jpeg", 
+            "https://i.imgur.com/XeieJ7H.jpeg", 
+            //"https://i.imgur.com/RCWrBK0.jpeg", // Dusri Photo
+        ],
+        description: `What happened to the Wither? IT’S OP! Can you survive its dangerous powers? Summon the Wither Wraith and watch it turn the overworld into a dark wasteland. Try your best to survive and obtain the powerful weapon!
+
+- A massive Wither Boss with dangerous abilities
+- Biomes slowly turn into Withered Lands
+- New powerful Wither Weapons
+- New Withered Mobs
+
+CHANGELOG:
+Wither Apocalypse 1.1:
++ New Withered Mobs
++ New Withered Beacon
++ New Dash Ability
++ Settings menu
++ Further Corruption Optimisation
++ Boss AI Tweaks
++ Many smaller fixes and improvements
+
+Good luck out there!`,
+        links: [
+            { type: "Addon", url: "https://linkpays.in/qUPkc", icon: "fa-puzzle-piece" }
+        ]
+    }, // <--- Comma lagana na bhulein
+    {
+        id: 16, 
+        title: "FURNITURE Add-On",
+        category: "addon",
+        // Multiple Images
+        images: [
+            "https://i.imgur.com/KfZlma0.jpeg", // Pehli Photo
+            "https://i.imgur.com/yjI7zuV.jpeg",
+            "https://i.imgur.com/C3NjQ8Y.jpeg",
+            "https://i.imgur.com/RAexgpb.jpeg",
+            "https://i.imgur.com/S26wwK8.jpeg",
+            "https://i.imgur.com/ZHL4gAE.jpeg",
+            "https://i.imgur.com/XcEQvYt.jpeg", 
+            "https://i.imgur.com/y9LZgd0.jpeg", 
+            "https://i.imgur.com/GvrvlTb.jpeg", 
+            "https://i.imgur.com/mT0r8uo.jpeg", 
+            "https://i.imgur.com/g0zVFcv.jpeg",
+            "https://i.imgur.com/RCWrBK0.jpeg", // Dusri Photo
+        ],
+        description: `This FURNITURE Add-On fills ANY WORLD with over 1000+ functioning furniture and decorations.
+
++ 1000 Craftable Furniture options
++ Decorative and functional Furniture
++ Features wooden and color variants
+
+CHANGELOG:
+Bug fixing update for FURNITURE 2.0!
+- Added VFX on statues and leaves
+- Fixed issues of certain items leaving ghost blocks & missing recipes
+- Improvements on saplings & trees (leaf decay, sapling drops...)
+- Furniture Merchant is now enabled by default (disable in settings block)
+- More fixes!`,
+        links: [
+            { type: "Addon", url: "https://linkpays.in/RXjqBB", icon: "fa-puzzle-piece" }
+        ]
+    }, // <--- Comma lagana na bhulein
         {
         id: 15, 
         title: "TrueRealism HD",
