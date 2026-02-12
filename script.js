@@ -365,7 +365,7 @@ Updated TrueRealism HD to include the latest textures for The Mounts of Mayhem a
         id: 2,
         title: "Dragon Ball Z",
         category: "world",
-        image: "https://xforgeassets002.xboxlive.com/pf-namespace-b63a0803d3653643/c3f0a98e-f39b-4f40-944e-854395bb2f59/dragon_ball_z_thumbnail_0.jpg",
+        image: "https://i.imgur.com/oWba8Bt.png",
         description: "Battle as your favorite Dragon Ball Z character in this explosive DLC!",
         links: [
             { type: "World", url: "https://linkpays.in/z3ehlv", icon: "fa-globe" },
