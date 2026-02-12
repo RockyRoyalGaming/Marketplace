@@ -79,7 +79,7 @@ Version: 1.1.10 Hover Update
         title: "Epic Cyberpunk City",
         category: "world",
         images: [
-            "https://i.imgur.com/L1fL5lQ.jpeg", 
+            "https://i.imgur.com/8P6q7kH.jpeg", 
         ],
         panorama: "https://i.imgur.com/L1fL5lQ.jpeg", 
         description: `Explore a massive futuristic city with neon lights and flying cars. Features a full panorama view!
