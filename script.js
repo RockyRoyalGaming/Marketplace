@@ -1,19 +1,16 @@
 // --- 1. DATABASE (Items List) ---
 const items = [
-      // --- NEW EXAMPLE WITH PANORAMA ---
+      // --- ITEM 103: PANORAMA EXAMPLE ---
     {
         id: 103,
         title: "Epic Cyberpunk City",
         category: "world",
         images: [
-            "https://raw.githubusercontent.com/RockyRoyalGaming/Marketplace/refs/heads/Image3cuttrope/1.png", // Main Thumbnail
+            "https://raw.githubusercontent.com/RockyRoyalGaming/Marketplace/refs/heads/Image3cuttrope/1.png", 
         ],
-        // NEW FIELD: Panorama Image Link (Bahut chaudi image honi chahiye)
+        // Panorama Link
         panorama: "https://raw.githubusercontent.com/RockyRoyalGaming/Marketplace/refs/heads/Image3cuttrope/panorama0.png", 
-
-        description: 'Explore a massive futuristic city with neon lights and flying cars. Features a full panorama view!
-              1
-              2',
+        description: `Explore a massive futuristic city with neon lights and flying cars. Features a full panorama view!`,
         links: [
             { type: "Download World", url: "#", icon: "fa-globe" },
             { type: "Cyber Skin", url: "#", icon: "fa-tshirt" }
