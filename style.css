@@ -202,3 +202,66 @@ footer { text-align: center; margin-top: 40px; padding: 20px; color: #555; font-
     display: none; /* JS decide karega ki dikhana hai ya nahi */
 }
 #readMoreBtn:hover { text-decoration: underline; }
+
+/* --- NEW: HORIZONTAL SCROLL BUTTONS --- */
+.buttons-container {
+    display: flex;
+    flex-direction: row; /* Row me layenge */
+    gap: 10px;
+    overflow-x: auto; /* Horizontal scroll on */
+    padding-bottom: 5px; /* Scrollbar ke liye jagah */
+    white-space: nowrap; /* Buttons agli line me nahi jayenge */
+    /* Scrollbar chupane ke liye (optional) */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* IE */
+}
+.buttons-container::-webkit-scrollbar { display: none; /* Chrome/Safari */ }
+
+.dwn-option-btn {
+    /* Compact Design */
+    flex: 0 0 auto; /* Button shrink nahi hoga */
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(76, 175, 80, 0.15); /* Thoda green tint */
+    color: #e0e0e0;
+    text-decoration: none;
+    padding: 10px 16px; /* Thoda chota padding */
+    border-radius: 20px; /* Pill shape */
+    font-size: 0.85rem; font-weight: 600;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+    transition: all 0.2s;
+}
+.dwn-option-btn:hover {
+    background: #4caf50; color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+}
+.dwn-option-btn i { font-size: 1rem; }
+
+/* --- NEW: PANORAMA VIEW SECTION --- */
+.panorama-section {
+    margin-top: 20px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    padding-top: 15px;
+    animation: fadeIn 0.3s ease;
+}
+.panorama-label {
+    font-size: 0.8rem; color: #888; margin-bottom: 10px; display: block; font-weight: 500;
+}
+.panorama-container {
+    width: 100%;
+    height: 140px; /* Fixed height */
+    overflow-x: auto; /* Horizontal scrolling */
+    border-radius: 12px;
+    border: 2px solid rgba(255,255,255,0.1);
+    background: #000;
+    /* Smooth scroll */
+    scroll-behavior: smooth;
+}
+.panorama-img {
+    height: 100%;
+    width: auto; /* Height fix rahegi, width apne aap badhegi */
+    max-width: unset; /* Container se bahar jane do */
+    object-fit: cover;
+}
