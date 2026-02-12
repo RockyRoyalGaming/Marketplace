@@ -1,5 +1,37 @@
 // --- 1. DATABASE (Items List) ---
 const items = [
+        {
+        id: 15, 
+        title: "TrueRealism HD",
+        category: "world",
+        // Multiple Images
+        images: [
+            "https://i.imgur.com/RKrsM8s.jpeg", // Pehli Photo
+            "https://i.imgur.com/Hs8EZUk.jpeg",
+            "https://i.imgur.com/pvcnNk1.jpeg",
+            "https://i.imgur.com/5iKN9Kf.jpeg",
+            "https://i.imgur.com/xtWrq8v.jpeg",
+            "https://i.imgur.com/6OHth66.jpeg",
+            "https://i.imgur.com/IUTG5Bz.jpeg", 
+            "https://i.imgur.com/Sugugkq.jpeg", 
+            "https://i.imgur.com/ALoXW4S.jpeg",
+            "https://i.imgur.com/PCA0yMV.jpeg", // Dusri Photo
+        ],
+        description: `Redefine your world with next-level HD graphics and stunning visual features. Unparalleled beauty awaits!
+
+- Realistic sky, life-like clouds and atmospheric fog
+- Highly detailed hand-crafted 64x textures
+- Waving foliage, block variations and custom mob models for greater realism
+- Works on all devices and in any world
+
+True Realism HD by SCT Studios & Pathway Studios
+
+CHANGELOG:
+Updated TrueRealism HD to include the latest textures for The Mounts of Mayhem and Copper Age drops, including the nautilus, copper golem, copper tools, spears, and much more — in addition to various fixes and optimizations.`,
+        links: [
+            { type: "Texture", url: "https://linkpays.in/pjiTeSF", icon: "fa-image" }
+        ]
+    }, // <--- Comma lagana na bhulein
     // NAYA ITEM (Multiple Images Example)
     {
         id: 102, 
