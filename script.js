@@ -267,7 +267,7 @@ Bug fixing update for FURNITURE 2.0!
     {
         id: 15, 
         title: "TrueRealism HD",
-        category: "world",
+        category: "texture",
         images: [
             "https://i.imgur.com/RKrsM8s.jpeg",
             "https://i.imgur.com/Hs8EZUk.jpeg",
