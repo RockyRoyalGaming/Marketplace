@@ -10,6 +10,27 @@ function getImages(linkPrefix, count) {
 // --- 1. DATABASE (Items List) ---
 const items = [
         {
+        id: 26, // Naya ID dein
+        title: "Gadgets Add-On",
+        category: "addon",
+       
+        images: getImages("https://github.com/RockyRoyalGaming/images/raw/refs/heads/gadgets/", 10),
+        panorama: "https://github.com/RockyRoyalGaming/images/raw/refs/heads/gadgets/0panorama.png",
+
+        description: `Futuristic GADGETS in Minecraft? Scientist discovered over 50+ awesome gadgets to craft! 
++ Pocket Dimension
++ 2x2 Boats
++ Player Link
+and others utilities gadget for singleplayer and multiplayer world!
++ Easy Portals
++ Automatic Fishing
++ And other unique gadgets!`,
+        
+        links: [
+            { type: "addon", url: "https://linkpays.in/HBqJ", icon: "fa-puzzle-piece" }
+        ]
+    },
+        {
         id: 25, // Naya ID dein
         title: "MINE ZOO 2",
         category: "world",
