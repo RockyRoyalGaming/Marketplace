@@ -21,7 +21,15 @@ const items = [
         // 2. PANORAMA (0panorama.png ke liye link copy-paste karein)
         panorama: "https://github.com/RockyRoyalGaming/images/raw/refs/heads/Revive/0panorama.png",
 
-        description: `Your description here...`,
+        description: `Get a SECOND CHANCE at life with the Revive Add-On! Be revived by another player and recover your armor, items, and XP!
+
+- Fully CUSTOMIZABLE: configure revive time, animations, beacons, coordinates displaying and MORE!
+- 6 COOL ANIMATIONS
+- Add to your OWN WORLD!
+
+Too OP for your liking? Enable the REVIVE COST and charge players for reviving another player!
+
+by Cubical`,
         
         links: [
             { type: "Download", url: "#", icon: "fa-download" }
