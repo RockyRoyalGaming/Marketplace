@@ -753,7 +753,7 @@ function submitNewRequest() {
     });
 }
 
-// 6. LOAD REQUESTS
+// 6. LOAD REQUESTS (Updated: Ab Link bhi dikhega)
 function loadRequests() {
     pendingBox.innerHTML = "<p style='color:#666;'>Loading...</p>";
     completedBox.innerHTML = "";
@@ -773,17 +773,25 @@ function loadRequests() {
             div.className = `req-card ${req.status}`;
 
             let btnHTML = "";
+            let linkHTML = ""; // Naya variable
+
             if (req.status === "completed") {
+                // Completed hai to Download button
                 const dwnLink = req.downloadLink || "#"; 
                 btnHTML = `<a href="${dwnLink}" class="req-link-btn" target="_blank"><i class="fas fa-check"></i> Get File</a>`;
             } else {
+                // Pending hai
                 btnHTML = `<span style="color:#fbc02d; font-size:0.8rem; background:rgba(251, 192, 45, 0.1); padding:5px 10px; border-radius:10px;"><i class="fas fa-clock"></i> Pending</span>`;
+                
+                // NEW: Agar user ne link diya hai, to chhota icon dikhao
+                if (req.link) {
+                    linkHTML = `<a href="${req.link}" target="_blank" style="color:#aaa; margin-left:10px; font-size:0.9rem;" title="Open Original Link"><i class="fas fa-external-link-alt"></i></a>`;
+                }
             }
 
             div.innerHTML = `
                 <div class="req-info">
-                    <h4>${req.addon}</h4>
-                    <p><i class="fas fa-user-circle"></i> Suggested by ${req.user}</p>
+                    <h4>${req.addon} ${linkHTML}</h4> <p><i class="fas fa-user-circle"></i> Suggested by ${req.user}</p>
                 </div>
                 ${btnHTML}
             `;
