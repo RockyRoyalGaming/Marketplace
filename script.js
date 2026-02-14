@@ -10,6 +10,27 @@ function getImages(linkPrefix, count) {
 // --- 1. DATABASE (Items List) ---
 const items = [
         {
+        id: 27, // Naya ID dein
+        title: "Blocks Update",
+        category: "addon",
+       
+        images: getImages("https://github.com/RockyRoyalGaming/images/raw/refs/heads/BU/", 8),
+        panorama: "https://github.com/RockyRoyalGaming/images/raw/refs/heads/BU/0panorama.png",
+
+        description: `With this add-on, you can add 5,000+ new blocks and furniture to ANY WORLD, and it works with your favorite TEXTURE PACKS!
+
+- 5000+ block options and furniture to be made
+- Adapts to most all resource packs
+- Block interactions
+- Connective blocks
+- Proper block organization
+- Custom subgroups in the creative menu`,
+        
+        links: [
+            { type: "addon", url: "https://linkpays.in/alN4O", icon: "fa-puzzle-piece" }
+        ]
+    },
+        {
         id: 26, // Naya ID dein
         title: "Gadgets Add-On",
         category: "addon",
