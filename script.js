@@ -1,7 +1,7 @@
 // --- 1. DATABASE (Items List) ---
 const items = [
       {
-        id: 22, // Hamesha naya number dein (Pichle wale se alag)
+        id: 23, // Hamesha naya number dein (Pichle wale se alag)
         title: "Sonic Add-On",
         category: "addon", // Options: 'addon', 'world', 'skin', 'texture', 'mashup'
         
@@ -32,7 +32,7 @@ Transform into Super Sonic and Super Shadow by collecting Chaos Emeralds from Ch
         ]
     }, // <--- YE COMMA (,) BAHUT ZAROORI HAI!
                 {
-        id: 21, // Hamesha naya number dein (Pichle wale se alag)
+        id: 22, // Hamesha naya number dein (Pichle wale se alag)
         title: "RealismCraft 2.3",
         category: "mashup", // Options: 'addon', 'world', 'skin', 'texture', 'mashup'
         
