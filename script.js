@@ -9,6 +9,25 @@ function getImages(linkPrefix, count) {
 
 // --- 1. DATABASE (Items List) ---
 const items = [
+        {
+        id: 24, // Naya ID dein
+        title: "Revive Addon",
+        category: "addon",
+        
+        // 1. CAROUSEL IMAGES (Short Trick)
+        // Ye '1.png' se '9.png' tak khud utha lega (Total 9 files hain)
+        images: getImages("https://github.com/RockyRoyalGaming/images/raw/refs/heads/Revive/", 9),
+
+        // 2. PANORAMA (0panorama.png ke liye link copy-paste karein)
+        panorama: "https://github.com/RockyRoyalGaming/images/raw/refs/heads/Revive/0panorama.png",
+
+        description: `Your description here...`,
+        
+        links: [
+            { type: "Download", url: "#", icon: "fa-download" }
+        ]
+    },
+
       {
         id: 23, // Hamesha naya number dein (Pichle wale se alag)
         title: "Sonic Add-On",
