@@ -1,3 +1,12 @@
+// --- HELPER FUNCTION (Images generate karne ke liye) ---
+function getImages(linkPrefix, count) {
+    let urls = [];
+    for (let i = 1; i <= count; i++) {
+        urls.push(`${linkPrefix}${i}.png`);
+    }
+    return urls;
+}
+
 // --- 1. DATABASE (Items List) ---
 const items = [
       {
