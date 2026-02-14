@@ -10,6 +10,24 @@ function getImages(linkPrefix, count) {
 // --- 1. DATABASE (Items List) ---
 const items = [
         {
+        id: 25, // Naya ID dein
+        title: "MINE ZOO 2",
+        category: "world",
+       
+        images: getImages("https://github.com/RockyRoyalGaming/images/raw/refs/heads/MZ2/", 6),
+        panorama: "https://github.com/RockyRoyalGaming/images/raw/refs/heads/MZ2/0panorama.png",
+
+        description: `Become the zookeeper once again, in MINE ZOO 2! You decide which animals stays where. Pandas & Flamingos together? You got it. Just try not to create too much chaos.
++ 42 animal species to breed
++ 20+ enclosures
++ Expand your zoo!
+*Only works with provided world*`,
+        
+        links: [
+            { type: "World", url: "https://linkpays.in/yt3fbfpa", icon: "fa-globe" }
+        ]
+    },
+        {
         id: 24, // Naya ID dein
         title: "Revive Addon",
         category: "addon",
