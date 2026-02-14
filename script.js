@@ -683,3 +683,117 @@ if (canvas) {
     }
     window.addEventListener('resize', initStars); initStars(); animateStars();
 }
+
+// --- 8. REAL-TIME REQUEST SYSTEM (FIREBASE) ---
+
+// 1. YOUR REAL CONFIGURATION (Copy-Paste from Screenshot)
+const firebaseConfig = {
+  apiKey: "AIzaSyDOnkkfPgIX9rlEXefUKnZ3atV6zdBu1RU",
+  authDomain: "strikemarket-32a5e.firebaseapp.com",
+  databaseURL: "https://strikemarket-32a5e-default-rtdb.firebaseio.com",
+  projectId: "strikemarket-32a5e",
+  storageBucket: "strikemarket-32a5e.firebasestorage.app",
+  messagingSenderId: "719596182121",
+  appId: "1:719596182121:web:d02df0d3089f560fc560f8",
+  measurementId: "G-KTVM3J2491"
+};
+
+// 2. INITIALIZE FIREBASE
+if (typeof firebase !== 'undefined') {
+    firebase.initializeApp(firebaseConfig);
+    var database = firebase.database();
+} else {
+    console.error("Firebase SDK not loaded in HTML!");
+}
+
+// 3. VARIABLES
+const reqSection = document.getElementById('requestsSection');
+const itemsGrid = document.getElementById('itemsContainer');
+const pendingBox = document.getElementById('pendingContainer');
+const completedBox = document.getElementById('completedContainer');
+const reqModal = document.getElementById('requestFormModal');
+
+// 4. TOGGLE VIEW
+function toggleRequestView() {
+    if (reqSection.style.display === "none") {
+        itemsGrid.style.display = "none";
+        reqSection.style.display = "block";
+        loadRequests();
+    } else {
+        itemsGrid.style.display = "grid";
+        reqSection.style.display = "none";
+    }
+}
+
+// 5. SUBMIT REQUEST
+function submitNewRequest() {
+    const name = document.getElementById('reqName').value;
+    const addon = document.getElementById('reqAddonName').value;
+    const link = document.getElementById('reqLink').value;
+
+    if (!name || !addon) { alert("Name and Addon Name are required!"); return; }
+
+    const newReqRef = database.ref('requests').push();
+    newReqRef.set({
+        user: name,
+        addon: addon,
+        link: link || "",
+        status: "pending",
+        timestamp: Date.now()
+    }, (error) => {
+        if (error) { alert("Error: " + error.message); } 
+        else {
+            alert("✅ Request Sent!");
+            closeReqModal();
+            document.getElementById('reqName').value = "";
+            document.getElementById('reqAddonName').value = "";
+            document.getElementById('reqLink').value = "";
+            if(reqSection.style.display === "block") loadRequests();
+        }
+    });
+}
+
+// 6. LOAD REQUESTS
+function loadRequests() {
+    pendingBox.innerHTML = "<p style='color:#666;'>Loading...</p>";
+    completedBox.innerHTML = "";
+
+    database.ref('requests').once('value', (snapshot) => {
+        pendingBox.innerHTML = "";
+        completedBox.innerHTML = "";
+
+        if (!snapshot.exists()) {
+            pendingBox.innerHTML = "<p>No pending requests.</p>";
+            return;
+        }
+
+        snapshot.forEach((childSnapshot) => {
+            const req = childSnapshot.val();
+            const div = document.createElement('div');
+            div.className = `req-card ${req.status}`;
+
+            let btnHTML = "";
+            if (req.status === "completed") {
+                const dwnLink = req.downloadLink || "#"; 
+                btnHTML = `<a href="${dwnLink}" class="req-link-btn" target="_blank"><i class="fas fa-check"></i> Get File</a>`;
+            } else {
+                btnHTML = `<span style="color:#fbc02d; font-size:0.8rem; background:rgba(251, 192, 45, 0.1); padding:5px 10px; border-radius:10px;"><i class="fas fa-clock"></i> Pending</span>`;
+            }
+
+            div.innerHTML = `
+                <div class="req-info">
+                    <h4>${req.addon}</h4>
+                    <p><i class="fas fa-user-circle"></i> Suggested by ${req.user}</p>
+                </div>
+                ${btnHTML}
+            `;
+
+            if (req.status === "pending") pendingBox.prepend(div);
+            else completedBox.prepend(div);
+        });
+    });
+}
+
+// 7. MODAL FUNCTIONS
+function openReqModal() { reqModal.style.display = "flex"; }
+function closeReqModal() { reqModal.style.display = "none"; }
