@@ -224,3 +224,34 @@ input {
 
 /* Footer */
 footer { text-align: center; margin-top: 40px; padding: 20px; color: #555; font-size: 0.8rem; }
+
+/* --- REQUEST MODAL STYLE --- */
+.request-box { text-align: center; max-width: 400px; }
+.input-group {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px; padding: 12px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px;
+}
+.input-group i { color: #4caf50; }
+.input-group input { background: transparent; border: none; padding: 0; color: white; width: 100%; outline: none; }
+.submit-req-btn {
+    width: 100%; background: #4caf50; color: white; padding: 12px; border: none;
+    border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 10px;
+}
+
+/* --- REQUEST LIST --- */
+.requests-container { max-width: 800px; margin: 20px auto; padding: 15px; animation: fadeIn 0.3s; }
+.req-heading { font-size: 1.2rem; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+.req-grid { display: grid; gap: 10px; }
+.req-card {
+    background: rgba(30, 30, 30, 0.6); border-radius: 12px; padding: 15px;
+    border-left: 4px solid #fbc02d; display: flex; justify-content: space-between; align-items: center;
+}
+.req-card.completed { border-left: 4px solid #4caf50; }
+.req-info h4 { font-size: 1rem; margin-bottom: 4px; color:white; }
+.req-info p { font-size: 0.8rem; color: #aaa; margin: 0; }
+.req-link-btn {
+    background: rgba(255,255,255,0.1); color: white; text-decoration: none;
+    padding: 8px 12px; border-radius: 8px; font-size: 0.8rem;
+}
+.req-link-btn:hover { background: #4caf50; }
