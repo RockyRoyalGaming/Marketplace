@@ -1,5 +1,36 @@
 // --- 1. DATABASE (Items List) ---
 const items = [
+      {
+        id: 22, // Hamesha naya number dein (Pichle wale se alag)
+        title: "Sonic Add-On",
+        category: "addon", // Options: 'addon', 'world', 'skin', 'texture', 'mashup'
+        
+        // --- 1. CAROUSEL IMAGES (Jitni chahein utni daalein) ---
+        // Note: Pehli image hi thumbnail banegi.
+        images: [
+            "https://github.com/RockyRoyalGaming/images/raw/refs/heads/Sonicoboom/1.png",            "https://github.com/RockyRoyalGaming/images/raw/refs/heads/Sonicoboom/2.png",
+"https://github.com/RockyRoyalGaming/images/raw/refs/heads/Sonicoboom/3.png", "https://github.com/RockyRoyalGaming/images/raw/refs/heads/Sonicoboom/4.png", "https://github.com/RockyRoyalGaming/images/raw/refs/heads/Sonicoboom/5.png",       "https://github.com/RockyRoyalGaming/images/raw/refs/heads/Sonicoboom/6.png", "https://github.com/RockyRoyalGaming/images/raw/refs/heads/Sonicoboom/7.png",       "https://github.com/RockyRoyalGaming/images/raw/refs/heads/Sonicoboom/8.png", "https://github.com/RockyRoyalGaming/images/raw/refs/heads/Sonicoboom/9.png", "https://github.com/RockyRoyalGaming/images/raw/refs/heads/Sonicoboom/10.png" // Last wale me comma (,) nahi lagana
+        ],
+
+        // --- 2. PANORAMA IMAGE (Optional) ---
+        // Agar panorama nahi hai to is line ko hata dein ya khali chhod dein ("")
+        panorama: "https://github.com/RockyRoyalGaming/images/raw/refs/heads/Sonicoboom/0panorama.png",
+
+        // --- 3. DESCRIPTION ---
+        description: `Sonic-boom into ANY world with this thrilling Add-On! Transform into Sonic, Knuckles, Tails, Amy and Shadow! Run at the speed of sound, smash blocks, collect Rings and bop mobs like they're Badniks. Build your own levels with springs, spikes and dash panels!
+Enjoy Version 1.1: The Super Update!
+
+♻️Changelog:
+v1.1.0 - The Super Update:
+Transform into Super Sonic and Super Shadow by collecting Chaos Emeralds from Chaos Shrines scattered around the world. Watch out for the nefarious Dr Eggman! View more changes in the Sonic Guidebook.`,
+
+        // --- 4. DOWNLOAD LINKS ---
+        links: [
+            { type: "Addon", url: "https://linkpays.in/z7QAeN5r", icon: "fa-puzzle-piece" },
+            // Agar dusra button chahiye:
+            // { type: "Skin", url: "LINK_HERE", icon: "fa-tshirt" }
+        ]
+    }, // <--- YE COMMA (,) BAHUT ZAROORI HAI!
                 {
         id: 21, // Hamesha naya number dein (Pichle wale se alag)
         title: "RealismCraft 2.3",
