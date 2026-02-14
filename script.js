@@ -32,7 +32,7 @@ Too OP for your liking? Enable the REVIVE COST and charge players for reviving a
 by Cubical`,
         
         links: [
-            { type: "Download", url: "#", icon: "fa-download" }
+            { type: "Addon", url: "#", icon: "fa-puzzle-piece" }
         ]
     },
 
