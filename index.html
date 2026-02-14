@@ -61,7 +61,41 @@
     <div class="container" id="itemsContainer">
         <div class="loading-spinner">Loading content...</div>
     </div>
+    <div id="requestsSection" class="requests-container" style="display: none;">
+        <h2 class="req-heading">🚧 Pending Requests</h2>
+        <div class="req-grid" id="pendingContainer">
+            </div>
 
+        <h2 class="req-heading" style="color: #4caf50; margin-top: 30px;">✅ Completed Requests</h2>
+        <div class="req-grid" id="completedContainer">
+            </div>
+        
+        <button onclick="toggleRequestView()" style="margin-top:20px; background:#333; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer;">Back to Home</button>
+    </div>
+
+    <div id="requestFormModal" class="modal">
+        <div class="modal-content request-box">
+            <span class="close" onclick="closeReqModal()">&times;</span>
+            <h2>Submit a Request</h2>
+            <p style="color:#888; font-size:0.9rem; margin-bottom:20px;">We will try to add your addon soon!</p>
+            
+            <div class="input-group">
+                <i class="fas fa-user"></i>
+                <input type="text" id="reqName" placeholder="Your Name (e.g. Nick)">
+            </div>
+            <div class="input-group">
+                <i class="fas fa-puzzle-piece"></i>
+                <input type="text" id="reqAddonName" placeholder="Addon Name (e.g. Dark Fantasy)">
+            </div>
+            <div class="input-group">
+                <i class="fas fa-link"></i>
+                <input type="text" id="reqLink" placeholder="Minecraft Marketplace Link">
+            </div>
+
+            <button onclick="submitNewRequest()" class="submit-req-btn">Send Request <i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+    
     <div id="itemModal" class="modal">
         <div class="modal-content">
             
