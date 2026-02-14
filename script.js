@@ -10,6 +10,24 @@ function getImages(linkPrefix, count) {
 // --- 1. DATABASE (Items List) ---
 const items = [
         {
+        id: 28, // Naya ID dein
+        title: "Advanced Machines Add-On",
+        category: "addon",
+       
+        images: getImages("https://github.com/RockyRoyalGaming/images/raw/refs/heads/AM/", 7),
+        panorama: "https://github.com/RockyRoyalGaming/images/raw/refs/heads/AM/0panorama.png",
+
+        description: `(Suggested by Weepvi)
+Advanced Machines Add-On! Automate your tasks and create complex networks. Build your own factory on ANY world! Use pipes to transport items, fluids and power to machines!
+
++ Pipes, cables and machines
++ New armor and tools`,
+        
+        links: [
+            { type: "addon", url: "https://linkpays.in/JnYQ", icon: "fa-puzzle-piece" }
+        ]
+    },
+        {
         id: 27, // Naya ID dein
         title: "Blocks Update",
         category: "addon",
