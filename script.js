@@ -10,6 +10,52 @@ function getImages(linkPrefix, count) {
 // --- 1. DATABASE (Items List) ---
 const items = [
         {
+        id: 29, // Naya ID dein
+        title: "SpongeBob Biomes",
+        category: "world",
+       
+        images: getImages("https://github.com/RockyRoyalGaming/images/raw/refs/heads/SBB/", 11),
+        panorama: "https://github.com/RockyRoyalGaming/images/raw/refs/heads/SBB/0panorama.png",
+
+        description: `Are ya ready, kids? The underwater world of SpongeBob is now a Minecraft Dynamic World where every biome is reimaged with custom generation! Visit Jellyfish Fields, Bikini Bottom, Kelp Forest & more. Eat Krabby Patties, ride Seahorses, use Spatulas to fight and craft your own Krusty Armor! Hang out with familiar SpongeBob characters and take on the Flying Dutchman!`,
+        
+        links: [
+            { type: "World", url: "https://linkpays.in/9GV8fvIx", icon: "fa-globe" },
+            { type: "SkinPack", url: "https://www.mediafire.com/file/t42rwirc0yx17s9/SpongeBob_Biomes_%2528skin_pack%2529_RockyRG.mcpack/file", icon: "fa-tshirt" }
+        ]
+    },
+    {
+        id: 30, // Naya ID dein
+        title: "SpongeBob SquarePants Add-On",
+        category: "addon",
+       
+        images: getImages("https://github.com/RockyRoyalGaming/images/raw/refs/heads/SBSPA/", 7),
+        panorama: "https://github.com/RockyRoyalGaming/images/raw/refs/heads/SBSPA/0panorama.png",
+
+        description: `Are ya ready, kids? Bring SpongeBob and his friends into your worlds with this add-on!
+Includes buildings, mobs, vehicles, weapons, tools, and all of your favorite friends and foes from the SpongeBob universe.`,
+        
+        links: [
+            { type: "Addon", url: "https://linkpays.in/EeiUCOS", icon: "fa-puzzle-piece" }
+        ]
+    },
+    {
+        id: 31, // Naya ID dein
+        title: "SpongeBob SquarePants",
+        category: "world",
+       
+        images: getImages("https://github.com/RockyRoyalGaming/images/raw/refs/heads/SBSP/", 9),
+        panorama: "https://github.com/RockyRoyalGaming/images/raw/refs/heads/SBSP/0panorama.png",
+
+        description: `Are you ready, kids? It’s time to join your favourite under-the-sea chums on an adventure in Minecraft! Visit Bikini Bottom and help make today the BEST DAY EVER for SpongeBob, Patrick, Sandy, and friends. Complete with 40 skins.
+Created by Spark Universe`,
+        
+        links: [
+            { type: "World", url: "https://linkpays.in/dCskk", icon: "fa-globe" },
+            { type: "SkinPack", url: "https://www.mediafire.com/file/jfr0s3ooole87u7/SpongeBob_SquarePants_%2528skin_pack%2529_RockyRG.mcpack/file", icon: "fa-tshirt" }
+        ]
+    },
+        {
         id: 28, // Naya ID dein
         title: "Advanced Machines Add-On",
         category: "addon",
