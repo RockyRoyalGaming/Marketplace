@@ -62,8 +62,14 @@
         }
         var database = firebase.database();
 
+        // पेज खुलते ही ब्राउज़र की मेमोरी से टोकन अपने-आप बॉक्स में आ जाएगा
+window.onload = function() {
+    document.getElementById('ghToken').value = localStorage.getItem('myGhToken') || "";
+};
         async function startUpload() {
             var btn = document.getElementById('uploadBtn');
+            // अपलोड बटन दबाते ही, टोकन ब्राउज़र की मेमोरी में हमेशा के लिए सेव हो जाएगा
+localStorage.setItem('myGhToken', ghToken);
             var ghToken = document.getElementById('ghToken').value;
             var webhookUrl = document.getElementById('webhookUrl').value;
             var addonTitle = document.getElementById('addonTitle').value;
