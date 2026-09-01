@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secret Admin Panel - StrikeMarket</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #0f172a; color: white; padding: 20px; max-width: 500px; margin: 0 auto; }
+        .box { background: #1e293b; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        input, select { display: block; width: 90%; margin-bottom: 15px; padding: 12px; background: #0f172a; color: white; border: 1px solid #334155; border-radius: 8px; }
+        button { background: #0ea5e9; color: white; padding: 15px; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; width: 100%; font-size: 16px; transition: 0.3s; }
+        button:hover { background: #0284c7; }
+        .secret-zone { border-bottom: 2px dashed #334155; padding-bottom: 10px; margin-bottom: 15px; }
+    </style>
+    <!-- Firebase Libraries -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+
+    <div class="box">
+        <h2 style="text-align: center; color: #38bdf8;">🤫 Strike Admin Upload</h2>
+        
+        <div class="secret-zone">
+            <!-- Aapka Github Token -->
+            <input type="password" id="ghToken" value="Ghp_paYcWbanx6wc0pFu2K4hKJfomPUWhl2oE6Wk" placeholder="🔑 GitHub PAT">
+            <input type="password" id="webhookUrl" placeholder="🤖 Discord Webhook URL (Optional)">
+        </div>
+
+        <input type="text" id="addonTitle" placeholder="Item Name (e.g. 200 Mobs)">
+        
+        <select id="addonCategory">
+            <option value="addon">Add-On</option>
+            <option value="world">World</option>
+            <option value="skin">Skin / Texture</option>
+        </select>
+
+        <input type="text" id="addonLink" placeholder="Download Link (Mediafire, Gofile...)">
+        
+        <label style="font-size: 12px; color: #94a3b8; display:block; margin-bottom:5px;">Select Images (GitHub me jayengi):</label>
+        <input type="file" id="imageFiles" multiple accept="image/*">
+
+        <button onclick="startUpload()" id="uploadBtn">🚀 UPLOAD TO SITE & DISCORD</button>
+        <p id="status" style="font-size: 13px; text-align: center; margin-top: 15px; font-weight: bold;"></p>
+    </div>
+
+    <script>
+        // Aapka Firebase Config
+        var firebaseConfig = {
+          apiKey: "AIzaSyDOnkkfPgIX9rlEXefUKnZ3atV6zdBu1RU",
+          authDomain: "strikemarket-32a5e.firebaseapp.com",
+          databaseURL: "https://strikemarket-32a5e-default-rtdb.firebaseio.com",
+          projectId: "strikemarket-32a5e",
+          storageBucket: "strikemarket-32a5e.firebasestorage.app",
+          messagingSenderId: "719596182121",
+          appId: "1:719596182121:web:d02dfdd3089f560fc560f8",
+          measurementId: "G-KTVM3J2491"
+        };
+        
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        var database = firebase.database();
+
+        async function startUpload() {
+            var btn = document.getElementById('uploadBtn');
+            var ghToken = document.getElementById('ghToken').value;
+            var webhookUrl = document.getElementById('webhookUrl').value;
+            var addonTitle = document.getElementById('addonTitle').value;
+            var addonCategory = document.getElementById('addonCategory').value;
+            var addonLink = document.getElementById('addonLink').value;
+            var imageFiles = document.getElementById('imageFiles').files;
+            var statusEl = document.getElementById('status');
+
+            if (!addonTitle || !addonLink || imageFiles.length === 0) {
+                alert("Please fill Name, Link and select at least 1 image!");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.style.background = "#64748b";
+            
+            var folderName = addonTitle.replace(/[^a-zA-Z0-9]/g, "_");
+            var uploadedImageUrls = [];
+
+            try {
+                statusEl.innerText = "⏳ 1/3: GitHub par photos upload ho rahi hain...";
+                statusEl.style.color = "#38bdf8";
+
+                for (let i = 0; i < imageFiles.length; i++) {
+                    let file = imageFiles[i];
+                    let fileName = (i + 1) + ".png";
+                    let filePath = folderName + "/" + fileName;
+
+                    let base64Data = await new Promise((resolve) => {
+                        let reader = new FileReader();
+                        reader.onload = () => resolve(reader.result.split(',')[1]);
+                        reader.readAsDataURL(file);
+                    });
+
+                    let ghResponse = await fetch("https://api.github.com/repos/RockyRoyalGaming/images/contents/" + filePath, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': 'token ' + ghToken,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message: "Upload " + fileName,
+                            content: base64Data
+                        })
+                    });
+
+                    if (!ghResponse.ok) throw new Error("GitHub Upload Failed. Token ya Repository Name check karein.");
+                    
+                    let rawUrl = "https://raw.githubusercontent.com/RockyRoyalGaming/images/main/" + filePath;
+                    uploadedImageUrls.push(rawUrl);
+                }
+
+                statusEl.innerText = "⏳ 2/3: Firebase Database me save ho raha hai...";
+                
+                var newItemData = {
+                    id: Date.now().toString(),
+                    title: addonTitle,
+                    category: addonCategory,
+                    images: uploadedImageUrls,
+                    links: [{ type: "Download", url: addonLink, icon: "fa-download" }]
+                };
+
+                await database.ref('market_items').push().set(newItemData);
+
+                if (webhookUrl) {
+                    statusEl.innerText = "⏳ 3/3: Discord par message ja raha hai...";
+                    await fetch(webhookUrl, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            content: "🚀 **New " + addonCategory.toUpperCase() + " Dropped!**",
+                            embeds: [{
+                                title: addonTitle,
+                                url: addonLink,
+                                description: "StrikeMarket par naya item aa gaya hai!",
+                                color: 3447003,
+                                image: { url: uploadedImageUrls[0] }
+                            }]
+                        })
+                    });
+                }
+
+                statusEl.innerText = "✅ DONE! Website par upload ho gaya!";
+                statusEl.style.color = "#10b981";
+                
+                document.getElementById('addonTitle').value = "";
+                document.getElementById('addonLink').value = "";
+                document.getElementById('imageFiles').value = "";
+
+            } catch (error) {
+                console.error(error);
+                statusEl.innerText = "❌ Error: " + error.message;
+                statusEl.style.color = "#ef4444";
+            }
+
+            btn.disabled = false;
+            btn.style.background = "#0ea5e9";
+        }
+    </script>
+</body>
+</html>
