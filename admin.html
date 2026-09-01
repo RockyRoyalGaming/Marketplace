@@ -110,7 +110,10 @@
                         })
                     });
 
-                    if (!ghResponse.ok) throw new Error("GitHub Upload Failed. Token ya Repository Name check karein.");
+                    if (!ghResponse.ok) {
+    let errData = await ghResponse.json();
+    throw new Error("GitHub Error: " + errData.message);
+};
                     
                     let rawUrl = "https://raw.githubusercontent.com/RockyRoyalGaming/images/main/" + filePath;
                     uploadedImageUrls.push(rawUrl);
