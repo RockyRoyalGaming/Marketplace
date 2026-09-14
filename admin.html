@@ -3,29 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secret Admin Panel - StrikeMarket</title>
+    <title>Strike Admin Manager</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #0f172a; color: white; padding: 20px; max-width: 500px; margin: 0 auto; }
-        .box { background: #1e293b; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        input, select { display: block; width: 90%; margin-bottom: 15px; padding: 12px; background: #0f172a; color: white; border: 1px solid #334155; border-radius: 8px; }
-        button { background: #0ea5e9; color: white; padding: 15px; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; width: 100%; font-size: 16px; transition: 0.3s; }
-        button:hover { background: #0284c7; }
+        body { font-family: Arial, sans-serif; background: #0f172a; color: white; padding: 15px; max-width: 550px; margin: 0 auto; }
+        .box { background: #1e293b; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-bottom: 25px; }
+        input, select, textarea { display: block; width: 90%; margin-bottom: 12px; padding: 12px; background: #0f172a; color: white; border: 1px solid #334155; border-radius: 8px; font-size: 14px; }
+        textarea { height: 80px; resize: vertical; }
+        button { background: #0ea5e9; color: white; padding: 13px; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; width: 100%; font-size: 15px; }
         .secret-zone { border-bottom: 2px dashed #334155; padding-bottom: 10px; margin-bottom: 15px; }
+        
+        /* Manage Items List Styles */
+        .item-row { display: flex; align-items: center; justify-content: space-between; background: #0f172a; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #334155; }
+        .item-info { display: flex; align-items: center; gap: 10px; overflow: hidden; }
+        .item-info img { width: 45px; height: 45px; border-radius: 6px; object-fit: cover; }
+        .item-text { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+        .actions { display: flex; gap: 6px; }
+        .btn-edit { background: #f59e0b; padding: 6px 10px; font-size: 12px; border-radius: 5px; width: auto; }
+        .btn-del { background: #ef4444; padding: 6px 10px; font-size: 12px; border-radius: 5px; width: auto; }
     </style>
-    <!-- Firebase Libraries -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
 
+    <!-- 1. UPLOAD & EDIT FORM -->
     <div class="box">
-        <h2 style="text-align: center; color: #38bdf8;">🤫 Strike Admin Upload</h2>
+        <h2 id="formHeading" style="text-align: center; color: #38bdf8;">🤫 Strike Admin Upload</h2>
         
         <div class="secret-zone">
-            <!-- Aapka Github Token -->
-            <input type="password" id="ghToken" value="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" placeholder="🔑 GitHub PAT">
+            <input type="password" id="ghToken" placeholder="🔑 GitHub PAT">
             <input type="password" id="webhookUrl" placeholder="🤖 Discord Webhook URL (Optional)">
         </div>
+
+        <input type="hidden" id="editKey" value="">
 
         <input type="text" id="addonTitle" placeholder="Item Name (e.g. 200 Mobs)">
         
@@ -33,19 +43,28 @@
             <option value="addon">Add-On</option>
             <option value="world">World</option>
             <option value="skin">Skin / Texture</option>
+            <option value="mashup">Mashup</option>
         </select>
 
-        <input type="text" id="addonLink" placeholder="Download Link (Mediafire, Gofile...)">
+        <textarea id="addonDesc" placeholder="Item Description..."></textarea>
         
-        <label style="font-size: 12px; color: #94a3b8; display:block; margin-bottom:5px;">Select Images (GitHub me jayengi):</label>
-        <input type="file" id="imageFiles" multiple accept="image/*">
+        <input type="text" id="addonLink" placeholder="Download Link (Mediafire, Gofile...)">
+        <input type="text" id="addonPanorama" placeholder="Panorama Image Link (Optional)">
+        
+        <label style="font-size: 12px; color: #94a3b8; display:block; margin-bottom:5px;">Images (GitHub me jayengi):</label>
+        <input type="file" id="imageFiles" multiple>
 
-        <button onclick="startUpload()" id="uploadBtn">🚀 UPLOAD TO SITE & DISCORD</button>
+        <button onclick="startUpload()" id="uploadBtn">🚀 UPLOAD TO SITE</button>
         <p id="status" style="font-size: 13px; text-align: center; margin-top: 15px; font-weight: bold;"></p>
     </div>
 
+    <!-- 2. MANAGE ITEMS SECTION -->
+    <div class="box">
+        <h3 style="color: #38bdf8; margin-bottom: 15px;">📦 Manage Existing Items</h3>
+        <div id="itemsManageList">Loading items...</div>
+    </div>
+
     <script>
-        // Aapka Firebase Config
         var firebaseConfig = {
           apiKey: "AIzaSyDOnkkfPgIX9rlEXefUKnZ3atV6zdBu1RU",
           authDomain: "strikemarket-32a5e.firebaseapp.com",
@@ -62,114 +81,183 @@
         }
         var database = firebase.database();
 
-        // पेज खुलते ही ब्राउज़र की मेमोरी से टोकन अपने-आप बॉक्स में आ जाएगा
-window.onload = function() {
-    document.getElementById('ghToken').value = localStorage.getItem('myGhToken') || "";
-};
+        window.onload = function() {
+            document.getElementById('ghToken').value = localStorage.getItem('myGhToken') || "";
+            loadItemsForManagement();
+        };
+
+        // --- ITEMS LOAD KARNA (MANAGE LIST) ---
+        function loadItemsForManagement() {
+            var listDiv = document.getElementById('itemsManageList');
+            database.ref('market_items').on('value', (snapshot) => {
+                listDiv.innerHTML = "";
+                if (!snapshot.exists()) {
+                    listDiv.innerHTML = "<p style='color:#666; font-size:13px;'>No items found.</p>";
+                    return;
+                }
+
+                snapshot.forEach((child) => {
+                    var key = child.key;
+                    var item = child.val();
+                    var thumb = (item.images && item.images[0]) ? item.images[0] : (item.image || "https://via.placeholder.com/45");
+
+                    var row = document.createElement('div');
+                    row.className = "item-row";
+                    row.innerHTML = `
+                        <div class="item-info">
+                            <img src="${thumb}" onerror="this.src='https://via.placeholder.com/45'">
+                            <div class="item-text">
+                                <strong>${item.title}</strong><br>
+                                <span style="color:#10b981; font-size:11px;">${item.category.toUpperCase()}</span>
+                            </div>
+                        </div>
+                        <div class="actions">
+                            <button class="btn-edit" onclick="setupEdit('${key}')">✏️</button>
+                            <button class="btn-del" onclick="deleteItem('${key}')">🗑️</button>
+                        </div>
+                    `;
+                    listDiv.prepend(row);
+                });
+            });
+        }
+
+        // --- DELETE FUNCTION ---
+        function deleteItem(key) {
+            if (confirm("Kya aap sach me ise delete karna chahte hain?")) {
+                database.ref('market_items/' + key).remove()
+                    .then(() => alert("Item deleted successfully!"))
+                    .catch((err) => alert("Error: " + err.message));
+            }
+        }
+
+        // --- EDIT SETUP FUNCTION ---
+        function setupEdit(key) {
+            database.ref('market_items/' + key).once('value', (snapshot) => {
+                var item = snapshot.val();
+                if (!item) return;
+
+                document.getElementById('editKey').value = key;
+                document.getElementById('addonTitle').value = item.title;
+                document.getElementById('addonCategory').value = item.category;
+                document.getElementById('addonDesc').value = item.description || "";
+                document.getElementById('addonPanorama').value = item.panorama || "";
+                document.getElementById('addonLink').value = (item.links && item.links[0]) ? item.links[0].url : "";
+
+                document.getElementById('formHeading').innerText = "✏️ Editing: " + item.title;
+                document.getElementById('uploadBtn').innerText = "💾 UPDATE ITEM";
+                document.getElementById('uploadBtn').style.background = "#f59e0b";
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        }
+
+        // --- UPLOAD YA UPDATE FUNCTION ---
         async function startUpload() {
             var btn = document.getElementById('uploadBtn');
-            // अपलोड बटन दबाते ही, टोकन ब्राउज़र की मेमोरी में हमेशा के लिए सेव हो जाएगा
-localStorage.setItem('myGhToken', ghToken);
             var ghToken = document.getElementById('ghToken').value;
             var webhookUrl = document.getElementById('webhookUrl').value;
+            var editKey = document.getElementById('editKey').value;
+
             var addonTitle = document.getElementById('addonTitle').value;
             var addonCategory = document.getElementById('addonCategory').value;
+            var addonDesc = document.getElementById('addonDesc').value;
             var addonLink = document.getElementById('addonLink').value;
+            var addonPanorama = document.getElementById('addonPanorama').value;
             var imageFiles = document.getElementById('imageFiles').files;
             var statusEl = document.getElementById('status');
 
-            if (!addonTitle || !addonLink || imageFiles.length === 0) {
-                alert("Please fill Name, Link and select at least 1 image!");
+            if (!addonTitle || !addonLink) {
+                alert("Please fill Title and Download Link!");
                 return;
             }
 
+            if (ghToken) localStorage.setItem('myGhToken', ghToken);
+
             btn.disabled = true;
-            btn.style.background = "#64748b";
-            
-            var folderName = addonTitle.replace(/[^a-zA-Z0-9]/g, "_");
-            var uploadedImageUrls = [];
 
             try {
-                statusEl.innerText = "⏳ 1/3: GitHub par photos upload ho rahi hain...";
-                statusEl.style.color = "#38bdf8";
+                var uploadedUrls = [];
 
-                for (let i = 0; i < imageFiles.length; i++) {
-                    let file = imageFiles[i];
-                    let fileName = (i + 1) + ".png";
-                    let filePath = folderName + "/" + fileName;
+                // Nayi images tabhi upload hongi agar select ki gayi hon
+                if (imageFiles.length > 0) {
+                    statusEl.innerText = "⏳ Photos GitHub par upload ho rahi hain...";
+                    statusEl.style.color = "#38bdf8";
 
-                    let base64Data = await new Promise((resolve) => {
-                        let reader = new FileReader();
-                        reader.onload = () => resolve(reader.result.split(',')[1]);
-                        reader.readAsDataURL(file);
-                    });
+                    var folderName = addonTitle.replace(/[^a-zA-Z0-9]/g, "_");
 
-                    let ghResponse = await fetch("https://api.github.com/repos/RockyRoyalGaming/images/contents/" + filePath, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': 'token ' + ghToken,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            message: "Upload " + fileName,
-                            content: base64Data
-                        })
-                    });
+                    for (let i = 0; i < imageFiles.length; i++) {
+                        let file = imageFiles[i];
+                        let fileName = (i + 1) + ".png";
+                        let filePath = folderName + "/" + fileName;
 
-                    if (!ghResponse.ok) {
-    let errData = await ghResponse.json();
-    throw new Error("GitHub Error: " + errData.message);
-};
-                    
-                    let rawUrl = "https://raw.githubusercontent.com/RockyRoyalGaming/images/main/" + filePath;
-                    uploadedImageUrls.push(rawUrl);
+                        let base64Data = await new Promise((resolve) => {
+                            let reader = new FileReader();
+                            reader.onload = () => resolve(reader.result.split(',')[1]);
+                            reader.readAsDataURL(file);
+                        });
+
+                        let ghResponse = await fetch("https://api.github.com/repos/RockyRoyalGaming/images/contents/" + filePath, {
+                            method: 'PUT',
+                            headers: { 'Authorization': 'token ' + ghToken, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ message: "Upload " + fileName, content: base64Data })
+                        });
+
+                        if (!ghResponse.ok) {
+                            let errData = await ghResponse.json();
+                            throw new Error("GitHub Error: " + errData.message);
+                        }
+
+                        uploadedUrls.push("https://raw.githubusercontent.com/RockyRoyalGaming/images/main/" + filePath);
+                    }
                 }
 
-                statusEl.innerText = "⏳ 2/3: Firebase Database me save ho raha hai...";
-                
-                var newItemData = {
-                    id: Date.now().toString(),
+                statusEl.innerText = "⏳ Firebase update ho raha hai...";
+
+                var itemData = {
                     title: addonTitle,
                     category: addonCategory,
-                    images: uploadedImageUrls,
+                    description: addonDesc,
+                    panorama: addonPanorama,
                     links: [{ type: "Download", url: addonLink, icon: "fa-download" }]
                 };
 
-                await database.ref('market_items').push().set(newItemData);
-
-                if (webhookUrl) {
-                    statusEl.innerText = "⏳ 3/3: Discord par message ja raha hai...";
-                    await fetch(webhookUrl, {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({
-                            content: "🚀 **New " + addonCategory.toUpperCase() + " Dropped!**",
-                            embeds: [{
-                                title: addonTitle,
-                                url: addonLink,
-                                description: "StrikeMarket par naya item aa gaya hai!",
-                                color: 3447003,
-                                image: { url: uploadedImageUrls[0] }
-                            }]
-                        })
-                    });
+                if (uploadedUrls.length > 0) {
+                    itemData.images = uploadedUrls;
                 }
 
-                statusEl.innerText = "✅ DONE! Website par upload ho gaya!";
-                statusEl.style.color = "#10b981";
-                
-                document.getElementById('addonTitle').value = "";
-                document.getElementById('addonLink').value = "";
-                document.getElementById('imageFiles').value = "";
+                if (editKey) {
+                    // Update Existing Item
+                    await database.ref('market_items/' + editKey).update(itemData);
+                    statusEl.innerText = "✅ Item Updated Successfully!";
+                } else {
+                    // Create New Item
+                    itemData.id = Date.now().toString();
+                    if (uploadedUrls.length === 0) {
+                        throw new Error("Pehli baar item daalne par photo select karna zaroori hai!");
+                    }
+                    await database.ref('market_items').push().set(itemData);
+                    statusEl.innerText = "✅ Item Added Successfully!";
+                }
 
-            } catch (error) {
-                console.error(error);
-                statusEl.innerText = "❌ Error: " + error.message;
+                statusEl.style.color = "#10b981";
+
+                // Reset Form
+                document.getElementById('editKey').value = "";
+                document.getElementById('addonTitle').value = "";
+                document.getElementById('addonDesc').value = "";
+                document.getElementById('addonLink').value = "";
+                document.getElementById('addonPanorama').value = "";
+                document.getElementById('imageFiles').value = "";
+                document.getElementById('formHeading').innerText = "🤫 Strike Admin Upload";
+                btn.innerText = "🚀 UPLOAD TO SITE";
+                btn.style.background = "#0ea5e9";
+
+            } catch (err) {
+                console.error(err);
+                statusEl.innerText = "❌ " + err.message;
                 statusEl.style.color = "#ef4444";
             }
 
             btn.disabled = false;
-            btn.style.background = "#0ea5e9";
         }
     </script>
 </body>
