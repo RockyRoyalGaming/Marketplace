@@ -19,7 +19,7 @@
         .actions { display: flex; gap: 6px; }
         .btn-edit { background: #f59e0b; padding: 6px 10px; font-size: 12px; border-radius: 5px; width: auto; }
         .btn-del { background: #ef4444; padding: 6px 10px; font-size: 12px; border-radius: 5px; width: auto; }
-        .btn-done { background: #10b981; padding: 6px 10px; font-size: 12px; border-radius: 5px; width: auto; }
+        .btn-fulfill { background: #10b981; padding: 6px 10px; font-size: 12px; border-radius: 5px; width: auto; }
         .field-label { font-size: 12px; color: #94a3b8; display: block; margin-bottom: 5px; margin-top: 5px; }
         
         .req-tag { font-size: 11px; padding: 2px 6px; border-radius: 4px; }
@@ -41,6 +41,7 @@
         </div>
 
         <input type="hidden" id="editKey" value="">
+        <input type="hidden" id="fulfillReqKey" value="">
 
         <input type="text" id="addonTitle" placeholder="Item Name (e.g. 200 Mobs)">
         
@@ -86,7 +87,7 @@
           projectId: "strikemarket-32a5e",
           storageBucket: "strikemarket-32a5e.firebasestorage.app",
           messagingSenderId: "719596182121",
-          appId: "1:719596182121:web:d02dfdd3089f560fc560f8",
+          appId: "1:719596182121:web:d02df0d3089f560fc560f8",
           measurementId: "G-KTVM3J2491"
         };
         
@@ -119,15 +120,15 @@
                     var row = document.createElement('div');
                     row.className = "item-row";
                     row.innerHTML = `
-                        <div class="item-text" style="max-width: 280px;">
+                        <div class="item-text" style="max-width: 270px;">
                             <strong>${req.addon}</strong>
-                            ${req.link ? `<a href="${req.link}" target="_blank" style="color:#38bdf8; font-size:11px; margin-left:5px;">[Link]</a>` : ""}
+                            ${req.link ? `<a href="${req.link}" target="_blank" style="color:#38bdf8; font-size:11px; margin-left:5px;">[Market Link]</a>` : ""}
                             <br>
                             <span style="color:#aaa; font-size:11px;">By: ${req.user}</span> | 
                             <span class="req-tag ${req.status}">${req.status.toUpperCase()}</span>
                         </div>
                         <div class="actions">
-                            ${!isCompleted ? `<button class="btn-done" title="Mark Complete" onclick="completeRequest('${key}')">✅</button>` : ""}
+                            ${!isCompleted ? `<button class="btn-fulfill" title="Fulfill via Upload" onclick="fulfillRequest('${key}', '${encodeURIComponent(req.addon)}', '${encodeURIComponent(req.user)}')">🚀</button>` : ""}
                             <button class="btn-del" title="Delete Request" onclick="deleteRequest('${key}')">🗑️</button>
                         </div>
                     `;
@@ -136,15 +137,22 @@
             });
         }
 
-        function completeRequest(key) {
-            var downloadLink = prompt("Enter Download Link for this Addon:");
-            if (!downloadLink) return;
+        // REQUEST KO UPLOAD FORM ME BHEJNA
+        function fulfillRequest(key, encTitle, encUser) {
+            var title = decodeURIComponent(encTitle);
+            var user = decodeURIComponent(encUser);
 
-            database.ref('requests/' + key).update({
-                status: "completed",
-                downloadLink: downloadLink
-            }).then(() => alert("Request marked as completed!"))
-              .catch(err => alert("Error: " + err.message));
+            document.getElementById('fulfillReqKey').value = key;
+            document.getElementById('editKey').value = ""; // Reset edit
+
+            document.getElementById('addonTitle').value = title;
+            document.getElementById('addonDesc').value = `(Suggested by ${user})\n\n`;
+            
+            document.getElementById('formHeading').innerText = `🚀 Fulfilling: ${title}`;
+            document.getElementById('uploadBtn').innerText = "🚀 UPLOAD & COMPLETE REQUEST";
+            document.getElementById('uploadBtn').style.background = "#10b981";
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function deleteRequest(key) {
@@ -155,7 +163,7 @@
             }
         }
 
-        // --- ITEMS LOAD KARNA (MANAGE LIST) ---
+        // --- ITEMS LOAD KARNA ---
         function loadItemsForManagement() {
             var listDiv = document.getElementById('itemsManageList');
             database.ref('market_items').on('value', (snapshot) => {
@@ -204,6 +212,8 @@
                 if (!item) return;
 
                 document.getElementById('editKey').value = key;
+                document.getElementById('fulfillReqKey').value = ""; // Reset fulfill
+
                 document.getElementById('addonTitle').value = item.title;
                 document.getElementById('addonCategory').value = item.category;
                 document.getElementById('addonDesc').value = item.description || "";
@@ -241,6 +251,7 @@
             var ghToken = document.getElementById('ghToken').value;
             var webhookUrl = document.getElementById('webhookUrl').value;
             var editKey = document.getElementById('editKey').value;
+            var fulfillReqKey = document.getElementById('fulfillReqKey').value;
 
             var addonTitle = document.getElementById('addonTitle').value;
             var addonCategory = document.getElementById('addonCategory').value;
@@ -300,20 +311,33 @@
                 }
 
                 if (editKey) {
+                    // Update Item
                     await database.ref('market_items/' + editKey).update(itemData);
                     statusEl.innerText = "✅ Item Updated Successfully!";
                 } else {
+                    // New Item Add
                     itemData.id = Date.now().toString();
                     if (uploadedUrls.length === 0) {
-                        throw new Error("Pehli baar upload ke liye photo select karein!");
+                        throw new Error("Pehli baar upload ke liye kam se kam 1 photo select karein!");
                     }
                     await database.ref('market_items').push().set(itemData);
-                    statusEl.innerText = "✅ Item Added Successfully!";
+
+                    // Agar ye kisi request se aaya tha, to use Completed mark karein
+                    if (fulfillReqKey) {
+                        await database.ref('requests/' + fulfillReqKey).update({
+                            status: "completed",
+                            downloadLink: addonLink
+                        });
+                    }
+
+                    statusEl.innerText = "✅ Item Live ho gaya aur Request Complete ho gayi!";
                 }
 
                 statusEl.style.color = "#10b981";
 
+                // Form Reset
                 document.getElementById('editKey').value = "";
+                document.getElementById('fulfillReqKey').value = "";
                 document.getElementById('addonTitle').value = "";
                 document.getElementById('addonDesc').value = "";
                 document.getElementById('addonLink').value = "";
