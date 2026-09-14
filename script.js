@@ -1,3 +1,21 @@
+// FIREBASE INITIALIZATION (SABSE UPAR)
+const firebaseConfig = {
+  apiKey: "AIzaSyDOnkkfPgIX9rlEXefUKnZ3atV6zdBu1RU",
+  authDomain: "strikemarket-32a5e.firebaseapp.com",
+  databaseURL: "https://strikemarket-32a5e-default-rtdb.firebaseio.com",
+  projectId: "strikemarket-32a5e",
+  storageBucket: "strikemarket-32a5e.firebasestorage.app",
+  messagingSenderId: "719596182121",
+  appId: "1:719596182121:web:d02dfdd3089f560fc560f8",
+  measurementId: "G-KTVM3J2491"
+};
+
+var database;
+if (typeof firebase !== 'undefined') {
+    firebase.initializeApp(firebaseConfig);
+    database = firebase.database();
+}
+
 // --- HELPER FUNCTION (Images generate karne ke liye) ---
 function getImages(linkPrefix, count) {
     let urls = [];
@@ -878,16 +896,6 @@ if (canvas) {
 // --- 8. REAL-TIME REQUEST SYSTEM (FIREBASE) ---
 
 // 1. YOUR REAL CONFIGURATION (Copy-Paste from Screenshot)
-const firebaseConfig = {
-  apiKey: "AIzaSyDOnkkfPgIX9rlEXefUKnZ3atV6zdBu1RU",
-  authDomain: "strikemarket-32a5e.firebaseapp.com",
-  databaseURL: "https://strikemarket-32a5e-default-rtdb.firebaseio.com",
-  projectId: "strikemarket-32a5e",
-  storageBucket: "strikemarket-32a5e.firebasestorage.app",
-  messagingSenderId: "719596182121",
-  appId: "1:719596182121:web:d02df0d3089f560fc560f8",
-  measurementId: "G-KTVM3J2491"
-};
 
 // 2. INITIALIZE FIREBASE
 if (typeof firebase !== 'undefined') {
