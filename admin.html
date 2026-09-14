@@ -12,7 +12,6 @@
         button { background: #0ea5e9; color: white; padding: 13px; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; width: 100%; font-size: 15px; }
         .secret-zone { border-bottom: 2px dashed #334155; padding-bottom: 10px; margin-bottom: 15px; }
         
-        /* Manage Items List Styles */
         .item-row { display: flex; align-items: center; justify-content: space-between; background: #0f172a; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #334155; }
         .item-info { display: flex; align-items: center; gap: 10px; overflow: hidden; }
         .item-info img { width: 45px; height: 45px; border-radius: 6px; object-fit: cover; }
@@ -20,6 +19,7 @@
         .actions { display: flex; gap: 6px; }
         .btn-edit { background: #f59e0b; padding: 6px 10px; font-size: 12px; border-radius: 5px; width: auto; }
         .btn-del { background: #ef4444; padding: 6px 10px; font-size: 12px; border-radius: 5px; width: auto; }
+        .field-label { font-size: 12px; color: #94a3b8; display: block; margin-bottom: 5px; margin-top: 5px; }
     </style>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -42,17 +42,20 @@
         <select id="addonCategory">
             <option value="addon">Add-On</option>
             <option value="world">World</option>
-            <option value="skin">Skin / Texture</option>
+            <option value="texture">Texture</option>
+            <option value="skin">Skin</option>
             <option value="mashup">Mashup</option>
         </select>
 
         <textarea id="addonDesc" placeholder="Item Description..."></textarea>
         
         <input type="text" id="addonLink" placeholder="Download Link (Mediafire, Gofile...)">
-        <input type="text" id="addonPanorama" placeholder="Panorama Image Link (Optional)">
         
-        <label style="font-size: 12px; color: #94a3b8; display:block; margin-bottom:5px;">Images (GitHub me jayengi):</label>
-        <input type="file" id="imageFiles" multiple>
+        <label class="field-label">Carousel Images (Screenshots):</label>
+        <input type="file" id="imageFiles" multiple accept="image/*">
+
+        <label class="field-label">Panorama 360 Image (Optional):</label>
+        <input type="file" id="panoramaFile" accept="image/*">
 
         <button onclick="startUpload()" id="uploadBtn">🚀 UPLOAD TO SITE</button>
         <p id="status" style="font-size: 13px; text-align: center; margin-top: 15px; font-weight: bold;"></p>
@@ -86,7 +89,6 @@
             loadItemsForManagement();
         };
 
-        // --- ITEMS LOAD KARNA (MANAGE LIST) ---
         function loadItemsForManagement() {
             var listDiv = document.getElementById('itemsManageList');
             database.ref('market_items').on('value', (snapshot) => {
@@ -121,16 +123,14 @@
             });
         }
 
-        // --- DELETE FUNCTION ---
         function deleteItem(key) {
-            if (confirm("Kya aap sach me ise delete karna chahte hain?")) {
+            if (confirm("Delete this item permanently?")) {
                 database.ref('market_items/' + key).remove()
-                    .then(() => alert("Item deleted successfully!"))
+                    .then(() => alert("Item deleted!"))
                     .catch((err) => alert("Error: " + err.message));
             }
         }
 
-        // --- EDIT SETUP FUNCTION ---
         function setupEdit(key) {
             database.ref('market_items/' + key).once('value', (snapshot) => {
                 var item = snapshot.val();
@@ -140,7 +140,6 @@
                 document.getElementById('addonTitle').value = item.title;
                 document.getElementById('addonCategory').value = item.category;
                 document.getElementById('addonDesc').value = item.description || "";
-                document.getElementById('addonPanorama').value = item.panorama || "";
                 document.getElementById('addonLink').value = (item.links && item.links[0]) ? item.links[0].url : "";
 
                 document.getElementById('formHeading').innerText = "✏️ Editing: " + item.title;
@@ -150,7 +149,26 @@
             });
         }
 
-        // --- UPLOAD YA UPDATE FUNCTION ---
+        async function uploadFileToGithub(file, filePath, ghToken) {
+            let base64Data = await new Promise((resolve) => {
+                let reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.readAsDataURL(file);
+            });
+
+            let ghResponse = await fetch("https://api.github.com/repos/RockyRoyalGaming/images/contents/" + filePath, {
+                method: 'PUT',
+                headers: { 'Authorization': 'token ' + ghToken, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: "Upload " + filePath, content: base64Data })
+            });
+
+            if (!ghResponse.ok) {
+                let errData = await ghResponse.json();
+                throw new Error("GitHub Error: " + errData.message);
+            }
+            return "https://raw.githubusercontent.com/RockyRoyalGaming/images/main/" + filePath;
+        }
+
         async function startUpload() {
             var btn = document.getElementById('uploadBtn');
             var ghToken = document.getElementById('ghToken').value;
@@ -161,8 +179,8 @@
             var addonCategory = document.getElementById('addonCategory').value;
             var addonDesc = document.getElementById('addonDesc').value;
             var addonLink = document.getElementById('addonLink').value;
-            var addonPanorama = document.getElementById('addonPanorama').value;
             var imageFiles = document.getElementById('imageFiles').files;
+            var panoramaFiles = document.getElementById('panoramaFile').files;
             var statusEl = document.getElementById('status');
 
             if (!addonTitle || !addonLink) {
@@ -175,39 +193,29 @@
             btn.disabled = true;
 
             try {
+                var folderName = addonTitle.replace(/[^a-zA-Z0-9]/g, "_");
                 var uploadedUrls = [];
+                var uploadedPanoramaUrl = "";
 
-                // Nayi images tabhi upload hongi agar select ki gayi hon
+                // 1. Carousel Images Upload
                 if (imageFiles.length > 0) {
-                    statusEl.innerText = "⏳ Photos GitHub par upload ho rahi hain...";
+                    statusEl.innerText = "⏳ Carousel Photos GitHub par upload ho rahi hain...";
                     statusEl.style.color = "#38bdf8";
 
-                    var folderName = addonTitle.replace(/[^a-zA-Z0-9]/g, "_");
-
                     for (let i = 0; i < imageFiles.length; i++) {
-                        let file = imageFiles[i];
-                        let fileName = (i + 1) + ".png";
-                        let filePath = folderName + "/" + fileName;
-
-                        let base64Data = await new Promise((resolve) => {
-                            let reader = new FileReader();
-                            reader.onload = () => resolve(reader.result.split(',')[1]);
-                            reader.readAsDataURL(file);
-                        });
-
-                        let ghResponse = await fetch("https://api.github.com/repos/RockyRoyalGaming/images/contents/" + filePath, {
-                            method: 'PUT',
-                            headers: { 'Authorization': 'token ' + ghToken, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ message: "Upload " + fileName, content: base64Data })
-                        });
-
-                        if (!ghResponse.ok) {
-                            let errData = await ghResponse.json();
-                            throw new Error("GitHub Error: " + errData.message);
-                        }
-
-                        uploadedUrls.push("https://raw.githubusercontent.com/RockyRoyalGaming/images/main/" + filePath);
+                        let path = folderName + "/" + (i + 1) + ".png";
+                        let url = await uploadFileToGithub(imageFiles[i], path, ghToken);
+                        uploadedUrls.push(url);
                     }
+                }
+
+                // 2. Panorama Image Upload
+                if (panoramaFiles.length > 0) {
+                    statusEl.innerText = "⏳ Panorama Image upload ho rahi hai...";
+                    statusEl.style.color = "#38bdf8";
+
+                    let path = folderName + "/0panorama.png";
+                    uploadedPanoramaUrl = await uploadFileToGithub(panoramaFiles[0], path, ghToken);
                 }
 
                 statusEl.innerText = "⏳ Firebase update ho raha hai...";
@@ -216,23 +224,23 @@
                     title: addonTitle,
                     category: addonCategory,
                     description: addonDesc,
-                    panorama: addonPanorama,
                     links: [{ type: "Download", url: addonLink, icon: "fa-download" }]
                 };
 
                 if (uploadedUrls.length > 0) {
                     itemData.images = uploadedUrls;
                 }
+                if (uploadedPanoramaUrl !== "") {
+                    itemData.panorama = uploadedPanoramaUrl;
+                }
 
                 if (editKey) {
-                    // Update Existing Item
                     await database.ref('market_items/' + editKey).update(itemData);
                     statusEl.innerText = "✅ Item Updated Successfully!";
                 } else {
-                    // Create New Item
                     itemData.id = Date.now().toString();
                     if (uploadedUrls.length === 0) {
-                        throw new Error("Pehli baar item daalne par photo select karna zaroori hai!");
+                        throw new Error("Pehli baar upload ke liye kam se kam 1 photo select karein!");
                     }
                     await database.ref('market_items').push().set(itemData);
                     statusEl.innerText = "✅ Item Added Successfully!";
@@ -240,13 +248,13 @@
 
                 statusEl.style.color = "#10b981";
 
-                // Reset Form
+                // Reset
                 document.getElementById('editKey').value = "";
                 document.getElementById('addonTitle').value = "";
                 document.getElementById('addonDesc').value = "";
                 document.getElementById('addonLink').value = "";
-                document.getElementById('addonPanorama').value = "";
                 document.getElementById('imageFiles').value = "";
+                document.getElementById('panoramaFile').value = "";
                 document.getElementById('formHeading').innerText = "🤫 Strike Admin Upload";
                 btn.innerText = "🚀 UPLOAD TO SITE";
                 btn.style.background = "#0ea5e9";
