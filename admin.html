@@ -19,7 +19,12 @@
         .actions { display: flex; gap: 6px; }
         .btn-edit { background: #f59e0b; padding: 6px 10px; font-size: 12px; border-radius: 5px; width: auto; }
         .btn-del { background: #ef4444; padding: 6px 10px; font-size: 12px; border-radius: 5px; width: auto; }
+        .btn-done { background: #10b981; padding: 6px 10px; font-size: 12px; border-radius: 5px; width: auto; }
         .field-label { font-size: 12px; color: #94a3b8; display: block; margin-bottom: 5px; margin-top: 5px; }
+        
+        .req-tag { font-size: 11px; padding: 2px 6px; border-radius: 4px; }
+        .req-tag.pending { background: rgba(251, 192, 45, 0.2); color: #fbc02d; }
+        .req-tag.completed { background: rgba(16, 185, 129, 0.2); color: #10b981; }
     </style>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -61,7 +66,13 @@
         <p id="status" style="font-size: 13px; text-align: center; margin-top: 15px; font-weight: bold;"></p>
     </div>
 
-    <!-- 2. MANAGE ITEMS SECTION -->
+    <!-- 2. MANAGE REQUESTS SECTION -->
+    <div class="box">
+        <h3 style="color: #fbc02d; margin-bottom: 15px;">📋 User Requests Management</h3>
+        <div id="requestsManageList">Loading requests...</div>
+    </div>
+
+    <!-- 3. MANAGE ITEMS SECTION -->
     <div class="box">
         <h3 style="color: #38bdf8; margin-bottom: 15px;">📦 Manage Existing Items</h3>
         <div id="itemsManageList">Loading items...</div>
@@ -87,8 +98,64 @@
         window.onload = function() {
             document.getElementById('ghToken').value = localStorage.getItem('myGhToken') || "";
             loadItemsForManagement();
+            loadRequestsForManagement();
         };
 
+        // --- REQUESTS MANAGEMENT LOGIC ---
+        function loadRequestsForManagement() {
+            var reqListDiv = document.getElementById('requestsManageList');
+            database.ref('requests').on('value', (snapshot) => {
+                reqListDiv.innerHTML = "";
+                if (!snapshot.exists()) {
+                    reqListDiv.innerHTML = "<p style='color:#666; font-size:13px;'>No requests found.</p>";
+                    return;
+                }
+
+                snapshot.forEach((child) => {
+                    var key = child.key;
+                    var req = child.val();
+                    var isCompleted = req.status === "completed";
+
+                    var row = document.createElement('div');
+                    row.className = "item-row";
+                    row.innerHTML = `
+                        <div class="item-text" style="max-width: 280px;">
+                            <strong>${req.addon}</strong>
+                            ${req.link ? `<a href="${req.link}" target="_blank" style="color:#38bdf8; font-size:11px; margin-left:5px;">[Link]</a>` : ""}
+                            <br>
+                            <span style="color:#aaa; font-size:11px;">By: ${req.user}</span> | 
+                            <span class="req-tag ${req.status}">${req.status.toUpperCase()}</span>
+                        </div>
+                        <div class="actions">
+                            ${!isCompleted ? `<button class="btn-done" title="Mark Complete" onclick="completeRequest('${key}')">✅</button>` : ""}
+                            <button class="btn-del" title="Delete Request" onclick="deleteRequest('${key}')">🗑️</button>
+                        </div>
+                    `;
+                    reqListDiv.prepend(row);
+                });
+            });
+        }
+
+        function completeRequest(key) {
+            var downloadLink = prompt("Enter Download Link for this Addon:");
+            if (!downloadLink) return;
+
+            database.ref('requests/' + key).update({
+                status: "completed",
+                downloadLink: downloadLink
+            }).then(() => alert("Request marked as completed!"))
+              .catch(err => alert("Error: " + err.message));
+        }
+
+        function deleteRequest(key) {
+            if (confirm("Delete this request?")) {
+                database.ref('requests/' + key).remove()
+                    .then(() => alert("Request deleted!"))
+                    .catch(err => alert("Error: " + err.message));
+            }
+        }
+
+        // --- ITEMS LOAD KARNA (MANAGE LIST) ---
         function loadItemsForManagement() {
             var listDiv = document.getElementById('itemsManageList');
             database.ref('market_items').on('value', (snapshot) => {
@@ -197,7 +264,6 @@
                 var uploadedUrls = [];
                 var uploadedPanoramaUrl = "";
 
-                // 1. Carousel Images Upload
                 if (imageFiles.length > 0) {
                     statusEl.innerText = "⏳ Carousel Photos GitHub par upload ho rahi hain...";
                     statusEl.style.color = "#38bdf8";
@@ -209,7 +275,6 @@
                     }
                 }
 
-                // 2. Panorama Image Upload
                 if (panoramaFiles.length > 0) {
                     statusEl.innerText = "⏳ Panorama Image upload ho rahi hai...";
                     statusEl.style.color = "#38bdf8";
@@ -240,7 +305,7 @@
                 } else {
                     itemData.id = Date.now().toString();
                     if (uploadedUrls.length === 0) {
-                        throw new Error("Pehli baar upload ke liye kam se kam 1 photo select karein!");
+                        throw new Error("Pehli baar upload ke liye photo select karein!");
                     }
                     await database.ref('market_items').push().set(itemData);
                     statusEl.innerText = "✅ Item Added Successfully!";
@@ -248,7 +313,6 @@
 
                 statusEl.style.color = "#10b981";
 
-                // Reset
                 document.getElementById('editKey').value = "";
                 document.getElementById('addonTitle').value = "";
                 document.getElementById('addonDesc').value = "";
