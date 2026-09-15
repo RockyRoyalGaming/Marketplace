@@ -298,3 +298,59 @@ footer { text-align: center; margin-top: 40px; padding: 20px; color: #555; font-
     display: flex;
     align-items: center;
 }
+
+/* File Download Group Box */
+.download-group-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.group-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.group-title i { color: #38bdf8; }
+
+.mirrors-list {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.mirror-badge-btn {
+    background: rgba(255, 255, 255, 0.06);
+    color: #94a3b8;
+    text-decoration: none;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.mirror-badge-btn:hover {
+    background: #38bdf8;
+    color: #090a0f;
+    border-color: #38bdf8;
+}
