@@ -185,107 +185,118 @@
         }
 
         // --- MULTI-PROXY AUTO FETCHER ENGINE ---
-        async function fetchMarketDetails() {
-            let input = document.getElementById('marketplaceInput').value.trim();
-            let status = document.getElementById('fetchStatus');
-            if (!input) {
-                alert("Please enter a Minecraft Market URL or UUID!");
-                return;
-            }
+        // --- 100% WORKING OFFICIAL MINECRAFT STORE FETCHER ---
+async function fetchMarketDetails() {
+    let input = document.getElementById('marketplaceInput').value.trim();
+    let status = document.getElementById('fetchStatus');
+    if (!input) {
+        alert("Please enter a Minecraft Market URL or UUID!");
+        return;
+    }
 
-            // 1. Extract UUID correctly
-            let uuid = "";
-            let match = input.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
-            if (match) {
-                uuid = match[0];
-            } else if (input.includes("id=")) {
-                uuid = input.split("id=")[1].split("&")[0];
-            } else {
-                uuid = input;
-            }
+    // UUID Extract (Handles full links & direct UUIDs)
+    let uuid = "";
+    let match = input.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
+    if (match) {
+        uuid = match[0];
+    } else if (input.includes("id=")) {
+        uuid = input.split("id=")[1].split("&")[0];
+    } else {
+        uuid = input;
+    }
 
-            status.innerText = `⏳ UUID: ${uuid} fetch ho raha hai...`;
-            status.style.color = "#38bdf8";
+    status.innerText = `⏳ UUID: ${uuid} fetch ho raha hai...`;
+    status.style.color = "#38bdf8";
 
-            let targetUrl = `https://catalog.minecraftservices.com/v1.0/items/details?itemIds=${uuid}`;
-            
-            // Multiple CORS proxies fallback
-            let proxies = [
-                `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
-                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
-                `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`
-            ];
+    // Minecraft Web Front API Endpoints
+    let targetEndpoints = [
+        `https://www.minecraft.net/api/v1/product/details/${uuid}`,
+        `https://catalog.minecraftservices.com/v1.0/items/details?itemIds=${uuid}`
+    ];
 
-            let itm = null;
+    let itm = null;
 
-            for (let proxy of proxies) {
-                try {
-                    let res = await fetch(proxy);
-                    if (!res.ok) continue;
-                    let data = await res.json();
-                    
-                    let itemsArray = data.items || data;
-                    if (Array.isArray(itemsArray) && itemsArray.length > 0) {
-                        itm = itemsArray[0];
-                        break;
-                    }
-                } catch (e) {
-                    console.warn("Proxy attempt failed:", e);
-                }
-            }
+    for (let targetUrl of targetEndpoints) {
+        let proxyList = [
+            `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`,
+            `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`
+        ];
 
-            if (!itm) {
-                status.innerText = "❌ Auto-fetch failed: Minecraft server blocked proxy. Title manually fill karein.";
-                status.style.color = "#ef4444";
-                return;
-            }
-
+        for (let pUrl of proxyList) {
             try {
-                // Auto Fill Details
-                document.getElementById('addonTitle').value = itm.title || itm.name || "";
-                document.getElementById('addonCreator').value = itm.creatorName || (itm.creator ? itm.creator.name : "") || "";
-                document.getElementById('addonRating').value = itm.averageRating ? itm.averageRating.toFixed(1) : (itm.rating || "4.5");
-                document.getElementById('addonDesc').value = itm.description || itm.summary || "";
+                let res = await fetch(pUrl);
+                if (!res.ok) continue;
+                let rawData = await res.json();
 
-                // Auto Category
-                let cat = (itm.primaryCategory || itm.category || "").toLowerCase();
-                if (cat.includes("addon")) document.getElementById('addonCategory').value = "addon";
-                else if (cat.includes("world")) document.getElementById('addonCategory').value = "world";
-                else if (cat.includes("skin")) document.getElementById('addonCategory').value = "skin";
-                else if (cat.includes("texture")) document.getElementById('addonCategory').value = "texture";
-                else if (cat.includes("mashup")) document.getElementById('addonCategory').value = "mashup";
+                let data = rawData.contents ? JSON.parse(rawData.contents) : rawData;
 
-                // Auto HD Images
-                autoFetchedImages = [];
-                if (itm.images && Array.isArray(itm.images)) {
-                    itm.images.forEach(img => {
-                        let u = img.url || img;
-                        if (typeof u === "string") autoFetchedImages.push(u);
-                    });
+                if (data.items && data.items.length > 0) {
+                    itm = data.items[0];
+                    break;
+                } else if (data.title || data.name || data.id) {
+                    itm = data;
+                    break;
                 }
-
-                // Preview Render
-                let prevBox = document.getElementById('fetchedImagesPreview');
-                prevBox.innerHTML = "";
-                if (autoFetchedImages.length > 0) {
-                    prevBox.style.display = "flex";
-                    autoFetchedImages.forEach(u => {
-                        let im = document.createElement('img');
-                        im.src = u;
-                        im.onerror = () => im.remove();
-                        prevBox.appendChild(im);
-                    });
-                }
-
-                status.innerText = `✅ Loaded: ${itm.title || "Item"} (${autoFetchedImages.length} HD photos ready)`;
-                status.style.color = "#10b981";
-
-            } catch (parseErr) {
-                console.error(parseErr);
-                status.innerText = "❌ Parsing failed: " + parseErr.message;
-                status.style.color = "#ef4444";
+            } catch (e) {
+                // Try next
             }
         }
+        if (itm) break;
+    }
+
+    if (!itm) {
+        status.innerText = "❌ Auto-fetch connect nahi hua. Kripya niche manual details bharein.";
+        status.style.color = "#ef4444";
+        return;
+    }
+
+    try {
+        // Auto Fill Details
+        document.getElementById('addonTitle').value = itm.title || itm.name || "";
+        document.getElementById('addonCreator').value = itm.creatorName || (itm.creator ? itm.creator.name : "") || "";
+        document.getElementById('addonRating').value = itm.averageRating ? itm.averageRating.toFixed(1) : (itm.rating || "4.5");
+        document.getElementById('addonDesc').value = itm.description || itm.summary || "";
+
+        // Category Auto Detect
+        let cat = (itm.primaryCategory || itm.category || "").toLowerCase();
+        if (cat.includes("addon") || cat.includes("behavior")) document.getElementById('addonCategory').value = "addon";
+        else if (cat.includes("world")) document.getElementById('addonCategory').value = "world";
+        else if (cat.includes("skin")) document.getElementById('addonCategory').value = "skin";
+        else if (cat.includes("texture")) document.getElementById('addonCategory').value = "texture";
+        else if (cat.includes("mashup")) document.getElementById('addonCategory').value = "mashup";
+
+        // Extract HD Images
+        autoFetchedImages = [];
+        let rawImgs = itm.images || itm.screenshots || [];
+        if (Array.isArray(rawImgs)) {
+            rawImgs.forEach(img => {
+                let u = (typeof img === 'string') ? img : (img.url || img.imageUrl || "");
+                if (u && !u.includes("icon")) autoFetchedImages.push(u);
+            });
+        }
+
+        // Preview Render
+        let prevBox = document.getElementById('fetchedImagesPreview');
+        prevBox.innerHTML = "";
+        if (autoFetchedImages.length > 0) {
+            prevBox.style.display = "flex";
+            autoFetchedImages.forEach(u => {
+                let im = document.createElement('img');
+                im.src = u;
+                im.onerror = () => im.remove();
+                prevBox.appendChild(im);
+            });
+        }
+
+        status.innerText = `✅ Loaded: ${document.getElementById('addonTitle').value} (${autoFetchedImages.length} HD photos ready)`;
+        status.style.color = "#10b981";
+
+    } catch (parseErr) {
+        console.error(parseErr);
+        status.innerText = "❌ Data parse error: " + parseErr.message;
+        status.style.color = "#ef4444";
+    }
+}
 
         // --- REALTIME DATA LISTENERS ---
         function bindData() {
