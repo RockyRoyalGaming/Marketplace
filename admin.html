@@ -13,8 +13,8 @@
         .secret-zone { border-bottom: 2px dashed #334155; padding-bottom: 10px; margin-bottom: 15px; }
         
         .link-row { display: flex; gap: 8px; margin-bottom: 10px; width: 95%; }
-        .link-row select { width: 35%; margin-bottom: 0; }
-        .link-row input { width: 65%; margin-bottom: 0; }
+        .link-row select { width: 38%; margin-bottom: 0; }
+        .link-row input { width: 62%; margin-bottom: 0; }
         .btn-add-link { background: #334155; color: #38bdf8; padding: 8px; border-radius: 6px; font-size: 12px; width: auto; margin-bottom: 15px; }
 
         .item-row { display: flex; align-items: center; justify-content: space-between; background: #0f172a; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #334155; }
@@ -60,16 +60,16 @@
 
         <textarea id="addonDesc" placeholder="Item Description..."></textarea>
         
-        <label class="field-label">Download Links (Will auto-shorten via Linkpays):</label>
+        <label class="field-label">Download Links (Hosting auto-detect & auto-shorten):</label>
         <div id="linksWrapper">
             <div class="link-row">
                 <select class="link-type">
-                    <option value="Addon">Addon (.mcpack)</option>
-                    <option value="World">World (.mcworld)</option>
-                    <option value="Skin">Skin Pack</option>
-                    <option value="Mirror">Mirror (Gofile/Mega)</option>
+                    <option value="Addon">Addon</option>
+                    <option value="World">World</option>
+                    <option value="Skin Pack">Skin Pack</option>
+                    <option value="Mirror">Mirror</option>
                 </select>
-                <input type="text" class="link-url" placeholder="Original Link (Mediafire/etc)">
+                <input type="text" class="link-url" placeholder="Paste link (Mediafire, Gofile...)">
             </div>
         </div>
         <button type="button" class="btn-add-link" onclick="addLinkField()">+ Add Another Link</button>
@@ -126,12 +126,24 @@
                 <select class="link-type">
                     <option value="Addon" ${type === 'Addon' ? 'selected' : ''}>Addon</option>
                     <option value="World" ${type === 'World' ? 'selected' : ''}>World</option>
-                    <option value="Skin" ${type === 'Skin' ? 'selected' : ''}>Skin Pack</option>
+                    <option value="Skin Pack" ${type === 'Skin Pack' ? 'selected' : ''}>Skin Pack</option>
                     <option value="Mirror" ${type === 'Mirror' ? 'selected' : ''}>Mirror</option>
                 </select>
-                <input type="text" class="link-url" placeholder="Original Link" value="${url}">
+                <input type="text" class="link-url" placeholder="Paste link" value="${url}">
             `;
             wrapper.appendChild(row);
+        }
+
+        // Host name auto-detect karne ka function
+        function detectHostName(url) {
+            let u = url.toLowerCase();
+            if (u.includes("mediafire.com")) return "Mediafire";
+            if (u.includes("gofile.io")) return "Gofile";
+            if (u.includes("mega.nz")) return "Mega";
+            if (u.includes("drive.google.com")) return "Drive";
+            if (u.includes("devuploads.com")) return "DevUploads";
+            if (u.includes("terabox.com") || u.includes("1024tera")) return "Terabox";
+            return "";
         }
 
         async function shortenUrlWithLinkpays(rawUrl, apiToken) {
@@ -144,7 +156,7 @@
                     return data.shortenedUrl;
                 }
             } catch (e) {
-                console.warn("Linkpays Error, using raw url:", e);
+                console.warn("Linkpays Error:", e);
             }
             return rawUrl;
         }
@@ -261,7 +273,10 @@
                 var wrapper = document.getElementById('linksWrapper');
                 wrapper.innerHTML = "";
                 if (item.links && item.links.length > 0) {
-                    item.links.forEach(l => addLinkField(l.type, l.url));
+                    item.links.forEach(l => {
+                        let cleanType = l.type.split(" (")[0]; // pura name bina (Host) ke
+                        addLinkField(cleanType, l.url);
+                    });
                 } else {
                     addLinkField();
                 }
@@ -327,23 +342,24 @@
             btn.disabled = true;
 
             try {
-                // Shorten links with Linkpays
-                statusEl.innerText = "⏳ 1/3: Links Linkpays se short ho rahe hain...";
+                statusEl.innerText = "⏳ 1/3: Links auto-detect aur shorten ho rahe hain...";
                 statusEl.style.color = "#38bdf8";
 
                 var processedLinks = [];
-                var iconMap = { "Addon": "fa-puzzle-piece", "World": "fa-globe", "Skin": "fa-tshirt", "Mirror": "fa-download" };
+                var iconMap = { "Addon": "fa-puzzle-piece", "World": "fa-globe", "Skin Pack": "fa-tshirt", "Mirror": "fa-download" };
 
                 for (let l of rawLinks) {
+                    let host = detectHostName(l.url);
+                    let displayTitle = host ? `${l.type} (${host})` : l.type;
+
                     let shortUrl = await shortenUrlWithLinkpays(l.url, linkpaysToken);
                     processedLinks.push({
-                        type: l.type,
+                        type: displayTitle,
                         url: shortUrl,
                         icon: iconMap[l.type] || "fa-download"
                     });
                 }
 
-                // Images upload
                 var folderName = addonTitle.replace(/[^a-zA-Z0-9]/g, "_");
                 var uploadedUrls = [];
                 var uploadedPanoramaUrl = "";
@@ -393,7 +409,6 @@
 
                 statusEl.style.color = "#10b981";
 
-                // Reset
                 document.getElementById('editKey').value = "";
                 document.getElementById('fulfillReqKey').value = "";
                 document.getElementById('addonTitle').value = "";
@@ -402,8 +417,8 @@
                 document.getElementById('panoramaFile').value = "";
                 document.getElementById('linksWrapper').innerHTML = `
                     <div class="link-row">
-                        <select class="link-type"><option value="Addon">Addon</option><option value="World">World</option><option value="Skin">Skin Pack</option><option value="Mirror">Mirror</option></select>
-                        <input type="text" class="link-url" placeholder="Original Link">
+                        <select class="link-type"><option value="Addon">Addon</option><option value="World">World</option><option value="Skin Pack">Skin Pack</option><option value="Mirror">Mirror</option></select>
+                        <input type="text" class="link-url" placeholder="Paste link">
                     </div>
                 `;
                 document.getElementById('formHeading').innerText = "🤫 Strike Admin Upload";
