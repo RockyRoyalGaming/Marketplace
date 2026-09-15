@@ -7,15 +7,25 @@
     <style>
         body { font-family: Arial, sans-serif; background: #0f172a; color: white; padding: 15px; max-width: 550px; margin: 0 auto; }
         .box { background: #1e293b; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-bottom: 25px; }
-        input, select, textarea { display: block; width: 90%; margin-bottom: 12px; padding: 12px; background: #0f172a; color: white; border: 1px solid #334155; border-radius: 8px; font-size: 14px; }
+        input, select, textarea { display: block; width: 100%; box-sizing: border-box; margin-bottom: 12px; padding: 12px; background: #0f172a; color: white; border: 1px solid #334155; border-radius: 8px; font-size: 14px; }
         textarea { height: 80px; resize: vertical; }
         button { background: #0ea5e9; color: white; padding: 13px; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; width: 100%; font-size: 15px; }
         .secret-zone { border-bottom: 2px dashed #334155; padding-bottom: 10px; margin-bottom: 15px; }
         
-        .link-row { display: flex; gap: 8px; margin-bottom: 10px; width: 95%; }
-        .link-row select { width: 38%; margin-bottom: 0; }
-        .link-row input { width: 62%; margin-bottom: 0; }
-        .btn-add-link { background: #334155; color: #38bdf8; padding: 8px; border-radius: 6px; font-size: 12px; width: auto; margin-bottom: 15px; }
+        /* File Block Container */
+        .file-card { background: #090e17; border: 1px solid #293548; border-radius: 10px; padding: 12px; margin-bottom: 14px; position: relative; }
+        .file-card-header { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+        .file-card-header select { width: 45%; margin-bottom: 0; }
+        .file-card-header input { width: 55%; margin-bottom: 0; }
+        .mirror-container { margin-left: 15px; border-left: 2px solid #334155; padding-left: 10px; margin-top: 8px; }
+        .mirror-row { display: flex; gap: 6px; margin-bottom: 6px; }
+        .mirror-row input { margin-bottom: 0; }
+        .btn-mini { background: #334155; color: #94a3b8; border: none; padding: 5px 8px; border-radius: 5px; font-size: 11px; cursor: pointer; width: auto; }
+        .btn-mini:hover { color: white; }
+        .btn-del-file { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 5px 8px; border-radius: 5px; font-size: 11px; width: auto; cursor: pointer; margin-left: auto; }
+
+        .btn-add-block { background: #1e293b; border: 1px dashed #38bdf8; color: #38bdf8; padding: 10px; border-radius: 8px; width: 100%; margin-bottom: 15px; }
+        .field-label { font-size: 12px; color: #94a3b8; display: block; margin-bottom: 5px; margin-top: 5px; }
 
         .item-row { display: flex; align-items: center; justify-content: space-between; background: #0f172a; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #334155; }
         .item-info { display: flex; align-items: center; gap: 10px; overflow: hidden; }
@@ -25,8 +35,6 @@
         .btn-edit { background: #f59e0b; padding: 6px 10px; font-size: 12px; border-radius: 5px; width: auto; }
         .btn-del { background: #ef4444; padding: 6px 10px; font-size: 12px; border-radius: 5px; width: auto; }
         .btn-fulfill { background: #10b981; padding: 6px 10px; font-size: 12px; border-radius: 5px; width: auto; }
-        .field-label { font-size: 12px; color: #94a3b8; display: block; margin-bottom: 5px; margin-top: 5px; }
-        
         .req-tag { font-size: 11px; padding: 2px 6px; border-radius: 4px; }
         .req-tag.pending { background: rgba(251, 192, 45, 0.2); color: #fbc02d; }
         .req-tag.completed { background: rgba(16, 185, 129, 0.2); color: #10b981; }
@@ -60,19 +68,10 @@
 
         <textarea id="addonDesc" placeholder="Item Description..."></textarea>
         
-        <label class="field-label">Download Links (Hosting auto-detect & auto-shorten):</label>
-        <div id="linksWrapper">
-            <div class="link-row">
-                <select class="link-type">
-                    <option value="Addon">Addon</option>
-                    <option value="World">World</option>
-                    <option value="Skin Pack">Skin Pack</option>
-                    <option value="Mirror">Mirror</option>
-                </select>
-                <input type="text" class="link-url" placeholder="Paste link (Mediafire, Gofile...)">
-            </div>
-        </div>
-        <button type="button" class="btn-add-link" onclick="addLinkField()">+ Add Another Link</button>
+        <!-- DYNAMIC FILE & MIRROR SYSTEM -->
+        <label class="field-label">File Blocks & Mirrors (Auto-Shortened via Linkpays):</label>
+        <div id="fileBlocksWrapper"></div>
+        <button type="button" class="btn-add-block" onclick="addFileBlock()">+ Add Another File Block (e.g. World 2, Skin)</button>
 
         <label class="field-label">Carousel Images (Screenshots):</label>
         <input type="file" id="imageFiles" multiple accept="image/*">
@@ -106,34 +105,61 @@
           measurementId: "G-KTVM3J2491"
         };
         
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         var database = firebase.database();
 
         window.onload = function() {
             document.getElementById('ghToken').value = localStorage.getItem('myGhToken') || "";
             document.getElementById('linkpaysToken').value = localStorage.getItem('myLpToken') || "";
+            addFileBlock("Addon", "Main Addon");
             loadItemsForManagement();
             loadRequestsForManagement();
         };
 
-        function addLinkField(type = "Addon", url = "") {
-    var wrapper = document.getElementById('linksWrapper');
-    var row = document.createElement('div');
-    row.className = "link-row";
-    row.innerHTML = `
-        <select class="link-type">
-            <option value="Addon" ${type === 'Addon' ? 'selected' : ''}>Addon</option>
-            <option value="World" ${type === 'World' ? 'selected' : ''}>World</option>
-            <option value="Skin Pack" ${type === 'Skin Pack' ? 'selected' : ''}>Skin Pack</option>
-        </select>
-        <input type="text" class="link-url" placeholder="Paste link (Mediafire, Gofile...)" value="${url}">
-    `;
-    wrapper.appendChild(row);
-}
+        // --- FILE BLOCK LOGIC ---
+        let blockCounter = 0;
+        function addFileBlock(type = "Addon", customTitle = "", mainUrl = "", mirrors = []) {
+            blockCounter++;
+            let bId = "block_" + blockCounter;
+            let wrapper = document.getElementById('fileBlocksWrapper');
 
-        // Host name auto-detect karne ka function
+            let card = document.createElement('div');
+            card.className = "file-card";
+            card.id = bId;
+            card.innerHTML = `
+                <div class="file-card-header">
+                    <select class="block-type">
+                        <option value="Addon" ${type === 'Addon' ? 'selected' : ''}>Add-On</option>
+                        <option value="World" ${type === 'World' ? 'selected' : ''}>World</option>
+                        <option value="Skin Pack" ${type === 'Skin Pack' ? 'selected' : ''}>Skin Pack</option>
+                        <option value="Texture" ${type === 'Texture' ? 'selected' : ''}>Texture</option>
+                    </select>
+                    <input type="text" class="block-title" placeholder="Block Title (e.g. World 1, Addon)" value="${customTitle}">
+                    <button type="button" class="btn-del-file" onclick="document.getElementById('${bId}').remove()">✖</button>
+                </div>
+                <input type="text" class="block-main-url" placeholder="Main Download Link (Mediafire/etc)" value="${mainUrl}">
+                
+                <div class="mirror-container" id="mirrors_${bId}"></div>
+                <button type="button" class="btn-mini" onclick="addMirrorField('${bId}')">+ Add Mirror Link</button>
+            `;
+            wrapper.appendChild(card);
+
+            if (mirrors && mirrors.length > 0) {
+                mirrors.forEach(m => addMirrorField(bId, m));
+            }
+        }
+
+        function addMirrorField(blockId, url = "") {
+            let container = document.getElementById('mirrors_' + blockId);
+            let row = document.createElement('div');
+            row.className = "mirror-row";
+            row.innerHTML = `
+                <input type="text" class="block-mirror-url" placeholder="Mirror Link (Gofile, Mega, Drive...)" value="${url}">
+                <button type="button" class="btn-mini" style="color:#ef4444" onclick="this.parentElement.remove()">✖</button>
+            `;
+            container.appendChild(row);
+        }
+
         function detectHostName(url) {
             let u = url.toLowerCase();
             if (u.includes("mediafire.com")) return "Mediafire";
@@ -142,7 +168,7 @@
             if (u.includes("drive.google.com")) return "Drive";
             if (u.includes("devuploads.com")) return "DevUploads";
             if (u.includes("terabox.com") || u.includes("1024tera")) return "Terabox";
-            return "";
+            return "Mirror";
         }
 
         async function shortenUrlWithLinkpays(rawUrl, apiToken) {
@@ -151,15 +177,14 @@
                 let apiUrl = `https://linkpays.in/api?api=${apiToken}&url=${encodeURIComponent(rawUrl)}`;
                 let res = await fetch(apiUrl);
                 let data = await res.json();
-                if (data.status === "success" && data.shortenedUrl) {
-                    return data.shortenedUrl;
-                }
+                if (data.status === "success" && data.shortenedUrl) return data.shortenedUrl;
             } catch (e) {
                 console.warn("Linkpays Error:", e);
             }
             return rawUrl;
         }
 
+        // --- REQUESTS & MANAGE ITEMS ---
         function loadRequestsForManagement() {
             var reqListDiv = document.getElementById('requestsManageList');
             database.ref('requests').on('value', (snapshot) => {
@@ -168,7 +193,6 @@
                     reqListDiv.innerHTML = "<p style='color:#666; font-size:13px;'>No requests found.</p>";
                     return;
                 }
-
                 snapshot.forEach((child) => {
                     var key = child.key;
                     var req = child.val();
@@ -195,26 +219,18 @@
         }
 
         function fulfillRequest(key, encTitle, encUser) {
-            var title = decodeURIComponent(encTitle);
-            var user = decodeURIComponent(encUser);
-
             document.getElementById('fulfillReqKey').value = key;
             document.getElementById('editKey').value = "";
-
-            document.getElementById('addonTitle').value = title;
-            document.getElementById('addonDesc').value = `(Suggested by ${user})\n\n`;
-            
-            document.getElementById('formHeading').innerText = `🚀 Fulfilling: ${title}`;
+            document.getElementById('addonTitle').value = decodeURIComponent(encTitle);
+            document.getElementById('addonDesc').value = `(Suggested by ${decodeURIComponent(encUser)})\n\n`;
+            document.getElementById('formHeading').innerText = `🚀 Fulfilling: ${decodeURIComponent(encTitle)}`;
             document.getElementById('uploadBtn').innerText = "🚀 UPLOAD & COMPLETE REQUEST";
             document.getElementById('uploadBtn').style.background = "#10b981";
-
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function deleteRequest(key) {
-            if (confirm("Delete this request?")) {
-                database.ref('requests/' + key).remove();
-            }
+            if (confirm("Delete this request?")) database.ref('requests/' + key).remove();
         }
 
         function loadItemsForManagement() {
@@ -225,7 +241,6 @@
                     listDiv.innerHTML = "<p style='color:#666; font-size:13px;'>No items found.</p>";
                     return;
                 }
-
                 snapshot.forEach((child) => {
                     var key = child.key;
                     var item = child.val();
@@ -252,9 +267,7 @@
         }
 
         function deleteItem(key) {
-            if (confirm("Delete this item permanently?")) {
-                database.ref('market_items/' + key).remove();
-            }
+            if (confirm("Delete this item permanently?")) database.ref('market_items/' + key).remove();
         }
 
         function setupEdit(key) {
@@ -264,20 +277,22 @@
 
                 document.getElementById('editKey').value = key;
                 document.getElementById('fulfillReqKey').value = "";
-
                 document.getElementById('addonTitle').value = item.title;
                 document.getElementById('addonCategory').value = item.category;
                 document.getElementById('addonDesc').value = item.description || "";
 
-                var wrapper = document.getElementById('linksWrapper');
+                var wrapper = document.getElementById('fileBlocksWrapper');
                 wrapper.innerHTML = "";
-                if (item.links && item.links.length > 0) {
-                    item.links.forEach(l => {
-                        let cleanType = l.type.split(" (")[0]; // pura name bina (Host) ke
-                        addLinkField(cleanType, l.url);
+                
+                if (item.fileBlocks && item.fileBlocks.length > 0) {
+                    item.fileBlocks.forEach(b => {
+                        let mUrls = (b.mirrors || []).map(m => m.url);
+                        addFileBlock(b.type, b.title, b.mainLink ? b.mainLink.url : "", mUrls);
                     });
+                } else if (item.links && item.links.length > 0) {
+                    item.links.forEach(l => addFileBlock("Addon", l.type, l.url));
                 } else {
-                    addLinkField();
+                    addFileBlock();
                 }
 
                 document.getElementById('formHeading').innerText = "✏️ Editing: " + item.title;
@@ -311,7 +326,6 @@
             var btn = document.getElementById('uploadBtn');
             var ghToken = document.getElementById('ghToken').value;
             var linkpaysToken = document.getElementById('linkpaysToken').value;
-            var webhookUrl = document.getElementById('webhookUrl').value;
             var editKey = document.getElementById('editKey').value;
             var fulfillReqKey = document.getElementById('fulfillReqKey').value;
 
@@ -322,16 +336,27 @@
             var panoramaFiles = document.getElementById('panoramaFile').files;
             var statusEl = document.getElementById('status');
 
-            var linkRows = document.querySelectorAll('.link-row');
-            var rawLinks = [];
-            linkRows.forEach(row => {
-                let type = row.querySelector('.link-type').value;
-                let url = row.querySelector('.link-url').value.trim();
-                if (url) rawLinks.push({ type: type, url: url });
+            // Gather all File Blocks
+            var blockCards = document.querySelectorAll('.file-card');
+            var rawBlocks = [];
+
+            blockCards.forEach(card => {
+                let type = card.querySelector('.block-type').value;
+                let title = card.querySelector('.block-title').value.trim() || type;
+                let mainUrl = card.querySelector('.block-main-url').value.trim();
+                let mirrorInputs = card.querySelectorAll('.block-mirror-url');
+                let mirrors = [];
+                mirrorInputs.forEach(inp => {
+                    if (inp.value.trim()) mirrors.push(inp.value.trim());
+                });
+
+                if (mainUrl) {
+                    rawBlocks.push({ type, title, mainUrl, mirrors });
+                }
             });
 
-            if (!addonTitle || rawLinks.length === 0) {
-                alert("Please fill Title and at least 1 Download Link!");
+            if (!addonTitle || rawBlocks.length === 0) {
+                alert("Please fill Item Name and at least 1 Main Download Link!");
                 return;
             }
 
@@ -341,30 +366,48 @@
             btn.disabled = true;
 
             try {
-                statusEl.innerText = "⏳ 1/3: Links auto-detect aur shorten ho rahe hain...";
+                statusEl.innerText = "⏳ 1/3: Links Shorten ho rahe hain (Linkpays)...";
                 statusEl.style.color = "#38bdf8";
 
-                var processedLinks = [];
-                var iconMap = { "Addon": "fa-puzzle-piece", "World": "fa-globe", "Skin Pack": "fa-tshirt", "Mirror": "fa-download" };
+                var processedFileBlocks = [];
+                var legacyLinks = []; // For backward compatibility
+                var iconMap = { "Addon": "fa-puzzle-piece", "World": "fa-globe", "Skin Pack": "fa-tshirt", "Texture": "fa-image" };
 
-                for (let l of rawLinks) {
-                    let host = detectHostName(l.url);
-                    let displayTitle = host ? `${l.type} (${host})` : l.type;
+                for (let b of rawBlocks) {
+                    let mainShort = await shortenUrlWithLinkpays(b.mainUrl, linkpaysToken);
+                    let mainHost = detectHostName(b.mainUrl);
 
-                    let shortUrl = await shortenUrlWithLinkpays(l.url, linkpaysToken);
-                    processedLinks.push({
-                        type: displayTitle,
-                        url: shortUrl,
-                        icon: iconMap[l.type] || "fa-download"
+                    let processedMirrors = [];
+                    for (let mUrl of b.mirrors) {
+                        let mShort = await shortenUrlWithLinkpays(mUrl, linkpaysToken);
+                        processedMirrors.push({
+                            url: mShort,
+                            host: detectHostName(mUrl)
+                        });
+                    }
+
+                    processedFileBlocks.push({
+                        type: b.type,
+                        title: b.title,
+                        icon: iconMap[b.type] || "fa-download",
+                        mainLink: { url: mainShort, host: mainHost },
+                        mirrors: processedMirrors
+                    });
+
+                    legacyLinks.push({
+                        type: b.title + (mainHost ? ` (${mainHost})` : ""),
+                        url: mainShort,
+                        icon: iconMap[b.type] || "fa-download"
                     });
                 }
 
+                // Images Upload
                 var folderName = addonTitle.replace(/[^a-zA-Z0-9]/g, "_");
                 var uploadedUrls = [];
                 var uploadedPanoramaUrl = "";
 
                 if (imageFiles.length > 0) {
-                    statusEl.innerText = "⏳ 2/3: Carousel Photos GitHub par upload ho rahi hain...";
+                    statusEl.innerText = "⏳ 2/3: Screenshots GitHub par upload ho rahe hain...";
                     for (let i = 0; i < imageFiles.length; i++) {
                         let path = folderName + "/" + (i + 1) + ".png";
                         let url = await uploadFileToGithub(imageFiles[i], path, ghToken);
@@ -377,13 +420,14 @@
                     uploadedPanoramaUrl = await uploadFileToGithub(panoramaFiles[0], path, ghToken);
                 }
 
-                statusEl.innerText = "⏳ 3/3: Firebase Database update ho rahi hai...";
+                statusEl.innerText = "⏳ 3/3: Database me save ho raha hai...";
 
                 var itemData = {
                     title: addonTitle,
                     category: addonCategory,
                     description: addonDesc,
-                    links: processedLinks
+                    fileBlocks: processedFileBlocks,
+                    links: legacyLinks // Compatibility with older items
                 };
 
                 if (uploadedUrls.length > 0) itemData.images = uploadedUrls;
@@ -400,26 +444,23 @@
                     if (fulfillReqKey) {
                         await database.ref('requests/' + fulfillReqKey).update({
                             status: "completed",
-                            downloadLink: processedLinks[0].url
+                            downloadLink: legacyLinks[0].url
                         });
                     }
-                    statusEl.innerText = "✅ Item Live & Request Completed!";
+                    statusEl.innerText = "✅ Live & Request Completed!";
                 }
 
                 statusEl.style.color = "#10b981";
 
+                // Reset
                 document.getElementById('editKey').value = "";
                 document.getElementById('fulfillReqKey').value = "";
                 document.getElementById('addonTitle').value = "";
                 document.getElementById('addonDesc').value = "";
                 document.getElementById('imageFiles').value = "";
                 document.getElementById('panoramaFile').value = "";
-                document.getElementById('linksWrapper').innerHTML = `
-                    <div class="link-row">
-                        <select class="link-type"><option value="Addon">Addon</option><option value="World">World</option><option value="Skin Pack">Skin Pack</option><option value="Mirror">Mirror</option></select>
-                        <input type="text" class="link-url" placeholder="Paste link">
-                    </div>
-                `;
+                document.getElementById('fileBlocksWrapper').innerHTML = "";
+                addFileBlock("Addon", "Main Addon");
                 document.getElementById('formHeading').innerText = "🤫 Strike Admin Upload";
                 btn.innerText = "🚀 UPLOAD TO SITE";
                 btn.style.background = "#0ea5e9";
