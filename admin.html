@@ -117,59 +117,52 @@
         };
 
         // --- FILE BLOCK LOGIC ---
-        let blockCounter = 0;
-        function addFileBlock(type = "Addon", customTitle = "", mainUrl = "", mirrors = []) {
-            blockCounter++;
-            let bId = "block_" + blockCounter;
-            let wrapper = document.getElementById('fileBlocksWrapper');
+        // Har tarah ki hosting identify karne ka smart function
+function detectHostName(url) {
+    if (!url) return "Download";
+    let u = url.toLowerCase();
+    if (u.includes("mediafire")) return "Mediafire";
+    if (u.includes("gofile")) return "Gofile";
+    if (u.includes("mega.nz") || u.includes("mega.io")) return "Mega";
+    if (u.includes("drive.google")) return "G-Drive";
+    if (u.includes("devuploads")) return "DevUploads";
+    if (u.includes("terabox") || u.includes("1024tera") || u.includes("terashare")) return "Terabox";
+    if (u.includes("dropbox")) return "Dropbox";
+    if (u.includes("github")) return "GitHub";
+    return "Server"; // Default fallback
+}
 
-            let card = document.createElement('div');
-            card.className = "file-card";
-            card.id = bId;
-            card.innerHTML = `
-                <div class="file-card-header">
-                    <select class="block-type">
-                        <option value="Addon" ${type === 'Addon' ? 'selected' : ''}>Add-On</option>
-                        <option value="World" ${type === 'World' ? 'selected' : ''}>World</option>
-                        <option value="Skin Pack" ${type === 'Skin Pack' ? 'selected' : ''}>Skin Pack</option>
-                        <option value="Texture" ${type === 'Texture' ? 'selected' : ''}>Texture</option>
-                    </select>
-                    <input type="text" class="block-title" placeholder="Block Title (e.g. World 1, Addon)" value="${customTitle}">
-                    <button type="button" class="btn-del-file" onclick="document.getElementById('${bId}').remove()">✖</button>
-                </div>
-                <input type="text" class="block-main-url" placeholder="Main Download Link (Mediafire/etc)" value="${mainUrl}">
-                
-                <div class="mirror-container" id="mirrors_${bId}"></div>
-                <button type="button" class="btn-mini" onclick="addMirrorField('${bId}')">+ Add Mirror Link</button>
-            `;
-            wrapper.appendChild(card);
+let blockCounter = 0;
+function addFileBlock(type = "Addon", customTitle = "", mainUrl = "", mirrors = []) {
+    blockCounter++;
+    let bId = "block_" + blockCounter;
+    let wrapper = document.getElementById('fileBlocksWrapper');
 
-            if (mirrors && mirrors.length > 0) {
-                mirrors.forEach(m => addMirrorField(bId, m));
-            }
-        }
+    let card = document.createElement('div');
+    card.className = "file-card";
+    card.id = bId;
+    card.innerHTML = `
+        <div class="file-card-header">
+            <select class="block-type">
+                <option value="Addon" ${type === 'Addon' ? 'selected' : ''}>Add-On</option>
+                <option value="World" ${type === 'World' ? 'selected' : ''}>World</option>
+                <option value="Skin Pack" ${type === 'Skin Pack' ? 'selected' : ''}>Skin Pack</option>
+                <option value="Texture" ${type === 'Texture' ? 'selected' : ''}>Texture</option>
+            </select>
+            <input type="text" class="block-title" placeholder="Block Title (e.g. World 1, Behavior)" value="${customTitle}">
+            <button type="button" class="btn-del-file" onclick="document.getElementById('${bId}').remove()">✖</button>
+        </div>
+        <input type="text" class="block-main-url" placeholder="Main Download Link (Mediafire/etc)" value="${mainUrl}">
+        
+        <div class="mirror-container" id="mirrors_${bId}"></div>
+        <button type="button" class="btn-mini" onclick="addMirrorField('${bId}')">+ Add Mirror Link</button>
+    `;
+    wrapper.appendChild(card);
 
-        function addMirrorField(blockId, url = "") {
-            let container = document.getElementById('mirrors_' + blockId);
-            let row = document.createElement('div');
-            row.className = "mirror-row";
-            row.innerHTML = `
-                <input type="text" class="block-mirror-url" placeholder="Mirror Link (Gofile, Mega, Drive...)" value="${url}">
-                <button type="button" class="btn-mini" style="color:#ef4444" onclick="this.parentElement.remove()">✖</button>
-            `;
-            container.appendChild(row);
-        }
-
-        function detectHostName(url) {
-            let u = url.toLowerCase();
-            if (u.includes("mediafire.com")) return "Mediafire";
-            if (u.includes("gofile.io")) return "Gofile";
-            if (u.includes("mega.nz")) return "Mega";
-            if (u.includes("drive.google.com")) return "Drive";
-            if (u.includes("devuploads.com")) return "DevUploads";
-            if (u.includes("terabox.com") || u.includes("1024tera")) return "Terabox";
-            return "Mirror";
-        }
+    if (mirrors && mirrors.length > 0) {
+        mirrors.forEach(m => addMirrorField(bId, m));
+    }
+}
 
         async function shortenUrlWithLinkpays(rawUrl, apiToken) {
             if (!apiToken || rawUrl.includes("linkpays.in")) return rawUrl;
