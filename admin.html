@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Strike Admin Manager</title>
+    <title>Strike Admin Manager (Auto-Fetcher)</title>
     <style>
         body { font-family: Arial, sans-serif; background: #0f172a; color: white; padding: 15px; max-width: 550px; margin: 0 auto; }
         
-        /* Navigation Tabs */
         .admin-nav { display: flex; gap: 8px; margin-bottom: 20px; background: #1e293b; padding: 6px; border-radius: 12px; }
         .nav-btn { flex: 1; background: transparent; color: #94a3b8; border: none; padding: 10px 5px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; transition: 0.2s; }
         .nav-btn.active { background: #0ea5e9; color: white; }
@@ -20,6 +19,15 @@
         textarea { height: 75px; resize: vertical; }
         .btn-main { background: #0ea5e9; color: white; padding: 12px; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; width: 100%; font-size: 15px; }
         
+        /* Auto Fetcher Bar */
+        .fetcher-box { background: #0b1329; border: 1px solid #38bdf8; border-radius: 10px; padding: 12px; margin-bottom: 15px; }
+        .fetcher-input-group { display: flex; gap: 8px; }
+        .fetcher-input-group input { margin-bottom: 0; }
+        .btn-fetch { background: #38bdf8; color: #090e17; font-weight: bold; border: none; border-radius: 8px; padding: 0 15px; cursor: pointer; }
+
+        .preview-thumbs { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 12px; padding-bottom: 5px; }
+        .preview-thumbs img { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; border: 1px solid #334155; }
+
         .search-bar { background: #090e17; border: 1px solid #38bdf8; margin-bottom: 15px; padding-left: 12px; }
         .secret-zone { border-bottom: 2px dashed #334155; padding-bottom: 10px; margin-bottom: 15px; }
 
@@ -65,18 +73,34 @@
         <div class="box">
             <h2 id="formHeading" style="text-align: center; color: #38bdf8; margin-top:0;">🤫 Strike Admin Upload</h2>
             
+            <!-- AUTO FETCHER BOX -->
+            <div class="fetcher-box">
+                <span class="field-label" style="color:#38bdf8;">✨ Auto-Fill from Minecraft Marketplace:</span>
+                <div class="fetcher-input-group">
+                    <input type="text" id="marketplaceInput" placeholder="Paste Market Link or UUID (e.g. 5d1...)" style="margin-bottom:0;">
+                    <button type="button" class="btn-fetch" onclick="fetchMarketDetails()">Fetch</button>
+                </div>
+                <div id="fetchStatus" style="font-size:11px; margin-top:5px; color:#94a3b8;"></div>
+            </div>
+
             <div class="secret-zone">
-                <input type="password" id="ghToken" placeholder="🔑 GitHub PAT">
+                <input type="password" id="ghToken" placeholder="🔑 GitHub PAT (Only if uploading manual images)">
                 <input type="password" id="linkpaysToken" placeholder="🔗 Linkpays API Token">
                 <input type="password" id="webhookUrl" placeholder="🤖 Discord Webhook URL (Optional)">
             </div>
 
             <input type="hidden" id="editKey" value="">
             <input type="hidden" id="fulfillReqKey" value="">
+            <input type="hidden" id="fetchedThumbnails" value="">
 
             <input type="text" id="addonTitle" placeholder="Item Name (e.g. 200 Mobs)">
-            <input type="text" id="addonSize" placeholder="⚙️ File Size (e.g. 13.08MB or 45MB)">
             
+            <div style="display:flex; gap:8px;">
+                <input type="text" id="addonCreator" placeholder="Creator (e.g. Noxcrew)" style="width:50%;">
+                <input type="text" id="addonRating" placeholder="Rating (e.g. 4.7)" style="width:25%;">
+                <input type="text" id="addonSize" placeholder="Size (e.g. 15MB)" style="width:25%;">
+            </div>
+
             <select id="addonCategory">
                 <option value="addon">Add-On</option>
                 <option value="world">World</option>
@@ -86,16 +110,16 @@
             </select>
 
             <textarea id="addonDesc" placeholder="Item Description..."></textarea>
-            
-            <label class="field-label">File Blocks & Mirrors (Auto-Shorten via Linkpays):</label>
+
+            <!-- Auto-Fetched Images Preview -->
+            <div id="fetchedImagesPreview" class="preview-thumbs" style="display:none;"></div>
+
+            <label class="field-label">File Blocks & Mirrors (Auto-Shortened via Linkpays):</label>
             <div id="fileBlocksWrapper"></div>
             <button type="button" class="btn-add-block" onclick="addFileBlock()">+ Add Another File Block</button>
 
-            <label class="field-label">Carousel Images (Screenshots):</label>
+            <label class="field-label">Manual Images (Optional if fetched from Market):</label>
             <input type="file" id="imageFiles" multiple accept="image/*">
-
-            <label class="field-label">Panorama 360 Image (Optional):</label>
-            <input type="file" id="panoramaFile" accept="image/*">
 
             <button onclick="startUpload()" id="uploadBtn" class="btn-main">🚀 UPLOAD TO SITE</button>
             <p id="status" style="font-size: 13px; text-align: center; margin-top: 15px; font-weight: bold;"></p>
@@ -142,6 +166,7 @@
 
         let allRequestsData = [];
         let allItemsData = [];
+        let autoFetchedImages = [];
 
         window.onload = function() {
             document.getElementById('ghToken').value = localStorage.getItem('myGhToken') || "";
@@ -160,6 +185,83 @@
             }
         }
 
+        // --- AUTO FETCHER ENGINE (MINECRAFT MARKETPLACE) ---
+        async function fetchMarketDetails() {
+            let input = document.getElementById('marketplaceInput').value.trim();
+            let status = document.getElementById('fetchStatus');
+            if (!input) {
+                alert("Please enter a Minecraft Market URL or UUID!");
+                return;
+            }
+
+            // Extract UUID
+            let uuid = input;
+            if (input.includes("id=")) {
+                uuid = input.split("id=")[1].split("&")[0];
+            } else if (input.includes("/")) {
+                let parts = input.split("/").filter(Boolean);
+                uuid = parts[parts.length - 1];
+            }
+
+            status.innerText = "⏳ Fetching official metadata from Minecraft servers...";
+            status.style.color = "#38bdf8";
+
+            try {
+                // Public Mojang Discovery Catalog Endpoint
+                let apiUrl = `https://catalog.minecraftservices.com/v1.0/items/details?itemIds=${uuid}`;
+                let res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`);
+                let data = await res.json();
+
+                if (!data || !data.items || data.items.length === 0) {
+                    throw new Error("Item not found on Marketplace. Check UUID/URL.");
+                }
+
+                let itm = data.items[0];
+
+                // Auto Fill Form
+                document.getElementById('addonTitle').value = itm.title || "";
+                document.getElementById('addonCreator').value = itm.creatorName || "";
+                document.getElementById('addonRating').value = itm.averageRating ? itm.averageRating.toFixed(1) : "4.5";
+                document.getElementById('addonDesc').value = itm.description || "";
+
+                // Category Detect
+                let cat = (itm.primaryCategory || "").toLowerCase();
+                if (cat.includes("addon")) document.getElementById('addonCategory').value = "addon";
+                else if (cat.includes("world")) document.getElementById('addonCategory').value = "world";
+                else if (cat.includes("skin")) document.getElementById('addonCategory').value = "skin";
+                else if (cat.includes("texture")) document.getElementById('addonCategory').value = "texture";
+
+                // Extract HD Screenshots
+                autoFetchedImages = [];
+                if (itm.images) {
+                    itm.images.forEach(img => {
+                        if (img.url) autoFetchedImages.push(img.url);
+                    });
+                }
+
+                // Render Previews
+                let prevBox = document.getElementById('fetchedImagesPreview');
+                prevBox.innerHTML = "";
+                if (autoFetchedImages.length > 0) {
+                    prevBox.style.display = "flex";
+                    autoFetchedImages.forEach(u => {
+                        let im = document.createElement('img');
+                        im.src = u;
+                        prevBox.appendChild(im);
+                    });
+                }
+
+                status.innerText = `✅ Loaded: ${itm.title} (${autoFetchedImages.length} HD photos ready)`;
+                status.style.color = "#10b981";
+
+            } catch (err) {
+                console.error(err);
+                status.innerText = "❌ Auto-fetch failed: " + err.message;
+                status.style.color = "#ef4444";
+            }
+        }
+
+        // --- REALTIME DATA LISTENERS ---
         function bindData() {
             database.ref('requests').on('value', snap => {
                 allRequestsData = [];
@@ -215,11 +317,11 @@
             row.innerHTML = `
                 <div class="item-text">
                     <strong>${r.addon}</strong>
-                    ${r.link ? `<a href="${r.link}" target="_blank" style="color:#38bdf8; font-size:11px; margin-left:4px;">[Link]</a>` : ""}
+                    ${r.link ? `<a href="${r.link}" target="_blank" style="color:#38bdf8; font-size:11px; margin-left:4px;">[Market Link]</a>` : ""}
                     <br><span style="color:#888; font-size:11px;">By: ${r.user}</span>
                 </div>
                 <div class="actions">
-                    ${!isCompleted ? `<button class="btn-action btn-fulfill" title="Fulfill" onclick="fulfillRequest('${r.key}', '${encodeURIComponent(r.addon)}', '${encodeURIComponent(r.user)}')">🚀</button>` : ""}
+                    ${!isCompleted ? `<button class="btn-action btn-fulfill" title="Fulfill" onclick="fulfillRequest('${r.key}', '${encodeURIComponent(r.addon)}', '${encodeURIComponent(r.user)}', '${encodeURIComponent(r.link || '')}')">🚀</button>` : ""}
                     <button class="btn-action btn-del" title="Delete" onclick="deleteRequest('${r.key}')">🗑️</button>
                 </div>
             `;
@@ -261,11 +363,19 @@
             });
         }
 
-        function fulfillRequest(key, encTitle, encUser) {
+        function fulfillRequest(key, encTitle, encUser, encLink) {
             document.getElementById('fulfillReqKey').value = key;
             document.getElementById('editKey').value = "";
+            let marketLink = decodeURIComponent(encLink);
+            
             document.getElementById('addonTitle').value = decodeURIComponent(encTitle);
             document.getElementById('addonDesc').value = `(Suggested by ${decodeURIComponent(encUser)})\n\n`;
+            
+            if (marketLink) {
+                document.getElementById('marketplaceInput').value = marketLink;
+                fetchMarketDetails();
+            }
+
             document.getElementById('formHeading').innerText = `🚀 Fulfilling: ${decodeURIComponent(encTitle)}`;
             document.getElementById('uploadBtn').innerText = "🚀 UPLOAD & COMPLETE";
             document.getElementById('uploadBtn').style.background = "#10b981";
@@ -291,9 +401,11 @@
                 document.getElementById('editKey').value = key;
                 document.getElementById('fulfillReqKey').value = "";
                 document.getElementById('addonTitle').value = item.title;
+                document.getElementById('addonCreator').value = item.creator || "";
+                document.getElementById('addonRating').value = item.rating || "";
+                document.getElementById('addonSize').value = item.fileSize || "";
                 document.getElementById('addonCategory').value = item.category;
                 document.getElementById('addonDesc').value = item.description || "";
-                document.getElementById('addonSize').value = item.fileSize || "";
 
                 var wrapper = document.getElementById('fileBlocksWrapper');
                 wrapper.innerHTML = "";
@@ -409,7 +521,6 @@
             return "https://raw.githubusercontent.com/RockyRoyalGaming/images/main/" + filePath;
         }
 
-        // --- DISCORD PAYLOAD GENERATOR ---
         function buildDiscordPayload(item, requestedUser, firstImageUrl, fileSize) {
             let downloadLinksText = "";
             if (item.fileBlocks && item.fileBlocks.length > 0) {
@@ -437,6 +548,8 @@
 \`Up By RockyRG\`
 
 > 📁 **Category** : ${item.category.toUpperCase()}
+> 👤 **Creator** : ${item.creator || "Minecraft"}
+> ⭐ **Rating** : ${item.rating || "4.5"}
 > ⚙️ **File Size** : ${sizeStr}
 > 🍀 **Support Version** : Bedrock 1.21+ (Original/Patch)
 > 🙋‍♂️ **Requested by** : ${reqBy}
@@ -466,7 +579,6 @@ https://chat.whatsapp.com/JdeFaKUFV9E3rtpYgk6XdP
             };
         }
 
-        // --- MAIN UPLOAD LOGIC ---
         async function startUpload() {
             var btn = document.getElementById('uploadBtn');
             var ghToken = document.getElementById('ghToken').value;
@@ -476,11 +588,12 @@ https://chat.whatsapp.com/JdeFaKUFV9E3rtpYgk6XdP
             var fulfillReqKey = document.getElementById('fulfillReqKey').value;
 
             var addonTitle = document.getElementById('addonTitle').value;
-            var addonCategory = document.getElementById('addonCategory').value;
+            var addonCreator = document.getElementById('addonCreator').value;
+            var addonRating = document.getElementById('addonRating').value;
             var addonSize = document.getElementById('addonSize').value;
+            var addonCategory = document.getElementById('addonCategory').value;
             var addonDesc = document.getElementById('addonDesc').value;
             var imageFiles = document.getElementById('imageFiles').files;
-            var panoramaFiles = document.getElementById('panoramaFile').files;
             var statusEl = document.getElementById('status');
 
             var blockCards = document.querySelectorAll('.file-card');
@@ -510,7 +623,7 @@ https://chat.whatsapp.com/JdeFaKUFV9E3rtpYgk6XdP
             btn.disabled = true;
 
             try {
-                statusEl.innerText = "⏳ 1/4: Shortening Links (Linkpays)...";
+                statusEl.innerText = "⏳ 1/3: Shortening Links (Linkpays)...";
                 statusEl.style.color = "#38bdf8";
 
                 var processedFileBlocks = [];
@@ -545,44 +658,42 @@ https://chat.whatsapp.com/JdeFaKUFV9E3rtpYgk6XdP
                     });
                 }
 
-                var folderName = addonTitle.replace(/[^a-zA-Z0-9]/g, "_");
-                var uploadedUrls = [];
-                var uploadedPanoramaUrl = "";
+                // Images: Prioritize Auto-Fetched from Mojang, else GitHub upload
+                var finalImages = [...autoFetchedImages];
 
                 if (imageFiles.length > 0) {
-                    statusEl.innerText = "⏳ 2/4: Uploading Screenshots to GitHub...";
+                    statusEl.innerText = "⏳ 2/3: Uploading Manual Images to GitHub...";
+                    var folderName = addonTitle.replace(/[^a-zA-Z0-9]/g, "_");
                     for (let i = 0; i < imageFiles.length; i++) {
                         let path = folderName + "/" + (i + 1) + ".png";
                         let url = await uploadFileToGithub(imageFiles[i], path, ghToken);
-                        uploadedUrls.push(url);
+                        finalImages.push(url);
                     }
                 }
 
-                if (panoramaFiles.length > 0) {
-                    let path = folderName + "/0panorama.png";
-                    uploadedPanoramaUrl = await uploadFileToGithub(panoramaFiles[0], path, ghToken);
+                if (finalImages.length === 0) {
+                    throw new Error("No images available! Please Auto-Fetch or select manual photos.");
                 }
 
-                statusEl.innerText = "⏳ 3/4: Updating Database...";
+                statusEl.innerText = "⏳ 3/3: Updating Database...";
 
                 var itemData = {
                     title: addonTitle,
-                    category: addonCategory,
+                    creator: addonCreator,
+                    rating: addonRating,
                     fileSize: addonSize,
+                    category: addonCategory,
                     description: addonDesc,
+                    images: finalImages,
                     fileBlocks: processedFileBlocks,
                     links: legacyLinks
                 };
-
-                if (uploadedUrls.length > 0) itemData.images = uploadedUrls;
-                if (uploadedPanoramaUrl !== "") itemData.panorama = uploadedPanoramaUrl;
 
                 if (editKey) {
                     await database.ref('market_items/' + editKey).update(itemData);
                     statusEl.innerText = "✅ Item Updated Successfully!";
                 } else {
                     itemData.id = Date.now().toString();
-                    if (uploadedUrls.length === 0) throw new Error("Please select images for new items!");
                     await database.ref('market_items').push().set(itemData);
 
                     if (fulfillReqKey) {
@@ -597,12 +708,11 @@ https://chat.whatsapp.com/JdeFaKUFV9E3rtpYgk6XdP
                 // Discord Posting
                 if (webhookUrl) {
                     try {
-                        statusEl.innerText = "⏳ 4/4: Discord Posting...";
                         let reqUser = "";
                         let match = addonDesc.match(/\(Suggested by (.*?)\)/i);
                         if (match) reqUser = match[1];
 
-                        let payload = buildDiscordPayload(itemData, reqUser, uploadedUrls[0] || "", addonSize);
+                        let payload = buildDiscordPayload(itemData, reqUser, finalImages[0] || "", addonSize);
                         let postUrl = webhookUrl.includes("?") ? webhookUrl + "&wait=true" : webhookUrl + "?wait=true";
 
                         await fetch(postUrl, {
@@ -621,10 +731,14 @@ https://chat.whatsapp.com/JdeFaKUFV9E3rtpYgk6XdP
                 document.getElementById('editKey').value = "";
                 document.getElementById('fulfillReqKey').value = "";
                 document.getElementById('addonTitle').value = "";
+                document.getElementById('addonCreator').value = "";
+                document.getElementById('addonRating').value = "";
                 document.getElementById('addonSize').value = "";
                 document.getElementById('addonDesc').value = "";
+                document.getElementById('marketplaceInput').value = "";
+                document.getElementById('fetchedImagesPreview').style.display = "none";
+                autoFetchedImages = [];
                 document.getElementById('imageFiles').value = "";
-                document.getElementById('panoramaFile').value = "";
                 document.getElementById('fileBlocksWrapper').innerHTML = "";
                 addFileBlock("Addon", "Main Addon");
                 document.getElementById('formHeading').innerText = "🤫 Strike Admin Upload";
