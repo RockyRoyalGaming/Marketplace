@@ -77,7 +77,7 @@
             <div class="fetcher-box">
                 <span class="field-label" style="color:#38bdf8;">✨ Auto-Fill from Minecraft Marketplace:</span>
                 <div class="fetcher-input-group">
-                    <input type="text" id="marketplaceInput" placeholder="Paste Market Link or UUID (e.g. 5d1...)" style="margin-bottom:0;">
+                    <input type="text" id="marketplaceInput" placeholder="Paste Market Link or UUID" style="margin-bottom:0;">
                     <button type="button" class="btn-fetch" onclick="fetchMarketDetails()">Fetch</button>
                 </div>
                 <div id="fetchStatus" style="font-size:11px; margin-top:5px; color:#94a3b8;"></div>
@@ -91,7 +91,6 @@
 
             <input type="hidden" id="editKey" value="">
             <input type="hidden" id="fulfillReqKey" value="">
-            <input type="hidden" id="fetchedThumbnails" value="">
 
             <input type="text" id="addonTitle" placeholder="Item Name (e.g. 200 Mobs)">
             
@@ -157,7 +156,7 @@
           projectId: "strikemarket-32a5e",
           storageBucket: "strikemarket-32a5e.firebasestorage.app",
           messagingSenderId: "719596182121",
-          appId: "1:719596182121:web:d02dfdd3089f560fc560f8",
+          appId: "1:719596182121:web:d02df0d3089f560fc560f8",
           measurementId: "G-KTVM3J2491"
         };
         
@@ -185,7 +184,7 @@
             }
         }
 
-        // --- AUTO FETCHER ENGINE (MINECRAFT MARKETPLACE) ---
+        // --- MULTI-PROXY AUTO FETCHER ENGINE ---
         async function fetchMarketDetails() {
             let input = document.getElementById('marketplaceInput').value.trim();
             let status = document.getElementById('fetchStatus');
@@ -194,52 +193,78 @@
                 return;
             }
 
-            // Extract UUID
-            let uuid = input;
-            if (input.includes("id=")) {
+            // 1. Extract UUID correctly
+            let uuid = "";
+            let match = input.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
+            if (match) {
+                uuid = match[0];
+            } else if (input.includes("id=")) {
                 uuid = input.split("id=")[1].split("&")[0];
-            } else if (input.includes("/")) {
-                let parts = input.split("/").filter(Boolean);
-                uuid = parts[parts.length - 1];
+            } else {
+                uuid = input;
             }
 
-            status.innerText = "⏳ Fetching official metadata from Minecraft servers...";
+            status.innerText = `⏳ UUID: ${uuid} fetch ho raha hai...`;
             status.style.color = "#38bdf8";
 
-            try {
-                // Public Mojang Discovery Catalog Endpoint
-                let apiUrl = `https://catalog.minecraftservices.com/v1.0/items/details?itemIds=${uuid}`;
-                let res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`);
-                let data = await res.json();
+            let targetUrl = `https://catalog.minecraftservices.com/v1.0/items/details?itemIds=${uuid}`;
+            
+            // Multiple CORS proxies fallback
+            let proxies = [
+                `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
+                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`
+            ];
 
-                if (!data || !data.items || data.items.length === 0) {
-                    throw new Error("Item not found on Marketplace. Check UUID/URL.");
+            let itm = null;
+
+            for (let proxy of proxies) {
+                try {
+                    let res = await fetch(proxy);
+                    if (!res.ok) continue;
+                    let data = await res.json();
+                    
+                    let itemsArray = data.items || data;
+                    if (Array.isArray(itemsArray) && itemsArray.length > 0) {
+                        itm = itemsArray[0];
+                        break;
+                    }
+                } catch (e) {
+                    console.warn("Proxy attempt failed:", e);
                 }
+            }
 
-                let itm = data.items[0];
+            if (!itm) {
+                status.innerText = "❌ Auto-fetch failed: Minecraft server blocked proxy. Title manually fill karein.";
+                status.style.color = "#ef4444";
+                return;
+            }
 
-                // Auto Fill Form
-                document.getElementById('addonTitle').value = itm.title || "";
-                document.getElementById('addonCreator').value = itm.creatorName || "";
-                document.getElementById('addonRating').value = itm.averageRating ? itm.averageRating.toFixed(1) : "4.5";
-                document.getElementById('addonDesc').value = itm.description || "";
+            try {
+                // Auto Fill Details
+                document.getElementById('addonTitle').value = itm.title || itm.name || "";
+                document.getElementById('addonCreator').value = itm.creatorName || (itm.creator ? itm.creator.name : "") || "";
+                document.getElementById('addonRating').value = itm.averageRating ? itm.averageRating.toFixed(1) : (itm.rating || "4.5");
+                document.getElementById('addonDesc').value = itm.description || itm.summary || "";
 
-                // Category Detect
-                let cat = (itm.primaryCategory || "").toLowerCase();
+                // Auto Category
+                let cat = (itm.primaryCategory || itm.category || "").toLowerCase();
                 if (cat.includes("addon")) document.getElementById('addonCategory').value = "addon";
                 else if (cat.includes("world")) document.getElementById('addonCategory').value = "world";
                 else if (cat.includes("skin")) document.getElementById('addonCategory').value = "skin";
                 else if (cat.includes("texture")) document.getElementById('addonCategory').value = "texture";
+                else if (cat.includes("mashup")) document.getElementById('addonCategory').value = "mashup";
 
-                // Extract HD Screenshots
+                // Auto HD Images
                 autoFetchedImages = [];
-                if (itm.images) {
+                if (itm.images && Array.isArray(itm.images)) {
                     itm.images.forEach(img => {
-                        if (img.url) autoFetchedImages.push(img.url);
+                        let u = img.url || img;
+                        if (typeof u === "string") autoFetchedImages.push(u);
                     });
                 }
 
-                // Render Previews
+                // Preview Render
                 let prevBox = document.getElementById('fetchedImagesPreview');
                 prevBox.innerHTML = "";
                 if (autoFetchedImages.length > 0) {
@@ -247,16 +272,17 @@
                     autoFetchedImages.forEach(u => {
                         let im = document.createElement('img');
                         im.src = u;
+                        im.onerror = () => im.remove();
                         prevBox.appendChild(im);
                     });
                 }
 
-                status.innerText = `✅ Loaded: ${itm.title} (${autoFetchedImages.length} HD photos ready)`;
+                status.innerText = `✅ Loaded: ${itm.title || "Item"} (${autoFetchedImages.length} HD photos ready)`;
                 status.style.color = "#10b981";
 
-            } catch (err) {
-                console.error(err);
-                status.innerText = "❌ Auto-fetch failed: " + err.message;
+            } catch (parseErr) {
+                console.error(parseErr);
+                status.innerText = "❌ Parsing failed: " + parseErr.message;
                 status.style.color = "#ef4444";
             }
         }
@@ -317,7 +343,7 @@
             row.innerHTML = `
                 <div class="item-text">
                     <strong>${r.addon}</strong>
-                    ${r.link ? `<a href="${r.link}" target="_blank" style="color:#38bdf8; font-size:11px; margin-left:4px;">[Market Link]</a>` : ""}
+                    ${r.link ? `<a href="${r.link}" target="_blank" style="color:#38bdf8; font-size:11px; margin-left:4px;">[Link]</a>` : ""}
                     <br><span style="color:#888; font-size:11px;">By: ${r.user}</span>
                 </div>
                 <div class="actions">
@@ -658,7 +684,6 @@ https://chat.whatsapp.com/JdeFaKUFV9E3rtpYgk6XdP
                     });
                 }
 
-                // Images: Prioritize Auto-Fetched from Mojang, else GitHub upload
                 var finalImages = [...autoFetchedImages];
 
                 if (imageFiles.length > 0) {
@@ -705,7 +730,6 @@ https://chat.whatsapp.com/JdeFaKUFV9E3rtpYgk6XdP
                     statusEl.innerText = "✅ Live & Request Completed!";
                 }
 
-                // Discord Posting
                 if (webhookUrl) {
                     try {
                         let reqUser = "";
