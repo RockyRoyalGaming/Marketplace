@@ -118,21 +118,20 @@
             loadRequestsForManagement();
         };
 
-        function addLinkField(type = "Mirror", url = "") {
-            var wrapper = document.getElementById('linksWrapper');
-            var row = document.createElement('div');
-            row.className = "link-row";
-            row.innerHTML = `
-                <select class="link-type">
-                    <option value="Addon" ${type === 'Addon' ? 'selected' : ''}>Addon</option>
-                    <option value="World" ${type === 'World' ? 'selected' : ''}>World</option>
-                    <option value="Skin Pack" ${type === 'Skin Pack' ? 'selected' : ''}>Skin Pack</option>
-                    <option value="Mirror" ${type === 'Mirror' ? 'selected' : ''}>Mirror</option>
-                </select>
-                <input type="text" class="link-url" placeholder="Paste link" value="${url}">
-            `;
-            wrapper.appendChild(row);
-        }
+        function addLinkField(type = "Addon", url = "") {
+    var wrapper = document.getElementById('linksWrapper');
+    var row = document.createElement('div');
+    row.className = "link-row";
+    row.innerHTML = `
+        <select class="link-type">
+            <option value="Addon" ${type === 'Addon' ? 'selected' : ''}>Addon</option>
+            <option value="World" ${type === 'World' ? 'selected' : ''}>World</option>
+            <option value="Skin Pack" ${type === 'Skin Pack' ? 'selected' : ''}>Skin Pack</option>
+        </select>
+        <input type="text" class="link-url" placeholder="Paste link (Mediafire, Gofile...)" value="${url}">
+    `;
+    wrapper.appendChild(row);
+}
 
         // Host name auto-detect karne ka function
         function detectHostName(url) {
