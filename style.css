@@ -255,3 +255,46 @@ footer { text-align: center; margin-top: 40px; padding: 20px; color: #555; font-
     padding: 8px 12px; border-radius: 8px; font-size: 0.8rem;
 }
 .req-link-btn:hover { background: #4caf50; }
+
+/* Suggested By Tag Badge */
+.suggested-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(251, 192, 45, 0.15);
+    color: #fbc02d;
+    border: 1px solid rgba(251, 192, 45, 0.3);
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    margin-top: 5px;
+    margin-bottom: 12px;
+}
+
+/* Link Group Header & Host Chip */
+.link-group-title {
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-top: 10px;
+    margin-bottom: 5px;
+    letter-spacing: 0.5px;
+}
+
+.host-badge {
+    background: rgba(255, 255, 255, 0.1);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    margin-right: 8px;
+}
+
+.btn-right {
+    display: flex;
+    align-items: center;
+}
