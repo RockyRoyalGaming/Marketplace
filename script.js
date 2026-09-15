@@ -196,49 +196,68 @@ function openModal(item) {
         };
     }
 
-    // --- GROUPED DOWNLOAD BUTTONS WITH RIGHT-SIDE HOST BADGE ---
+        // --- DOWNLOAD BUTTONS & MIRRORS RENDERING ---
     btnContainer.innerHTML = "";
-    if (item.links && item.links.length > 0) {
-        // Group links by main category
-        let groups = {};
-        item.links.forEach(link => {
-            // "Addon (Mediafire)" me se type aur host alag nikalna
-            let parts = link.type.split(" (");
-            let cleanType = parts[0].trim();
-            let hostName = parts[1] ? parts[1].replace(")", "").trim() : "";
 
-            if (!groups[cleanType]) groups[cleanType] = [];
-            groups[cleanType].push({ ...link, cleanType, hostName });
-        });
+    // Agar naya fileBlocks structure hai
+    if (item.fileBlocks && item.fileBlocks.length > 0) {
+        item.fileBlocks.forEach(block => {
+            let card = document.createElement('div');
+            card.className = "download-group-card";
 
-        // Generate Buttons in Groups
-        for (let groupName in groups) {
-            let groupTitle = document.createElement('div');
-            groupTitle.className = "link-group-title";
-            groupTitle.innerText = groupName + " Downloads";
-            btnContainer.appendChild(groupTitle);
+            // Mirrors HTML
+            let mirrorsHtml = "";
+            if (block.mirrors && block.mirrors.length > 0) {
+                let mBadges = block.mirrors.map(m => `
+                    <a href="${m.url}" target="_blank" class="mirror-badge-btn">
+                        <i class="fas fa-link"></i> ${m.host}
+                    </a>
+                `).join('');
 
-            groups[groupName].forEach(link => {
-                const a = document.createElement('a');
-                a.className = "dwn-option-btn"; 
-                a.href = link.url;
-                a.target = "_blank";
-                
-                let hostHtml = link.hostName ? `<span class="host-badge">${link.hostName}</span>` : "";
-
-                a.innerHTML = `
-                    <div class="btn-left">
-                        <i class="fas ${link.icon || 'fa-download'}"></i>
-                        <span>${link.cleanType}</span>
-                    </div>
-                    <div class="btn-right">
-                        ${hostHtml}
-                        <i class="fas fa-chevron-right" style="font-size: 0.8rem; color:#666;"></i>
+                mirrorsHtml = `
+                    <div class="mirrors-list">
+                        <span style="font-size: 0.7rem; color: #64748b; margin-right: 4px; align-self:center;">Mirrors:</span>
+                        ${mBadges}
                     </div>
                 `;
-                btnContainer.appendChild(a);
-            });
-        }
+            }
+
+            // Main Download Button
+            card.innerHTML = `
+                <div class="group-header">
+                    <span class="group-title"><i class="fas ${block.icon || 'fa-folder'}"></i> ${block.title}</span>
+                </div>
+                <a href="${block.mainLink.url}" target="_blank" class="dwn-option-btn" style="margin-bottom:0;">
+                    <div class="btn-left">
+                        <i class="fas fa-download"></i>
+                        <span>Download</span>
+                    </div>
+                    <div class="btn-right">
+                        ${block.mainLink.host ? `<span class="host-badge">${block.mainLink.host}</span>` : ""}
+                        <i class="fas fa-chevron-right" style="font-size: 0.8rem; color:#666;"></i>
+                    </div>
+                </a>
+                ${mirrorsHtml}
+            `;
+            btnContainer.appendChild(card);
+        });
+    } 
+    // Purane items ke liye fallback
+    else if (item.links && item.links.length > 0) {
+        item.links.forEach(link => {
+            const a = document.createElement('a');
+            a.className = "dwn-option-btn"; 
+            a.href = link.url;
+            a.target = "_blank";
+            a.innerHTML = `
+                <div class="btn-left">
+                    <i class="fas ${link.icon || 'fa-download'}"></i>
+                    <span>${link.type}</span>
+                </div>
+                <i class="fas fa-chevron-right" style="font-size: 0.8rem; color:#666;"></i>
+            `;
+            btnContainer.appendChild(a);
+        });
     } else {
         btnContainer.innerHTML = "<p style='color:#666; font-size:0.9rem;'>No links available.</p>";
     }
