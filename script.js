@@ -133,8 +133,30 @@ function openModal(item) {
     document.getElementById('modalTitle').innerText = item.title || "";
     document.getElementById('modalTag').innerText = item.category ? item.category.toUpperCase() : "ITEM";
     
-    const descText = item.description ? item.description.replace(/\n/g, '<br>') : "No description.";
-    descElement.innerHTML = descText;
+    // Description & Suggested By Tag Logic
+    let rawDesc = item.description || "No description.";
+    let suggestedUser = "";
+    
+    // Check if description has "(Suggested by Name)"
+    let match = rawDesc.match(/\(Suggested by (.*?)\)/i);
+    if (match) {
+        suggestedUser = match[1];
+        rawDesc = rawDesc.replace(match[0], "").trim(); // Desc se text hata dein
+    }
+
+    // Modal Header me Tag inject karein
+    let existingTag = document.getElementById('modalSuggestedTag');
+    if (existingTag) existingTag.remove();
+
+    if (suggestedUser) {
+        let stag = document.createElement('div');
+        stag.id = 'modalSuggestedTag';
+        stag.className = 'suggested-tag';
+        stag.innerHTML = `<i class="fas fa-user-circle"></i> Suggested by ${suggestedUser}`;
+        document.querySelector('.modal-header').insertAdjacentElement('afterend', stag);
+    }
+
+    descElement.innerHTML = rawDesc.replace(/\n/g, '<br>');
     
     if (readMoreBtn) {
         descElement.classList.remove('expanded');
@@ -145,13 +167,11 @@ function openModal(item) {
         }, 10);
     }
 
+    // Carousel Setup
     if (track) {
         track.innerHTML = "";
-        if(dotsContainer) dotsContainer.innerHTML = "";
-        
-        let imagesList = [];
-        if (item.images && item.images.length > 0) imagesList = item.images;
-        else imagesList = [item.image || "https://via.placeholder.com/400x250"];
+        if (dotsContainer) dotsContainer.innerHTML = "";
+        let imagesList = (item.images && item.images.length > 0) ? item.images : [item.image || "https://via.placeholder.com/400x250"];
 
         imagesList.forEach((imgUrl, index) => {
             const img = document.createElement('img');
@@ -169,35 +189,61 @@ function openModal(item) {
 
         track.onscroll = () => {
             if (imagesList.length <= 1) return;
-            const scrollPosition = track.scrollLeft;
-            const width = track.offsetWidth;
-            const index = Math.round(scrollPosition / width); 
+            const index = Math.round(track.scrollLeft / track.offsetWidth);
             const dots = document.querySelectorAll('.dot');
             dots.forEach(d => d.classList.remove('active'));
-            if(dots[index]) dots[index].classList.add('active');
+            if (dots[index]) dots[index].classList.add('active');
         };
     }
 
+    // --- GROUPED DOWNLOAD BUTTONS WITH RIGHT-SIDE HOST BADGE ---
     btnContainer.innerHTML = "";
     if (item.links && item.links.length > 0) {
+        // Group links by main category
+        let groups = {};
         item.links.forEach(link => {
-            const a = document.createElement('a');
-            a.className = "dwn-option-btn"; 
-            a.href = link.url;
-            a.target = "_blank";
-            a.innerHTML = `
-                <div class="btn-left">
-                    <i class="fas ${link.icon || 'fa-download'}"></i>
-                    <span>${link.type || 'Download'}</span>
-                </div>
-                <i class="fas fa-chevron-right" style="font-size: 0.8rem; color:#666;"></i>
-            `;
-            btnContainer.appendChild(a);
+            // "Addon (Mediafire)" me se type aur host alag nikalna
+            let parts = link.type.split(" (");
+            let cleanType = parts[0].trim();
+            let hostName = parts[1] ? parts[1].replace(")", "").trim() : "";
+
+            if (!groups[cleanType]) groups[cleanType] = [];
+            groups[cleanType].push({ ...link, cleanType, hostName });
         });
+
+        // Generate Buttons in Groups
+        for (let groupName in groups) {
+            let groupTitle = document.createElement('div');
+            groupTitle.className = "link-group-title";
+            groupTitle.innerText = groupName + " Downloads";
+            btnContainer.appendChild(groupTitle);
+
+            groups[groupName].forEach(link => {
+                const a = document.createElement('a');
+                a.className = "dwn-option-btn"; 
+                a.href = link.url;
+                a.target = "_blank";
+                
+                let hostHtml = link.hostName ? `<span class="host-badge">${link.hostName}</span>` : "";
+
+                a.innerHTML = `
+                    <div class="btn-left">
+                        <i class="fas ${link.icon || 'fa-download'}"></i>
+                        <span>${link.cleanType}</span>
+                    </div>
+                    <div class="btn-right">
+                        ${hostHtml}
+                        <i class="fas fa-chevron-right" style="font-size: 0.8rem; color:#666;"></i>
+                    </div>
+                `;
+                btnContainer.appendChild(a);
+            });
+        }
     } else {
         btnContainer.innerHTML = "<p style='color:#666; font-size:0.9rem;'>No links available.</p>";
     }
 
+    // Panorama Setup
     if (item.panorama && panoramaSection) {
         panoramaImg.src = item.panorama;
         panoramaSection.style.display = "block"; 
