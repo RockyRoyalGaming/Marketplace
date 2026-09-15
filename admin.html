@@ -101,7 +101,7 @@
           projectId: "strikemarket-32a5e",
           storageBucket: "strikemarket-32a5e.firebasestorage.app",
           messagingSenderId: "719596182121",
-          appId: "1:719596182121:web:d02df0d3089f560fc560f8",
+          appId: "1:719596182121:web:d02dfdd3089f560fc560f8",
           measurementId: "G-KTVM3J2491"
         };
         
@@ -117,52 +117,62 @@
         };
 
         // --- FILE BLOCK LOGIC ---
-        // Har tarah ki hosting identify karne ka smart function
-function detectHostName(url) {
-    if (!url) return "Download";
-    let u = url.toLowerCase();
-    if (u.includes("mediafire")) return "Mediafire";
-    if (u.includes("gofile")) return "Gofile";
-    if (u.includes("mega.nz") || u.includes("mega.io")) return "Mega";
-    if (u.includes("drive.google")) return "G-Drive";
-    if (u.includes("devuploads")) return "DevUploads";
-    if (u.includes("terabox") || u.includes("1024tera") || u.includes("terashare")) return "Terabox";
-    if (u.includes("dropbox")) return "Dropbox";
-    if (u.includes("github")) return "GitHub";
-    return "Server"; // Default fallback
-}
+        let blockCounter = 0;
+        function addFileBlock(type = "Addon", customTitle = "", mainUrl = "", mirrors = []) {
+            blockCounter++;
+            let bId = "block_" + blockCounter;
+            let wrapper = document.getElementById('fileBlocksWrapper');
 
-let blockCounter = 0;
-function addFileBlock(type = "Addon", customTitle = "", mainUrl = "", mirrors = []) {
-    blockCounter++;
-    let bId = "block_" + blockCounter;
-    let wrapper = document.getElementById('fileBlocksWrapper');
+            let card = document.createElement('div');
+            card.className = "file-card";
+            card.id = bId;
+            card.innerHTML = `
+                <div class="file-card-header">
+                    <select class="block-type">
+                        <option value="Addon" ${type === 'Addon' ? 'selected' : ''}>Add-On</option>
+                        <option value="World" ${type === 'World' ? 'selected' : ''}>World</option>
+                        <option value="Skin Pack" ${type === 'Skin Pack' ? 'selected' : ''}>Skin Pack</option>
+                        <option value="Texture" ${type === 'Texture' ? 'selected' : ''}>Texture</option>
+                    </select>
+                    <input type="text" class="block-title" placeholder="Block Title (e.g. World 1, Behavior)" value="${customTitle}">
+                    <button type="button" class="btn-del-file" onclick="document.getElementById('${bId}').remove()">✖</button>
+                </div>
+                <input type="text" class="block-main-url" placeholder="Main Download Link (Mediafire/etc)" value="${mainUrl}">
+                
+                <div class="mirror-container" id="mirrors_${bId}"></div>
+                <button type="button" class="btn-mini" onclick="addMirrorField('${bId}')">+ Add Mirror Link</button>
+            `;
+            wrapper.appendChild(card);
 
-    let card = document.createElement('div');
-    card.className = "file-card";
-    card.id = bId;
-    card.innerHTML = `
-        <div class="file-card-header">
-            <select class="block-type">
-                <option value="Addon" ${type === 'Addon' ? 'selected' : ''}>Add-On</option>
-                <option value="World" ${type === 'World' ? 'selected' : ''}>World</option>
-                <option value="Skin Pack" ${type === 'Skin Pack' ? 'selected' : ''}>Skin Pack</option>
-                <option value="Texture" ${type === 'Texture' ? 'selected' : ''}>Texture</option>
-            </select>
-            <input type="text" class="block-title" placeholder="Block Title (e.g. World 1, Behavior)" value="${customTitle}">
-            <button type="button" class="btn-del-file" onclick="document.getElementById('${bId}').remove()">✖</button>
-        </div>
-        <input type="text" class="block-main-url" placeholder="Main Download Link (Mediafire/etc)" value="${mainUrl}">
-        
-        <div class="mirror-container" id="mirrors_${bId}"></div>
-        <button type="button" class="btn-mini" onclick="addMirrorField('${bId}')">+ Add Mirror Link</button>
-    `;
-    wrapper.appendChild(card);
+            if (mirrors && mirrors.length > 0) {
+                mirrors.forEach(m => addMirrorField(bId, m));
+            }
+        }
 
-    if (mirrors && mirrors.length > 0) {
-        mirrors.forEach(m => addMirrorField(bId, m));
-    }
-}
+        function addMirrorField(blockId, url = "") {
+            let container = document.getElementById('mirrors_' + blockId);
+            let row = document.createElement('div');
+            row.className = "mirror-row";
+            row.innerHTML = `
+                <input type="text" class="block-mirror-url" placeholder="Mirror Link (Gofile, Mega, Drive...)" value="${url}">
+                <button type="button" class="btn-mini" style="color:#ef4444" onclick="this.parentElement.remove()">✖</button>
+            `;
+            container.appendChild(row);
+        }
+
+        function detectHostName(url) {
+            if (!url) return "Server";
+            let u = url.toLowerCase();
+            if (u.includes("mediafire")) return "Mediafire";
+            if (u.includes("gofile")) return "Gofile";
+            if (u.includes("mega.nz") || u.includes("mega.io")) return "Mega";
+            if (u.includes("drive.google")) return "G-Drive";
+            if (u.includes("devuploads")) return "DevUploads";
+            if (u.includes("terabox") || u.includes("1024tera") || u.includes("terashare")) return "Terabox";
+            if (u.includes("dropbox")) return "Dropbox";
+            if (u.includes("github")) return "GitHub";
+            return "Server";
+        }
 
         async function shortenUrlWithLinkpays(rawUrl, apiToken) {
             if (!apiToken || rawUrl.includes("linkpays.in")) return rawUrl;
@@ -329,7 +339,6 @@ function addFileBlock(type = "Addon", customTitle = "", mainUrl = "", mirrors = 
             var panoramaFiles = document.getElementById('panoramaFile').files;
             var statusEl = document.getElementById('status');
 
-            // Gather all File Blocks
             var blockCards = document.querySelectorAll('.file-card');
             var rawBlocks = [];
 
@@ -363,7 +372,7 @@ function addFileBlock(type = "Addon", customTitle = "", mainUrl = "", mirrors = 
                 statusEl.style.color = "#38bdf8";
 
                 var processedFileBlocks = [];
-                var legacyLinks = []; // For backward compatibility
+                var legacyLinks = [];
                 var iconMap = { "Addon": "fa-puzzle-piece", "World": "fa-globe", "Skin Pack": "fa-tshirt", "Texture": "fa-image" };
 
                 for (let b of rawBlocks) {
@@ -394,7 +403,6 @@ function addFileBlock(type = "Addon", customTitle = "", mainUrl = "", mirrors = 
                     });
                 }
 
-                // Images Upload
                 var folderName = addonTitle.replace(/[^a-zA-Z0-9]/g, "_");
                 var uploadedUrls = [];
                 var uploadedPanoramaUrl = "";
@@ -420,7 +428,7 @@ function addFileBlock(type = "Addon", customTitle = "", mainUrl = "", mirrors = 
                     category: addonCategory,
                     description: addonDesc,
                     fileBlocks: processedFileBlocks,
-                    links: legacyLinks // Compatibility with older items
+                    links: legacyLinks
                 };
 
                 if (uploadedUrls.length > 0) itemData.images = uploadedUrls;
@@ -445,7 +453,6 @@ function addFileBlock(type = "Addon", customTitle = "", mainUrl = "", mirrors = 
 
                 statusEl.style.color = "#10b981";
 
-                // Reset
                 document.getElementById('editKey').value = "";
                 document.getElementById('fulfillReqKey').value = "";
                 document.getElementById('addonTitle').value = "";
