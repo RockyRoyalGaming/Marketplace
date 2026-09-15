@@ -12,6 +12,11 @@
         button { background: #0ea5e9; color: white; padding: 13px; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; width: 100%; font-size: 15px; }
         .secret-zone { border-bottom: 2px dashed #334155; padding-bottom: 10px; margin-bottom: 15px; }
         
+        .link-row { display: flex; gap: 8px; margin-bottom: 10px; width: 95%; }
+        .link-row select { width: 35%; margin-bottom: 0; }
+        .link-row input { width: 65%; margin-bottom: 0; }
+        .btn-add-link { background: #334155; color: #38bdf8; padding: 8px; border-radius: 6px; font-size: 12px; width: auto; margin-bottom: 15px; }
+
         .item-row { display: flex; align-items: center; justify-content: space-between; background: #0f172a; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #334155; }
         .item-info { display: flex; align-items: center; gap: 10px; overflow: hidden; }
         .item-info img { width: 45px; height: 45px; border-radius: 6px; object-fit: cover; }
@@ -31,12 +36,12 @@
 </head>
 <body>
 
-    <!-- 1. UPLOAD & EDIT FORM -->
     <div class="box">
         <h2 id="formHeading" style="text-align: center; color: #38bdf8;">🤫 Strike Admin Upload</h2>
         
         <div class="secret-zone">
             <input type="password" id="ghToken" placeholder="🔑 GitHub PAT">
+            <input type="password" id="linkpaysToken" placeholder="🔗 Linkpays API Token (Auto-Shortener)">
             <input type="password" id="webhookUrl" placeholder="🤖 Discord Webhook URL (Optional)">
         </div>
 
@@ -55,8 +60,20 @@
 
         <textarea id="addonDesc" placeholder="Item Description..."></textarea>
         
-        <input type="text" id="addonLink" placeholder="Download Link (Mediafire, Gofile...)">
-        
+        <label class="field-label">Download Links (Will auto-shorten via Linkpays):</label>
+        <div id="linksWrapper">
+            <div class="link-row">
+                <select class="link-type">
+                    <option value="Addon">Addon (.mcpack)</option>
+                    <option value="World">World (.mcworld)</option>
+                    <option value="Skin">Skin Pack</option>
+                    <option value="Mirror">Mirror (Gofile/Mega)</option>
+                </select>
+                <input type="text" class="link-url" placeholder="Original Link (Mediafire/etc)">
+            </div>
+        </div>
+        <button type="button" class="btn-add-link" onclick="addLinkField()">+ Add Another Link</button>
+
         <label class="field-label">Carousel Images (Screenshots):</label>
         <input type="file" id="imageFiles" multiple accept="image/*">
 
@@ -67,13 +84,11 @@
         <p id="status" style="font-size: 13px; text-align: center; margin-top: 15px; font-weight: bold;"></p>
     </div>
 
-    <!-- 2. MANAGE REQUESTS SECTION -->
     <div class="box">
         <h3 style="color: #fbc02d; margin-bottom: 15px;">📋 User Requests Management</h3>
         <div id="requestsManageList">Loading requests...</div>
     </div>
 
-    <!-- 3. MANAGE ITEMS SECTION -->
     <div class="box">
         <h3 style="color: #38bdf8; margin-bottom: 15px;">📦 Manage Existing Items</h3>
         <div id="itemsManageList">Loading items...</div>
@@ -98,11 +113,42 @@
 
         window.onload = function() {
             document.getElementById('ghToken').value = localStorage.getItem('myGhToken') || "";
+            document.getElementById('linkpaysToken').value = localStorage.getItem('myLpToken') || "";
             loadItemsForManagement();
             loadRequestsForManagement();
         };
 
-        // --- REQUESTS MANAGEMENT LOGIC ---
+        function addLinkField(type = "Mirror", url = "") {
+            var wrapper = document.getElementById('linksWrapper');
+            var row = document.createElement('div');
+            row.className = "link-row";
+            row.innerHTML = `
+                <select class="link-type">
+                    <option value="Addon" ${type === 'Addon' ? 'selected' : ''}>Addon</option>
+                    <option value="World" ${type === 'World' ? 'selected' : ''}>World</option>
+                    <option value="Skin" ${type === 'Skin' ? 'selected' : ''}>Skin Pack</option>
+                    <option value="Mirror" ${type === 'Mirror' ? 'selected' : ''}>Mirror</option>
+                </select>
+                <input type="text" class="link-url" placeholder="Original Link" value="${url}">
+            `;
+            wrapper.appendChild(row);
+        }
+
+        async function shortenUrlWithLinkpays(rawUrl, apiToken) {
+            if (!apiToken || rawUrl.includes("linkpays.in")) return rawUrl;
+            try {
+                let apiUrl = `https://linkpays.in/api?api=${apiToken}&url=${encodeURIComponent(rawUrl)}`;
+                let res = await fetch(apiUrl);
+                let data = await res.json();
+                if (data.status === "success" && data.shortenedUrl) {
+                    return data.shortenedUrl;
+                }
+            } catch (e) {
+                console.warn("Linkpays Error, using raw url:", e);
+            }
+            return rawUrl;
+        }
+
         function loadRequestsForManagement() {
             var reqListDiv = document.getElementById('requestsManageList');
             database.ref('requests').on('value', (snapshot) => {
@@ -128,8 +174,8 @@
                             <span class="req-tag ${req.status}">${req.status.toUpperCase()}</span>
                         </div>
                         <div class="actions">
-                            ${!isCompleted ? `<button class="btn-fulfill" title="Fulfill via Upload" onclick="fulfillRequest('${key}', '${encodeURIComponent(req.addon)}', '${encodeURIComponent(req.user)}')">🚀</button>` : ""}
-                            <button class="btn-del" title="Delete Request" onclick="deleteRequest('${key}')">🗑️</button>
+                            ${!isCompleted ? `<button class="btn-fulfill" title="Fulfill" onclick="fulfillRequest('${key}', '${encodeURIComponent(req.addon)}', '${encodeURIComponent(req.user)}')">🚀</button>` : ""}
+                            <button class="btn-del" title="Delete" onclick="deleteRequest('${key}')">🗑️</button>
                         </div>
                     `;
                     reqListDiv.prepend(row);
@@ -137,13 +183,12 @@
             });
         }
 
-        // REQUEST KO UPLOAD FORM ME BHEJNA
         function fulfillRequest(key, encTitle, encUser) {
             var title = decodeURIComponent(encTitle);
             var user = decodeURIComponent(encUser);
 
             document.getElementById('fulfillReqKey').value = key;
-            document.getElementById('editKey').value = ""; // Reset edit
+            document.getElementById('editKey').value = "";
 
             document.getElementById('addonTitle').value = title;
             document.getElementById('addonDesc').value = `(Suggested by ${user})\n\n`;
@@ -157,13 +202,10 @@
 
         function deleteRequest(key) {
             if (confirm("Delete this request?")) {
-                database.ref('requests/' + key).remove()
-                    .then(() => alert("Request deleted!"))
-                    .catch(err => alert("Error: " + err.message));
+                database.ref('requests/' + key).remove();
             }
         }
 
-        // --- ITEMS LOAD KARNA ---
         function loadItemsForManagement() {
             var listDiv = document.getElementById('itemsManageList');
             database.ref('market_items').on('value', (snapshot) => {
@@ -200,9 +242,7 @@
 
         function deleteItem(key) {
             if (confirm("Delete this item permanently?")) {
-                database.ref('market_items/' + key).remove()
-                    .then(() => alert("Item deleted!"))
-                    .catch((err) => alert("Error: " + err.message));
+                database.ref('market_items/' + key).remove();
             }
         }
 
@@ -212,12 +252,19 @@
                 if (!item) return;
 
                 document.getElementById('editKey').value = key;
-                document.getElementById('fulfillReqKey').value = ""; // Reset fulfill
+                document.getElementById('fulfillReqKey').value = "";
 
                 document.getElementById('addonTitle').value = item.title;
                 document.getElementById('addonCategory').value = item.category;
                 document.getElementById('addonDesc').value = item.description || "";
-                document.getElementById('addonLink').value = (item.links && item.links[0]) ? item.links[0].url : "";
+
+                var wrapper = document.getElementById('linksWrapper');
+                wrapper.innerHTML = "";
+                if (item.links && item.links.length > 0) {
+                    item.links.forEach(l => addLinkField(l.type, l.url));
+                } else {
+                    addLinkField();
+                }
 
                 document.getElementById('formHeading').innerText = "✏️ Editing: " + item.title;
                 document.getElementById('uploadBtn').innerText = "💾 UPDATE ITEM";
@@ -249,6 +296,7 @@
         async function startUpload() {
             var btn = document.getElementById('uploadBtn');
             var ghToken = document.getElementById('ghToken').value;
+            var linkpaysToken = document.getElementById('linkpaysToken').value;
             var webhookUrl = document.getElementById('webhookUrl').value;
             var editKey = document.getElementById('editKey').value;
             var fulfillReqKey = document.getElementById('fulfillReqKey').value;
@@ -256,29 +304,52 @@
             var addonTitle = document.getElementById('addonTitle').value;
             var addonCategory = document.getElementById('addonCategory').value;
             var addonDesc = document.getElementById('addonDesc').value;
-            var addonLink = document.getElementById('addonLink').value;
             var imageFiles = document.getElementById('imageFiles').files;
             var panoramaFiles = document.getElementById('panoramaFile').files;
             var statusEl = document.getElementById('status');
 
-            if (!addonTitle || !addonLink) {
-                alert("Please fill Title and Download Link!");
+            var linkRows = document.querySelectorAll('.link-row');
+            var rawLinks = [];
+            linkRows.forEach(row => {
+                let type = row.querySelector('.link-type').value;
+                let url = row.querySelector('.link-url').value.trim();
+                if (url) rawLinks.push({ type: type, url: url });
+            });
+
+            if (!addonTitle || rawLinks.length === 0) {
+                alert("Please fill Title and at least 1 Download Link!");
                 return;
             }
 
             if (ghToken) localStorage.setItem('myGhToken', ghToken);
+            if (linkpaysToken) localStorage.setItem('myLpToken', linkpaysToken);
 
             btn.disabled = true;
 
             try {
+                // Shorten links with Linkpays
+                statusEl.innerText = "⏳ 1/3: Links Linkpays se short ho rahe hain...";
+                statusEl.style.color = "#38bdf8";
+
+                var processedLinks = [];
+                var iconMap = { "Addon": "fa-puzzle-piece", "World": "fa-globe", "Skin": "fa-tshirt", "Mirror": "fa-download" };
+
+                for (let l of rawLinks) {
+                    let shortUrl = await shortenUrlWithLinkpays(l.url, linkpaysToken);
+                    processedLinks.push({
+                        type: l.type,
+                        url: shortUrl,
+                        icon: iconMap[l.type] || "fa-download"
+                    });
+                }
+
+                // Images upload
                 var folderName = addonTitle.replace(/[^a-zA-Z0-9]/g, "_");
                 var uploadedUrls = [];
                 var uploadedPanoramaUrl = "";
 
                 if (imageFiles.length > 0) {
-                    statusEl.innerText = "⏳ Carousel Photos GitHub par upload ho rahi hain...";
-                    statusEl.style.color = "#38bdf8";
-
+                    statusEl.innerText = "⏳ 2/3: Carousel Photos GitHub par upload ho rahi hain...";
                     for (let i = 0; i < imageFiles.length; i++) {
                         let path = folderName + "/" + (i + 1) + ".png";
                         let url = await uploadFileToGithub(imageFiles[i], path, ghToken);
@@ -287,62 +358,54 @@
                 }
 
                 if (panoramaFiles.length > 0) {
-                    statusEl.innerText = "⏳ Panorama Image upload ho rahi hai...";
-                    statusEl.style.color = "#38bdf8";
-
                     let path = folderName + "/0panorama.png";
                     uploadedPanoramaUrl = await uploadFileToGithub(panoramaFiles[0], path, ghToken);
                 }
 
-                statusEl.innerText = "⏳ Firebase update ho raha hai...";
+                statusEl.innerText = "⏳ 3/3: Firebase Database update ho rahi hai...";
 
                 var itemData = {
                     title: addonTitle,
                     category: addonCategory,
                     description: addonDesc,
-                    links: [{ type: "Download", url: addonLink, icon: "fa-download" }]
+                    links: processedLinks
                 };
 
-                if (uploadedUrls.length > 0) {
-                    itemData.images = uploadedUrls;
-                }
-                if (uploadedPanoramaUrl !== "") {
-                    itemData.panorama = uploadedPanoramaUrl;
-                }
+                if (uploadedUrls.length > 0) itemData.images = uploadedUrls;
+                if (uploadedPanoramaUrl !== "") itemData.panorama = uploadedPanoramaUrl;
 
                 if (editKey) {
-                    // Update Item
                     await database.ref('market_items/' + editKey).update(itemData);
                     statusEl.innerText = "✅ Item Updated Successfully!";
                 } else {
-                    // New Item Add
                     itemData.id = Date.now().toString();
-                    if (uploadedUrls.length === 0) {
-                        throw new Error("Pehli baar upload ke liye kam se kam 1 photo select karein!");
-                    }
+                    if (uploadedUrls.length === 0) throw new Error("Photos select karna zaroori hai!");
                     await database.ref('market_items').push().set(itemData);
 
-                    // Agar ye kisi request se aaya tha, to use Completed mark karein
                     if (fulfillReqKey) {
                         await database.ref('requests/' + fulfillReqKey).update({
                             status: "completed",
-                            downloadLink: addonLink
+                            downloadLink: processedLinks[0].url
                         });
                     }
-
-                    statusEl.innerText = "✅ Item Live ho gaya aur Request Complete ho gayi!";
+                    statusEl.innerText = "✅ Item Live & Request Completed!";
                 }
 
                 statusEl.style.color = "#10b981";
 
-                // Form Reset
+                // Reset
                 document.getElementById('editKey').value = "";
                 document.getElementById('fulfillReqKey').value = "";
                 document.getElementById('addonTitle').value = "";
                 document.getElementById('addonDesc').value = "";
-                document.getElementById('addonLink').value = "";
                 document.getElementById('imageFiles').value = "";
                 document.getElementById('panoramaFile').value = "";
+                document.getElementById('linksWrapper').innerHTML = `
+                    <div class="link-row">
+                        <select class="link-type"><option value="Addon">Addon</option><option value="World">World</option><option value="Skin">Skin Pack</option><option value="Mirror">Mirror</option></select>
+                        <input type="text" class="link-url" placeholder="Original Link">
+                    </div>
+                `;
                 document.getElementById('formHeading').innerText = "🤫 Strike Admin Upload";
                 btn.innerText = "🚀 UPLOAD TO SITE";
                 btn.style.background = "#0ea5e9";
