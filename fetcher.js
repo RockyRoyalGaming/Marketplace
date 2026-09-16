@@ -1,50 +1,62 @@
 const fs = require('fs');
 const https = require('https');
 
-function fetchUrl(url) {
+function fetchCatalog() {
   return new Promise((resolve, reject) => {
-    https.get(url, {
+    const url = 'https://catalog.minecraftservices.com/v1.0/items?pageSize=100&sort=releaseDateDesc';
+    const req = https.get(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json'
       }
     }, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
+      let raw = '';
+      res.on('data', chunk => raw += chunk);
       res.on('end', () => {
         try {
-          resolve(JSON.parse(data));
+          const parsed = JSON.parse(raw);
+          resolve(parsed);
         } catch (e) {
-          reject(e);
+          reject(new Error("JSON Parse failed: " + e.message));
         }
       });
-    }).on('error', reject);
+    });
+
+    req.on('error', reject);
+    req.setTimeout(15000, () => {
+      req.destroy();
+      reject(new Error("Request timed out"));
+    });
   });
 }
 
-async function run() {
+async function main() {
   try {
-    console.log("Fetching live marketplace items...");
-    // Public Bedrock Catalog Feed
-    const res = await fetchUrl('https://catalog.minecraftservices.com/v1.0/items?pageSize=100&sort=releaseDateDesc');
-    const rawItems = res.items || [];
+    console.log("Fetching live items...");
+    const res = await fetchCatalog();
+    const items = res.items || [];
 
-    const formatted = rawItems.map(item => ({
-      id: item.id || item.uuid,
-      title: item.title || item.name || 'Minecraft Item',
-      creator: item.creatorName || 'Mojang Partner',
-      category: (item.primaryCategory || 'addon').toLowerCase(),
-      rating: item.averageRating ? item.averageRating.toFixed(1) : "4.6",
-      thumbnail: (item.images && item.images[0]) ? (item.images[0].url || item.images[0]) : '',
-      description: item.description || '',
-      marketplaceUrl: `https://www.minecraft.net/en-us/marketplace/pdp?id=${item.id || item.uuid}`
+    if (items.length === 0) {
+      throw new Error("No items returned from endpoint");
+    }
+
+    const output = items.map(i => ({
+      id: i.id || i.uuid,
+      title: i.title || i.name || 'Minecraft DLC',
+      creator: i.creatorName || 'Mojang Partner',
+      category: (i.primaryCategory || 'addon').toLowerCase(),
+      rating: i.averageRating ? i.averageRating.toFixed(1) : "4.5",
+      thumbnail: (i.images && i.images[0]) ? (i.images[0].url || i.images[0]) : '',
+      description: i.description || '',
+      marketplaceUrl: `https://www.minecraft.net/en-us/marketplace/pdp?id=${i.id || i.uuid}`
     }));
 
-    fs.writeFileSync('catalog.json', JSON.stringify(formatted, null, 2));
-    console.log(`Saved ${formatted.length} items to catalog.json successfully.`);
+    fs.writeFileSync('catalog.json', JSON.stringify(output, null, 2));
+    console.log(`Successfully written ${output.length} items to catalog.json`);
   } catch (err) {
-    console.error("Fetcher error:", err.message);
+    console.error("Fetch error:", err.message);
     process.exit(1);
   }
 }
 
-run();
+main();
