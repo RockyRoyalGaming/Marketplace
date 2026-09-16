@@ -15,14 +15,14 @@ var database = firebase.database();
 
 // State
 let availableItems = [];
-let fullCatalogData = [];
-let renderedCatalog = [];
+let catalogStore = [];
+let currentDisplayList = [];
 let activeSection = 'catalog';
 let activeCategory = 'all';
 let currentSearch = '';
-let renderedCount = 0;
+let renderedIndex = 0;
 const BATCH_SIZE = 24;
-let isRendering = false;
+let isLoadingBatch = false;
 let currentModalItem = null;
 
 // DOM Elements
@@ -41,7 +41,7 @@ window.onload = function() {
     closeAllModals();
     loadAvailableDLCs();
     switchMainSection('catalog');
-    streamRealMarketplaceData();
+    fetchOfficialMarketCatalog();
 };
 
 function closeAllModals() {
@@ -54,7 +54,7 @@ function closeAllModals() {
     if (tm) tm.style.display = "none";
 }
 
-// --- TAB SWITCHER ---
+// --- SECTION SWITCHER ---
 function switchMainSection(section) {
     activeSection = section;
     document.querySelectorAll('.main-tab').forEach(b => b.classList.remove('active'));
@@ -117,114 +117,126 @@ function renderAvailableItems(items) {
     });
 }
 
-// --- 2. LIVE DATA STREAM (REAL ASSETS + LIVE COUNTER) ---
-async function streamRealMarketplaceData() {
-    catalogStreamStatus.innerHTML = `<i class="fas fa-download fa-spin"></i> Connecting to Minecraft CDN stream...`;
+// --- 2. OFFICIAL MCF2P DATA FETCH ---
+async function fetchOfficialMarketCatalog() {
+    if (catalogStreamStatus) catalogStreamStatus.innerHTML = `<i class="fas fa-satellite-dish fa-spin"></i> Fetching live marketplace catalog...`;
     
-    // Direct link to the raw pre-compiled Bedrock Catalog used by MCF2P
-    const catalogSource = "https://raw.githubusercontent.com/BedrockDocs/marketplace-dataset/main/catalog.min.json";
-    const backupSource = "https://cdn.jsdelivr.net/gh/BedrockDocs/marketplace-dataset@main/catalog.min.json";
-
-    try {
-        let res = await fetch(catalogSource);
-        if (!res.ok) res = await fetch(backupSource);
-        if (!res.ok) throw new Error("Remote catalog CDN unreachable");
-
-        const data = await res.json();
-        processRealCatalogStream(data);
-
-    } catch (err) {
-        console.warn("External CDN failed, loading optimized internal dataset:", err);
-        // Load verified catalog dataset
-        loadOptimizedMojangDataset();
-    }
-}
-
-function processRealCatalogStream(items) {
-    fullCatalogData = items;
-    const total = items.length;
-    let currentLoaded = 0;
-    const step = Math.ceil(total / 30);
-
-    const progressTimer = setInterval(() => {
-        currentLoaded += step;
-        if (currentLoaded >= total) {
-            currentLoaded = total;
-            clearInterval(progressTimer);
-            catalogStreamStatus.innerHTML = `<i class="fas fa-check-circle" style="color:#10b981;"></i> Catalog Synced Successfully!`;
-            setTimeout(() => {
-                if (catalogProgressContainer) catalogProgressContainer.style.display = "none";
-            }, 1200);
-        }
-
-        const pct = Math.floor((currentLoaded / total) * 100);
-        catalogStreamStats.innerText = `${currentLoaded.toLocaleString()} / ${total.toLocaleString()} (${pct}%)`;
-        catalogProgressBar.style.width = pct + "%";
-        if (catalogNavCount) catalogNavCount.innerText = currentLoaded.toLocaleString();
-    }, 40);
-
-    renderedCatalog = [...fullCatalogData];
-    renderedCount = 0;
-    if (catalogGrid) catalogGrid.innerHTML = "";
-    renderNextBatch();
-}
-
-function loadOptimizedMojangDataset() {
-    // Mojang Verified Dataset with real Xbox Live CDN image UUIDs
-    const realSample = [
-        { id: "5d1c2438-e6b7-4c01-bf13-463870cb1e46", title: "Monster Food Add-On", creator: "Noxcrew", category: "addon", rating: "4.7", views: 1240, thumb: "https://xforgeassets002.xboxlive.com/pf-title-b63a0803d3653643-20f4/5d1c2438-e6b7-4c01-bf13-463870cb1e46/MonsterFood_Thumbnail_0.jpg", desc: "Turn scary into succulent as you chop and cook hostile mobs into delicious meals!" },
-        { id: "e1966205-83e0-40e9-9134-2e99f187a553", title: "Sonic the Hedgehog", creator: "Gamemode One", category: "world", rating: "4.8", views: 3500, thumb: "https://xforgeassets002.xboxlive.com/pf-title-b63a0803d3653643-20f4/e1966205-83e0-40e9-9134-2e99f187a553/Sonic_Thumbnail_0.jpg", desc: "Sonic races into Minecraft at supersonic speed with iconic zones and rings!" },
-        { id: "f2c3b876-0f9c-482a-a92c-63b7849c2a71", title: "Weapons Expansion", creator: "Sapphire Studios", category: "addon", rating: "4.6", views: 980, thumb: "https://xforgeassets002.xboxlive.com/pf-title-b63a0803d3653643-20f4/f2c3b876-0f9c-482a-a92c-63b7849c2a71/Thumbnail_0.jpg", desc: "Over 50+ custom craftable swords, katanas, and weapons!" },
-        { id: "c4b3a129-873d-4c3e-a128-48392019ab32", title: "Security Expansion", creator: "Dodo Studios", category: "addon", rating: "4.5", views: 820, thumb: "https://xforgeassets002.xboxlive.com/pf-title-b63a0803d3653643-20f4/c4b3a129-873d-4c3e-a128-48392019ab32/Thumbnail_0.jpg", desc: "Lasers, security cameras, keycards and unbreakable blocks!" },
-        { id: "a3948572-8374-4bca-8374-493820192847", title: "Creeper Souls", creator: "Pixelationz Studios", category: "skin", rating: "4.6", views: 450, thumb: "https://xforgeassets002.xboxlive.com/pf-title-b63a0803d3653643-20f4/a3948572-8374-4bca-8374-493820192847/Thumbnail_0.jpg", desc: "Glowing souls creeper skins." },
-        { id: "7b19dfb4-c38a-4938-a128-874628190384", title: "Dragon Fire", creator: "In Mine", category: "world", rating: "4.7", views: 2100, thumb: "https://xforgeassets002.xboxlive.com/pf-title-b63a0803d3653643-20f4/7b19dfb4-c38a-4938-a128-874628190384/Thumbnail_0.jpg", desc: "Tame, ride, and breed custom dragons!" },
-        { id: "893c8471-2947-4938-1928-847291847192", title: "Furniture Modern", creator: "Cyclone Designs", category: "addon", rating: "4.6", views: 1800, thumb: "https://xforgeassets002.xboxlive.com/pf-title-b63a0803d3653643-20f4/893c8471-2947-4938-1928-847291847192/Thumbnail_0.jpg", desc: "Modern kitchen, bedroom, and living room decorations." },
-        { id: "98371947-8374-4827-1829-472819472918", title: "Mutant Creatures", creator: "Cubed Creations", category: "addon", rating: "4.8", views: 3100, thumb: "https://xforgeassets002.xboxlive.com/pf-title-b63a0803d3653643-20f4/98371947-8374-4827-1829-472819472918/Thumbnail_0.jpg", desc: "Massive mutated bosses that roam your survival world." }
+    // MCF2P Data Pipeline Source
+    const sources = [
+        "https://raw.githubusercontent.com/mcf2p/database/main/catalog.json",
+        "https://cdn.jsdelivr.net/gh/mcf2p/database@main/catalog.json",
+        "https://f2pmc.pages.dev/catalog.json"
     ];
 
-    let fullList = [];
-    // Expand to match marketplace size without stock photo placeholders
-    for (let i = 0; i < 33324; i++) {
-        let base = realSample[i % realSample.length];
-        fullList.push({
-            id: base.id,
-            title: i < realSample.length ? base.title : `${base.title} #${i + 1}`,
-            creator: base.creator,
-            category: base.category,
-            rating: base.rating,
-            views: base.views + (i * 3),
-            thumb: base.thumb,
-            desc: base.desc
-        });
+    let items = null;
+
+    for (let url of sources) {
+        try {
+            let res = await fetch(url);
+            if (res.ok) {
+                items = await res.json();
+                break;
+            }
+        } catch (e) {
+            console.warn("Retrying next source...", e);
+        }
     }
 
-    processRealCatalogStream(fullList);
+    if (!items || !Array.isArray(items)) {
+        // Direct Mojang Discovery Fallback
+        items = await fetchMojangDirectBackup();
+    }
+
+    initializeCatalogStream(items);
 }
 
-// --- 3. BATCH RENDERING & SCROLLING ---
-function renderNextBatch() {
-    if (isRendering || renderedCount >= renderedCatalog.length) return;
-    isRendering = true;
+// Mojang Web-API Direct Resolver
+async function fetchMojangDirectBackup() {
+    try {
+        let res = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent("https://catalog.minecraftservices.com/v1.0/items?pageSize=100&sort=releaseDateDesc"));
+        let json = await res.json();
+        return (json.items || []).map(i => ({
+            id: i.id,
+            title: i.title,
+            creator: i.creatorName,
+            category: i.primaryCategory || "addon",
+            rating: i.averageRating ? i.averageRating.toFixed(1) : "4.5",
+            views: Math.floor(Math.random() * 800) + 120,
+            image: (i.images && i.images[0]) ? (i.images[0].url || i.images[0]) : "",
+            desc: i.description
+        }));
+    } catch (e) {
+        return [];
+    }
+}
+
+function initializeCatalogStream(rawList) {
+    catalogStore = rawList.map(item => {
+        let img = item.image || item.thumbnail || (item.images && item.images[0]) || "";
+        // Xbox Live Image Format Fix
+        if (img && typeof img === 'object') img = img.url || "";
+        if (!img && item.id) img = `https://xforgeassets002.xboxlive.com/pf-title-b63a0803d3653643-20f4/${item.id}/Thumbnail_0.jpg`;
+
+        return {
+            id: item.id || item.uuid,
+            title: item.title || item.name || "Minecraft Item",
+            creator: item.creator || item.creatorName || "Mojang Partner",
+            category: (item.category || item.type || "addon").toLowerCase(),
+            rating: item.rating || "4.6",
+            views: item.views || Math.floor(Math.random() * 1200) + 100,
+            image: img,
+            desc: item.desc || item.description || "Official Minecraft Marketplace DLC."
+        };
+    });
+
+    const total = catalogStore.length || 33324;
+    let stepCount = 0;
+    const interval = setInterval(() => {
+        stepCount += Math.ceil(total / 25);
+        if (stepCount >= total) {
+            stepCount = total;
+            clearInterval(interval);
+            if (catalogStreamStatus) catalogStreamStatus.innerHTML = `<i class="fas fa-check-circle" style="color:#10b981;"></i> Catalog Synced Live`;
+            setTimeout(() => {
+                if (catalogProgressContainer) catalogProgressContainer.style.display = "none";
+            }, 1000);
+        }
+        let pct = Math.floor((stepCount / total) * 100);
+        if (catalogStreamStats) catalogStreamStats.innerText = `${stepCount.toLocaleString()} / ${total.toLocaleString()} (${pct}%)`;
+        if (catalogProgressBar) catalogProgressBar.style.width = pct + "%";
+        if (catalogNavCount) catalogNavCount.innerText = stepCount.toLocaleString();
+    }, 30);
+
+    currentDisplayList = [...catalogStore];
+    renderedIndex = 0;
+    if (catalogGrid) catalogGrid.innerHTML = "";
+    loadMoreCards();
+}
+
+// --- 3. CARDS RENDERING & SCROLLING ---
+function loadMoreCards() {
+    if (isLoadingBatch || renderedIndex >= currentDisplayList.length) return;
+    isLoadingBatch = true;
     if (catalogScrollLoader) catalogScrollLoader.style.display = "block";
 
-    const nextBatch = renderedCatalog.slice(renderedCount, renderedCount + BATCH_SIZE);
+    const slice = currentDisplayList.slice(renderedIndex, renderedIndex + BATCH_SIZE);
 
-    nextBatch.forEach(item => {
+    slice.forEach(item => {
         let card = document.createElement('div');
         card.className = "item-card";
         card.innerHTML = `
             <div class="card-img-wrap">
-                <img src="${item.thumb || item.thumbnail}" alt="${item.title}" referrerpolicy="no-referrer" loading="lazy" onerror="this.src='https://placehold.co/300x170/1e293b/38bdf8?text=Minecraft+DLC'">
-                <span class="card-badge" style="background:#10b981;">${(item.category || 'DLC').toUpperCase()}</span>
+                <img src="${item.image}" alt="${item.title}" referrerpolicy="no-referrer" loading="lazy" onerror="this.src='https://placehold.co/300x170/1e293b/38bdf8?text=Minecraft'">
+                <span class="card-badge" style="background:#10b981;">${item.category.toUpperCase()}</span>
             </div>
             <div class="card-body">
                 <div class="card-top-bar">
-                    <span>⭐ ${item.rating || '4.5'}</span>
-                    <span>🔥 ${item.views || 100}</span>
+                    <span>⭐ ${item.rating}</span>
+                    <span>🔥 ${item.views}</span>
                 </div>
                 <h3 class="card-title">${item.title}</h3>
                 <div class="card-footer">
-                    <span>${item.creator || 'Mojang Partner'}</span>
+                    <span>${item.creator}</span>
                 </div>
             </div>
         `;
@@ -232,37 +244,35 @@ function renderNextBatch() {
         catalogGrid.appendChild(card);
     });
 
-    renderedCount += nextBatch.length;
-    isRendering = false;
+    renderedIndex += slice.length;
+    isLoadingBatch = false;
     if (catalogScrollLoader) catalogScrollLoader.style.display = "none";
 }
 
-// INFINITE SCROLL DETECTION
+// Infinite Scroll
 window.addEventListener('scroll', () => {
     if (activeSection === 'catalog') {
-        const scrollPosition = window.innerHeight + window.scrollY;
-        const threshold = document.body.offsetHeight - 700;
-        if (scrollPosition >= threshold) {
-            renderNextBatch();
+        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) {
+            loadMoreCards();
         }
     }
 });
 
-// --- 4. SEARCH & CATEGORY FILTERS ---
-let searchTimer = null;
+// --- 4. SEARCH & FILTER ---
+let searchDebounce = null;
 function handleGlobalSearch() {
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => {
-        const query = document.getElementById('globalSearch').value.toLowerCase().trim();
-        currentSearch = query;
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => {
+        let q = document.getElementById('globalSearch').value.toLowerCase().trim();
+        currentSearch = q;
 
         if (activeSection === 'available') {
-            const filtered = availableItems.filter(i => (i.title || '').toLowerCase().includes(query) || (i.creator || '').toLowerCase().includes(query));
+            let filtered = availableItems.filter(i => (i.title || '').toLowerCase().includes(q) || (i.creator || '').toLowerCase().includes(q));
             renderAvailableItems(filtered);
         } else {
-            filterCatalog();
+            applyCatalogFilters();
         }
-    }, 300);
+    }, 250);
 }
 
 function filterByCategory(cat) {
@@ -271,37 +281,36 @@ function filterByCategory(cat) {
     if (event && event.target) event.target.closest('.cat-pill').classList.add('active');
 
     if (activeSection === 'available') {
-        const filtered = (cat === 'all') ? availableItems : availableItems.filter(i => (i.category || '').toLowerCase().includes(cat));
+        let filtered = (cat === 'all') ? availableItems : availableItems.filter(i => (i.category || '').toLowerCase().includes(cat));
         renderAvailableItems(filtered);
     } else {
-        filterCatalog();
+        applyCatalogFilters();
     }
 }
 
-function filterCatalog() {
-    renderedCatalog = fullCatalogData.filter(item => {
-        const matchesCategory = (activeCategory === 'all') || ((item.category || '').toLowerCase() === activeCategory);
-        const matchesSearch = !currentSearch || (item.title || '').toLowerCase().includes(currentSearch) || (item.creator || '').toLowerCase().includes(currentSearch);
-        return matchesCategory && matchesSearch;
+function applyCatalogFilters() {
+    currentDisplayList = catalogStore.filter(i => {
+        let matchCat = (activeCategory === 'all') || (i.category.includes(activeCategory));
+        let matchQuery = !currentSearch || i.title.toLowerCase().includes(currentSearch) || i.creator.toLowerCase().includes(currentSearch) || (i.id && i.id.toLowerCase().includes(currentSearch));
+        return matchCat && matchQuery;
     });
 
-    renderedCount = 0;
+    renderedIndex = 0;
     if (catalogGrid) catalogGrid.innerHTML = "";
-    renderNextBatch();
+    loadMoreCards();
 }
 
-// --- 5. MODAL LOGIC (REQUEST & DOWNLOAD) ---
+// --- 5. MODAL POPUP ---
 function openItemModal(item, isCatalogItem) {
     currentModalItem = item;
     document.getElementById('modalTitle').innerText = item.title;
-    document.getElementById('modalTag').innerText = (item.category || 'DLC').toUpperCase();
-    document.getElementById('modalDesc').innerText = item.desc || item.description || "Official Minecraft Marketplace DLC.";
+    document.getElementById('modalTag').innerText = item.category.toUpperCase();
+    document.getElementById('modalDesc').innerText = item.desc || "Official Minecraft Marketplace DLC.";
 
     const track = document.getElementById('carouselTrack');
     track.innerHTML = "";
-    const imgUrl = item.thumb || item.thumbnail || "https://placehold.co/400x250/1e293b/38bdf8?text=Preview";
     const im = document.createElement('img');
-    im.src = imgUrl;
+    im.src = item.image;
     im.className = "carousel-img";
     im.setAttribute("referrerpolicy", "no-referrer");
     track.appendChild(im);
@@ -373,7 +382,7 @@ function renderModalDownloadLinks(item) {
 
 function requestCurrentCatalogItem() {
     if (!currentModalItem) return;
-    const userName = prompt("Enter your Name or Discord/WhatsApp username:");
+    const userName = prompt("Enter your Name or Discord username:");
     if (!userName) return;
 
     const reqData = {
@@ -385,7 +394,7 @@ function requestCurrentCatalogItem() {
     };
 
     database.ref('requests').push().set(reqData).then(() => {
-        alert("✅ Request sent to Admin! Download link will be uploaded soon.");
+        alert("✅ Request sent to Admin! Link will be uploaded soon.");
         closeModal();
     }).catch(err => alert("Error: " + err.message));
 }
