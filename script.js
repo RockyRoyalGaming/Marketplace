@@ -64,7 +64,7 @@ function switchMainSection(section) {
     }
 }
 
-// --- 1. AVAILABLE DLCS (DOWNLOADS READY) ---
+// --- 1. AVAILABLE DLCS (FIREBASE DATA) ---
 function loadAvailableDLCs() {
     database.ref('market_items').on('value', snapshot => {
         availableItems = [];
@@ -108,32 +108,25 @@ function renderAvailableItems(items) {
     });
 }
 
-// --- 2. AUTO-SYNCED MARKETPLACE RELEASES ---
-function loadRealtimeMarketplaceCatalog() {
+// --- 2. LOCAL CATALOG LOADER (FROM GITHUB ACTIONS CATALOG.JSON) ---
+async function loadRealtimeMarketplaceCatalog() {
     if (!catalogGrid) return;
     catalogGrid.innerHTML = "<p style='color:#38bdf8; text-align:center; grid-column:1/-1;'><i class='fas fa-spinner fa-spin'></i> Loading latest marketplace releases...</p>";
 
-    database.ref('marketplace_catalog').on('value', (snapshot) => {
-        catalogGrid.innerHTML = "";
-        catalogItems = [];
+    try {
+        const res = await fetch('catalog.json?v=' + Date.now());
+        if (!res.ok) throw new Error("Catalog file not generated yet.");
         
-        if (!snapshot.exists()) {
-            catalogGrid.innerHTML = "<p style='color:#888; text-align:center; grid-column:1/-1;'>No new items synced yet. Trigger GitHub Action to sync!</p>";
-            if (catalogCountDisplay) catalogCountDisplay.innerText = "0 Items";
-            if (catalogNavCount) catalogNavCount.innerText = "0";
-            return;
-        }
-
-        snapshot.forEach(child => {
-            catalogItems.push(child.val());
-        });
+        catalogItems = await res.json();
 
         if (catalogCountDisplay) catalogCountDisplay.innerText = `${catalogItems.length} Items Live`;
         if (catalogNavCount) catalogNavCount.innerText = catalogItems.length;
 
-        // Sort items newest first
-        renderCatalogItems([...catalogItems].reverse());
-    });
+        renderCatalogItems(catalogItems);
+    } catch (e) {
+        console.warn(e);
+        catalogGrid.innerHTML = "<p style='color:#888; text-align:center; grid-column:1/-1;'>Catalog updating... Please trigger the GitHub Action once.</p>";
+    }
 }
 
 function renderCatalogItems(items) {
@@ -302,7 +295,7 @@ function filterByCategory(cat) {
         let filtered = (cat === 'all') ? availableItems : availableItems.filter(i => (i.category || '').toLowerCase().includes(cat));
         renderAvailableItems(filtered);
     } else {
-        let filtered = (cat === 'all') ? [...catalogItems].reverse() : catalogItems.filter(i => (i.category || '').toLowerCase().includes(cat)).reverse();
+        let filtered = (cat === 'all') ? catalogItems : catalogItems.filter(i => (i.category || '').toLowerCase().includes(cat));
         renderCatalogItems(filtered);
     }
 }
