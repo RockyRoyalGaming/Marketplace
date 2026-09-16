@@ -2,26 +2,31 @@ name: Auto-Sync Minecraft Marketplace
 
 on:
   schedule:
-    # Har 2 ghante me apne-aap chalega
     - cron: '0 */2 * * *'
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
-
-      - name: Install Dependencies
-        run: npm install firebase-admin axios
+          node-version: 20
 
       - name: Run Fetcher
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: node fetcher.js
+
+      - name: Commit and Push Catalog
+        run: |
+          git config --global user.name "GitHub Action Bot"
+          git config --global user.email "action@github.com"
+          git add catalog.json
+          git commit -m "Auto-update marketplace catalog" || exit 0
+          git push
