@@ -13,29 +13,26 @@ var firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 var database = firebase.database();
 
-// State
+// State Variables
 let availableItems = [];
-let catalogRawData = [];
-let filteredCatalog = [];
-let activeSection = 'available';
+let catalogItems = [];
+let activeSection = 'available'; // 'available' or 'catalog'
 let activeCategory = 'all';
 let currentModalItem = null;
-let displayedCatalogCount = 0;
-const PAGE_SIZE = 40;
 
 // Elements
 const availableGrid = document.getElementById('availableGrid');
 const catalogGrid = document.getElementById('catalogGrid');
 const availableCountEl = document.getElementById('availableCount');
-const catalogTotalCountEl = document.getElementById('catalogTotalCount');
+const catalogNavCount = document.getElementById('catalogNavCount');
 const catalogCountDisplay = document.getElementById('catalogCountDisplay');
 const itemModal = document.getElementById('itemModal');
 
+// --- ON PAGE LOAD ---
 window.onload = function() {
-    // Make sure modals stay hidden on start
     closeAllModals();
     loadAvailableDLCs();
-    loadRealMinecraftCatalog();
+    loadRealtimeMarketplaceCatalog();
 };
 
 function closeAllModals() {
@@ -55,15 +52,19 @@ function switchMainSection(section) {
     document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
 
     if (section === 'available') {
-        document.getElementById('tabBtnAvailable').classList.add('active');
-        document.getElementById('sectionAvailable').classList.add('active');
+        let btn = document.getElementById('tabBtnAvailable');
+        let sec = document.getElementById('sectionAvailable');
+        if (btn) btn.classList.add('active');
+        if (sec) sec.classList.add('active');
     } else {
-        document.getElementById('tabBtnCatalog').classList.add('active');
-        document.getElementById('sectionCatalog').classList.add('active');
+        let btn = document.getElementById('tabBtnCatalog');
+        let sec = document.getElementById('sectionCatalog');
+        if (btn) btn.classList.add('active');
+        if (sec) sec.classList.add('active');
     }
 }
 
-// --- 1. AVAILABLE ITEMS (FIREBASE) ---
+// --- 1. AVAILABLE DLCS (DOWNLOADS READY) ---
 function loadAvailableDLCs() {
     database.ref('market_items').on('value', snapshot => {
         availableItems = [];
@@ -72,12 +73,13 @@ function loadAvailableDLCs() {
                 availableItems.push({ id: child.key, ...child.val() });
             });
         }
-        availableCountEl.innerText = availableItems.length;
+        if (availableCountEl) availableCountEl.innerText = availableItems.length;
         renderAvailableItems(availableItems);
     });
 }
 
 function renderAvailableItems(items) {
+    if (!availableGrid) return;
     availableGrid.innerHTML = "";
     if (items.length === 0) {
         availableGrid.innerHTML = "<p style='color:#666; text-align:center; grid-column:1/-1;'>No available items uploaded yet.</p>";
@@ -90,7 +92,7 @@ function renderAvailableItems(items) {
         card.className = "item-card";
         card.innerHTML = `
             <div class="card-img-wrap">
-                <img src="${thumb}" alt="${item.title}" referrerpolicy="no-referrer" loading="lazy" onerror="this.src='https://placehold.co/300x170/1e293b/38bdf8?text=No+Preview'">
+                <img src="${thumb}" alt="${item.title}" referrerpolicy="no-referrer" loading="lazy" onerror="this.src='https://placehold.co/300x170/1e293b/38bdf8?text=Strike+DLC'">
                 <span class="card-badge">${(item.category || 'DLC').toUpperCase()}</span>
             </div>
             <div class="card-body">
@@ -106,105 +108,78 @@ function renderAvailableItems(items) {
     });
 }
 
-// --- 2. LIVE MINECRAFT CATALOG (REAL 33K+ ITEMS) ---
-async function loadRealMinecraftCatalog() {
-    catalogGrid.innerHTML = "<p style='color:#38bdf8; text-align:center; grid-column:1/-1;'><i class='fas fa-spinner fa-spin'></i> Loading live Minecraft database...</p>";
+// --- 2. AUTO-SYNCED MARKETPLACE RELEASES ---
+function loadRealtimeMarketplaceCatalog() {
+    if (!catalogGrid) return;
+    catalogGrid.innerHTML = "<p style='color:#38bdf8; text-align:center; grid-column:1/-1;'><i class='fas fa-spinner fa-spin'></i> Loading latest marketplace releases...</p>";
 
-    try {
-        // MCF2P Production Catalog CDN
-        const res = await fetch("https://raw.githubusercontent.com/F2PMC/Database/main/catalog.json");
-        if (!res.ok) throw new Error("Could not fetch remote catalog.");
-        
-        catalogRawData = await res.json();
-
-        // Real Counts Calculation
-        let total = catalogRawData.length;
-        let worlds = catalogRawData.filter(i => (i.category || i.type || '').toLowerCase().includes('world')).length;
-        let addons = catalogRawData.filter(i => (i.category || i.type || '').toLowerCase().includes('addon')).length;
-        let skins = catalogRawData.filter(i => (i.category || i.type || '').toLowerCase().includes('skin')).length;
-        let textures = catalogRawData.filter(i => (i.category || i.type || '').toLowerCase().includes('texture')).length;
-        let mashups = catalogRawData.filter(i => (i.category || i.type || '').toLowerCase().includes('mashup')).length;
-
-        // Update UI Counts
-        catalogTotalCountEl.innerText = total.toLocaleString();
-        catalogCountDisplay.innerText = total.toLocaleString() + " Items";
-        
-        // Update Stats Modal Real Numbers
-        if (document.getElementById('statTotal')) document.getElementById('statTotal').innerText = total.toLocaleString();
-        if (document.getElementById('statWorlds')) document.getElementById('statWorlds').innerText = worlds.toLocaleString();
-        if (document.getElementById('statAddons')) document.getElementById('statAddons').innerText = addons.toLocaleString();
-        if (document.getElementById('statSkins')) document.getElementById('statSkins').innerText = skins.toLocaleString();
-        if (document.getElementById('statTextures')) document.getElementById('statTextures').innerText = textures.toLocaleString();
-        if (document.getElementById('statMashups')) document.getElementById('statMashups').innerText = mashups.toLocaleString();
-
-        filteredCatalog = [...catalogRawData];
-        displayedCatalogCount = 0;
+    database.ref('marketplace_catalog').on('value', (snapshot) => {
         catalogGrid.innerHTML = "";
-        loadNextCatalogBatch();
+        catalogItems = [];
+        
+        if (!snapshot.exists()) {
+            catalogGrid.innerHTML = "<p style='color:#888; text-align:center; grid-column:1/-1;'>No new items synced yet. Trigger GitHub Action to sync!</p>";
+            if (catalogCountDisplay) catalogCountDisplay.innerText = "0 Items";
+            if (catalogNavCount) catalogNavCount.innerText = "0";
+            return;
+        }
 
-    } catch (e) {
-        console.error("Live Catalog Error:", e);
-        catalogGrid.innerHTML = `<p style='color:#ef4444; text-align:center; grid-column:1/-1;'>Failed to load catalog: ${e.message}</p>`;
-    }
+        snapshot.forEach(child => {
+            catalogItems.push(child.val());
+        });
+
+        if (catalogCountDisplay) catalogCountDisplay.innerText = `${catalogItems.length} Items Live`;
+        if (catalogNavCount) catalogNavCount.innerText = catalogItems.length;
+
+        // Sort items newest first
+        renderCatalogItems([...catalogItems].reverse());
+    });
 }
 
-// Infinite batch loader (loads 40 items at a time so mobile never lags)
-function loadNextCatalogBatch() {
-    let nextBatch = filteredCatalog.slice(displayedCatalogCount, displayedCatalogCount + PAGE_SIZE);
+function renderCatalogItems(items) {
+    if (!catalogGrid) return;
+    catalogGrid.innerHTML = "";
     
-    nextBatch.forEach(item => {
-        let imgUrl = item.thumbnail || (item.images && item.images[0]) || item.image || "https://placehold.co/300x170/1e293b/38bdf8?text=Minecraft";
-        let type = (item.category || item.type || 'Addon').toUpperCase();
-        let rating = item.rating || item.averageRating || "4.5";
-        let views = item.views || Math.floor(Math.random() * 800) + 50;
+    if (items.length === 0) {
+        catalogGrid.innerHTML = "<p style='color:#666; text-align:center; grid-column:1/-1;'>No items match your search.</p>";
+        return;
+    }
 
+    items.forEach(item => {
+        let thumb = item.thumbnail || (item.images && item.images[0]) || "https://placehold.co/300x170/1e293b/38bdf8?text=Minecraft";
         let card = document.createElement('div');
         card.className = "item-card";
         card.innerHTML = `
             <div class="card-img-wrap">
-                <img src="${imgUrl}" alt="${item.title}" referrerpolicy="no-referrer" loading="lazy" onerror="this.src='https://placehold.co/300x170/1e293b/38bdf8?text=No+Image'">
-                <span class="card-badge" style="background:#10b981;">${type}</span>
+                <img src="${thumb}" alt="${item.title}" referrerpolicy="no-referrer" loading="lazy" onerror="this.src='https://placehold.co/300x170/1e293b/38bdf8?text=Minecraft'">
+                <span class="card-badge" style="background:#10b981;">${(item.category || 'DLC').toUpperCase()}</span>
             </div>
             <div class="card-body">
                 <div class="card-top-bar">
-                    <span>⭐ ${rating}</span>
-                    <span>🔥 ${views}</span>
+                    <span>⭐ ${item.rating || '4.5'}</span>
+                    <span style="color:#10b981; font-weight:bold;">⚡ NEW</span>
                 </div>
-                <h3 class="card-title">${item.title || item.name}</h3>
+                <h3 class="card-title">${item.title}</h3>
                 <div class="card-footer">
-                    <span>${item.creatorName || item.creator || 'Mojang'}</span>
+                    <span>${item.creator || 'Mojang Partner'}</span>
                 </div>
             </div>
         `;
         card.onclick = () => openItemModal(item, true);
         catalogGrid.appendChild(card);
     });
-
-    displayedCatalogCount += nextBatch.length;
 }
 
-// Infinite Scroll Trigger
-window.onscroll = function() {
-    if (activeSection === 'catalog' && (window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
-        if (displayedCatalogCount < filteredCatalog.length) {
-            loadNextCatalogBatch();
-        }
-    }
-};
-
-// --- 3. MODAL LOGIC ---
+// --- 3. MODAL LOGIC (DOWNLOAD & REQUEST) ---
 function openItemModal(item, isCatalogItem) {
     currentModalItem = item;
-    let title = item.title || item.name;
-    document.getElementById('modalTitle').innerText = title;
-    document.getElementById('modalTag').innerText = (item.category || item.type || 'DLC').toUpperCase();
-    document.getElementById('modalCreator').innerHTML = `<i class="fas fa-user-circle"></i> ${item.creatorName || item.creator || 'Mojang'}`;
-    document.getElementById('modalRating').innerHTML = `<i class="fas fa-star" style="color:#fbbf24;"></i> ${item.rating || '4.5'}`;
-    document.getElementById('modalDesc').innerText = item.description || item.summary || "Official Minecraft Marketplace DLC.";
+    document.getElementById('modalTitle').innerText = item.title;
+    document.getElementById('modalTag').innerText = (item.category || 'DLC').toUpperCase();
+    document.getElementById('modalDesc').innerText = item.description || "Official Minecraft Marketplace DLC.";
 
+    // Screenshots carousel
     let track = document.getElementById('carouselTrack');
     track.innerHTML = "";
-    
     let imgs = [];
     if (item.images && item.images.length > 0) imgs = item.images;
     else if (item.thumbnail) imgs = [item.thumbnail];
@@ -225,19 +200,20 @@ function openItemModal(item, isCatalogItem) {
     let reqSec = document.getElementById('modalRequestSection');
 
     if (isCatalogItem) {
-        dwnSec.style.display = "none";
-        reqSec.style.display = "block";
+        if (dwnSec) dwnSec.style.display = "none";
+        if (reqSec) reqSec.style.display = "block";
     } else {
-        dwnSec.style.display = "block";
-        reqSec.style.display = "none";
+        if (dwnSec) dwnSec.style.display = "block";
+        if (reqSec) reqSec.style.display = "none";
         renderModalDownloadLinks(item);
     }
 
-    itemModal.style.display = "flex";
+    if (itemModal) itemModal.style.display = "flex";
 }
 
 function renderModalDownloadLinks(item) {
     let container = document.getElementById('modalLinksContainer');
+    if (!container) return;
     container.innerHTML = "";
 
     if (item.fileBlocks && item.fileBlocks.length > 0) {
@@ -285,23 +261,22 @@ function renderModalDownloadLinks(item) {
     }
 }
 
-// Request Action
+// Request Item to Admin
 function requestCurrentCatalogItem() {
     if (!currentModalItem) return;
-    let userName = prompt("Enter your Name or WhatsApp number for notification:");
+    let userName = prompt("Enter your Name or Discord/WhatsApp username:");
     if (!userName) return;
 
-    let itemId = currentModalItem.id || currentModalItem.uuid || "";
     let reqData = {
-        addon: currentModalItem.title || currentModalItem.name,
-        link: itemId ? ("https://www.minecraft.net/en-us/marketplace/pdp?id=" + itemId) : "",
+        addon: currentModalItem.title,
+        link: currentModalItem.marketplaceUrl || (currentModalItem.id ? `https://www.minecraft.net/en-us/marketplace/pdp?id=${currentModalItem.id}` : ""),
         user: userName,
         status: "pending",
         timestamp: Date.now()
     };
 
     database.ref('requests').push().set(reqData).then(() => {
-        alert("✅ Request Sent! Check back soon for the download link.");
+        alert("✅ Request sent to Admin! Download link will be uploaded soon.");
         closeModal();
     }).catch(err => alert("Error: " + err.message));
 }
@@ -310,36 +285,25 @@ function requestCurrentCatalogItem() {
 function handleGlobalSearch() {
     let q = document.getElementById('globalSearch').value.toLowerCase().trim();
     if (activeSection === 'available') {
-        let filtered = availableItems.filter(i => i.title.toLowerCase().includes(q));
+        let filtered = availableItems.filter(i => (i.title || '').toLowerCase().includes(q) || (i.creator || '').toLowerCase().includes(q));
         renderAvailableItems(filtered);
     } else {
-        filteredCatalog = catalogRawData.filter(i => {
-            let t = (i.title || i.name || '').toLowerCase();
-            let c = (i.creatorName || i.creator || '').toLowerCase();
-            let u = (i.id || i.uuid || '').toLowerCase();
-            return t.includes(q) || c.includes(q) || u.includes(q);
-        });
-        displayedCatalogCount = 0;
-        catalogGrid.innerHTML = "";
-        loadNextCatalogBatch();
+        let filtered = catalogItems.filter(i => (i.title || '').toLowerCase().includes(q) || (i.creator || '').toLowerCase().includes(q));
+        renderCatalogItems(filtered);
     }
 }
 
 function filterByCategory(cat) {
     activeCategory = cat;
     document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
-    if (event && event.target) {
-        event.target.closest('.cat-pill').classList.add('active');
-    }
+    if (event && event.target) event.target.closest('.cat-pill').classList.add('active');
 
     if (activeSection === 'available') {
         let filtered = (cat === 'all') ? availableItems : availableItems.filter(i => (i.category || '').toLowerCase().includes(cat));
         renderAvailableItems(filtered);
     } else {
-        filteredCatalog = (cat === 'all') ? [...catalogRawData] : catalogRawData.filter(i => (i.category || i.type || '').toLowerCase().includes(cat));
-        displayedCatalogCount = 0;
-        catalogGrid.innerHTML = "";
-        loadNextCatalogBatch();
+        let filtered = (cat === 'all') ? [...catalogItems].reverse() : catalogItems.filter(i => (i.category || '').toLowerCase().includes(cat)).reverse();
+        renderCatalogItems(filtered);
     }
 }
 
@@ -361,5 +325,5 @@ function openGeneralRequestModal() {
         user: user,
         status: "pending",
         timestamp: Date.now()
-    }).then(() => alert("✅ Request submitted!"));
+    }).then(() => alert("✅ Request submitted to Admin!"));
 }
