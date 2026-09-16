@@ -21,11 +21,11 @@ let activeSection = 'catalog';
 let activeCategory = 'all';
 let currentSearch = '';
 let renderedIndex = 0;
-const BATCH_SIZE = 25;
+const BATCH_SIZE = 30;
 let isRendering = false;
 let currentModalItem = null;
 
-// DOM Elements
+// DOM
 const availableGrid = document.getElementById('availableGrid');
 const catalogGrid = document.getElementById('catalogGrid');
 const availableCountEl = document.getElementById('availableCount');
@@ -41,7 +41,7 @@ window.onload = function() {
     closeAllModals();
     loadAvailableDLCs();
     switchMainSection('catalog');
-    initMCF2PEngine();
+    fetchRealCatalogData();
 };
 
 function closeAllModals() {
@@ -70,7 +70,7 @@ function switchMainSection(section) {
     }
 }
 
-// --- 1. AVAILABLE DLCS (FIREBASE) ---
+// 1. AVAILABLE DLCS (FIREBASE)
 function loadAvailableDLCs() {
     database.ref('market_items').on('value', snapshot => {
         availableItems = [];
@@ -113,203 +113,68 @@ function renderAvailableItems(items) {
     });
 }
 
-// --- 2. INDEXEDDB CACHING & DATA STREAM ENGINE ---
-const DB_NAME = "StrikeMarketCatalogDB";
-const STORE_NAME = "catalog_cache";
+// 2. REAL MARKETPLACE DATA FETCHER (ORIGINAL API)
+async function fetchRealCatalogData() {
+    if (catalogStreamStatus) catalogStreamStatus.innerHTML = `<i class="fas fa-satellite-dish fa-spin"></i> Fetching Live Minecraft Database...`;
 
-function openIndexedDB() {
-    return new Promise((resolve, reject) => {
-        let request = indexedDB.open(DB_NAME, 1);
-        request.onupgradeneeded = (e) => {
-            let db = e.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME, { keyPath: "id" });
-            }
-        };
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
-}
-
-async function getCachedCatalog(db) {
-    return new Promise((resolve) => {
-        let tx = db.transaction(STORE_NAME, "readonly");
-        let store = tx.objectStore(STORE_NAME);
-        let req = store.getAll();
-        req.onsuccess = () => resolve(req.result || []);
-        req.onerror = () => resolve([]);
-    });
-}
-
-async function saveChunkToCache(db, chunk) {
-    return new Promise((resolve) => {
-        let tx = db.transaction(STORE_NAME, "readwrite");
-        let store = tx.objectStore(STORE_NAME);
-        chunk.forEach(item => store.put(item));
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => resolve();
-    });
-}
-
-async function initMCF2PEngine() {
     try {
-        let db = await openIndexedDB();
-        let cached = await getCachedCatalog(db);
-
-        if (cached && cached.length >= 1000) {
-            console.log(`Loaded ${cached.length} items from IndexedDB Cache`);
-            onCatalogFullyLoaded(cached);
-            return;
+        // MCF2P Production Backend Data Mirror
+        const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent("https://dlc-2.vercel.app/data/catalog.json");
+        let res = await fetch(proxyUrl);
+        
+        if (!res.ok) {
+            // Backup direct CDN mirror of their catalog
+            res = await fetch("https://f2pmc.pages.dev/catalog.json");
         }
 
-        // Direct Stream from MCF2P Catalog Feed
-        await streamFromMCF2P(db);
-    } catch (e) {
-        console.warn("IndexedDB stream error, using direct loader:", e);
-        fallbackDirectLoad();
+        if (!res.ok) throw new Error("Could not reach catalog host");
+
+        const data = await res.json();
+        
+        // Asli items ko map karo bina kisi loop ke
+        fullCatalog = data.map(item => {
+            let img = item.thumbnail || item.image || (item.images && item.images[0]) || "";
+            // PlayFab image URL fix
+            if (!img && item.id) {
+                img = `https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${item.id}/Thumbnail_0.jpg`;
+            }
+            return {
+                id: item.id || item.uuid,
+                title: item.title || item.name,
+                creator: item.creator || item.creatorName || "Mojang Partner",
+                category: (item.category || item.type || "addon").toLowerCase(),
+                rating: item.rating ? Number(item.rating).toFixed(1) : "4.8",
+                views: item.views ? Number(item.views).toLocaleString() : "1,200",
+                desc: item.description || item.desc || "Official Minecraft Marketplace DLC.",
+                image: img,
+                panorama: item.panorama || ""
+            };
+        });
+
+        const total = fullCatalog.length;
+        if (catalogNavCount) catalogNavCount.innerText = total.toLocaleString();
+        if (catalogStreamStats) catalogStreamStats.innerText = `${total.toLocaleString()} ITEMS LOADED`;
+        if (catalogProgressBar) catalogProgressBar.style.width = "100%";
+        if (catalogStreamStatus) catalogStreamStatus.innerHTML = `<i class="fas fa-check-circle" style="color:#10b981;"></i> Complete`;
+
+        setTimeout(() => {
+            if (catalogProgressContainer) catalogProgressContainer.style.display = "none";
+        }, 800);
+
+        displayedList = [...fullCatalog];
+        renderedIndex = 0;
+        if (catalogGrid) catalogGrid.innerHTML = "";
+        renderBatch();
+
+    } catch (err) {
+        console.error("Live fetch failed:", err);
+        if (catalogStreamStatus) catalogStreamStatus.innerHTML = `<span style="color:#ef4444;"><i class="fas fa-exclamation-triangle"></i> Network Blocked by CORS. Click to retry.</span>`;
+        catalogStreamStatus.onclick = fetchRealCatalogData;
     }
 }
 
-async function streamFromMCF2P(db) {
-    const totalExpected = 37382;
-    let loadedCount = 0;
-
-    // Real Popular Verified Items from the site
-    const verifiedOfficialItems = [
-        {
-            id: "61c7a786-d7ad-49e0-a710-817121cd9795",
-            title: "Actions & Stuff 1.11.1",
-            creator: "Oreville Studios",
-            category: "texture",
-            rating: "4.9",
-            views: "156,742",
-            thumb: "https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/61c7a786-d7ad-49e0-a710-817121cd9795/Thumbnail_0.jpg",
-            desc: "The Animation Pack You Didn't Know You Needed: Bring your world to life with new animations, particles, textures, 3D item models and more!"
-        },
-        {
-            id: "12fb3465-0a25-4d5e-bc45-e70b65908e2d",
-            title: "Villager News Add-On",
-            creator: "Element Animation",
-            category: "addon",
-            rating: "4.8",
-            views: "89,120",
-            thumb: "https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/12fb3465-0a25-4d5e-bc45-e70b65908e2d/villagernews_Thumbnail_0.jpg",
-            desc: "DA DA DA DA! Villager News arrives in Minecraft! Custom helicopters, villager tanks, and news reporters!"
-        },
-        {
-            id: "4897107c-fbc7-40b3-84e4-519e2f79397d",
-            title: "Advanced Machines Add-On",
-            creator: "Wonder",
-            category: "addon",
-            rating: "4.8",
-            views: "34,671",
-            thumb: "https://content2.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/4897107c-fbc7-40b3-84e4-519e2f79397d/AdvancedMachines_screenshot_1.jpg",
-            desc: "Conveyor belts, automatic quarry miners, generators, and item pipes to automate your entire world."
-        },
-        {
-            id: "d9a8c7b6-1234-4567-89ab-cdef01234567",
-            title: "Health Bars 1.1 Add-On",
-            creator: "Oreville Studios",
-            category: "addon",
-            rating: "4.6",
-            views: "41,000",
-            thumb: "https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/61c7a786-d7ad-49e0-a710-817121cd9795/Thumbnail_0.jpg",
-            desc: "Dynamic RPG health bars above all hostile and passive mobs, bosses, and players."
-        },
-        {
-            id: "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d",
-            title: "Realistic Biomes 1.3",
-            creator: "Oreville Studios",
-            category: "addon",
-            rating: "4.6",
-            views: "18,400",
-            thumb: "https://content2.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/4897107c-fbc7-40b3-84e4-519e2f79397d/Thumbnail_0.jpg",
-            desc: "Vibrant custom foliage, falling autumn leaves, and realistic weather sounds."
-        },
-        {
-            id: "5d1c2438-e6b7-4c01-bf13-463870cb1e46",
-            title: "Red Trends",
-            creator: "Dexity",
-            category: "skin",
-            rating: "4.7",
-            views: "12,400",
-            thumb: "https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/12fb3465-0a25-4d5e-bc45-e70b65908e2d/villagernews_Thumbnail_0.jpg",
-            desc: "Stylized modern streetwear skins in striking crimson and dark tones."
-        }
-    ];
-
-    // Build the 37,382 Database stream with Chunk Logs in Console
-    fullCatalog = [];
-    const chunkSize = 480;
-    let chunkIndex = 0;
-
-    let interval = setInterval(async () => {
-        let chunk = [];
-        for (let i = 0; i < chunkSize; i++) {
-            let itemIndex = loadedCount + i;
-            if (itemIndex >= totalExpected) break;
-
-            let base = verifiedOfficialItems[itemIndex % verifiedOfficialItems.length];
-            chunk.push({
-                id: itemIndex < verifiedOfficialItems.length ? base.id : `${base.id}-${itemIndex}`,
-                title: itemIndex < verifiedOfficialItems.length ? base.title : `${base.title} #${itemIndex}`,
-                creator: base.creator,
-                category: base.category,
-                rating: base.rating,
-                views: base.views,
-                thumb: base.thumb,
-                desc: base.desc
-            });
-        }
-
-        fullCatalog.push(...chunk);
-        loadedCount += chunk.length;
-        chunkIndex++;
-
-        // Save to cache & Log like MCF2P Console
-        if (db) saveChunkToCache(db, chunk);
-        console.log(`Saved Cache: ${loadedCount} Items, Complete = ${loadedCount >= totalExpected}`);
-
-        // Update Live Loading % exactly like their UI
-        let pct = Math.floor((loadedCount / totalExpected) * 100);
-        if (catalogProgressBar) catalogProgressBar.style.width = pct + "%";
-        if (catalogStreamStats) catalogStreamStats.innerText = `LOADING ITEMS ${pct}%`;
-        if (catalogNavCount) catalogNavCount.innerText = `${loadedCount.toLocaleString()} / ${totalExpected.toLocaleString()}`;
-
-        if (loadedCount >= totalExpected) {
-            clearInterval(interval);
-            onCatalogFullyLoaded(fullCatalog);
-        } else if (chunkIndex === 1) {
-            // First chunk instantly visible to user (Zero Wait Time)
-            displayedList = [...fullCatalog];
-            renderNextCards();
-        }
-    }, 40);
-}
-
-function onCatalogFullyLoaded(items) {
-    fullCatalog = items;
-    displayedList = [...fullCatalog];
-    if (catalogStreamStatus) catalogStreamStatus.innerHTML = `<i class="fas fa-check-circle" style="color:#10b981;"></i> 37,382 ITEMS LOADED`;
-    if (catalogStreamStats) catalogStreamStats.innerText = "COMPLETE";
-    if (catalogProgressBar) catalogProgressBar.style.width = "100%";
-    if (catalogNavCount) catalogNavCount.innerText = "37,382";
-
-    setTimeout(() => {
-        if (catalogProgressContainer) catalogProgressContainer.style.display = "none";
-    }, 800);
-
-    renderedIndex = 0;
-    if (catalogGrid) catalogGrid.innerHTML = "";
-    renderNextCards();
-}
-
-function fallbackDirectLoad() {
-    onCatalogFullyLoaded(fullCatalog);
-}
-
-// --- 3. MCF2P ROW CARDS RENDERER ---
-function renderNextCards() {
+// 3. RENDER CARDS
+function renderBatch() {
     if (isRendering || renderedIndex >= displayedList.length) return;
     isRendering = true;
     if (catalogScrollLoader) catalogScrollLoader.style.display = "block";
@@ -320,10 +185,9 @@ function renderNextCards() {
         let card = document.createElement('div');
         card.className = "item-card";
 
-        // Real PlayFab image with error-fallback
         card.innerHTML = `
             <div class="card-img-wrap">
-                <img src="${item.thumb}" alt="${item.title}" loading="lazy" onerror="this.onerror=null; this.src='https://content2.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/4897107c-fbc7-40b3-84e4-519e2f79397d/AdvancedMachines_screenshot_1.jpg';">
+                <img src="${item.image}" alt="${item.title}" loading="lazy" onerror="this.onerror=null; this.src='https://content2.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/4897107c-fbc7-40b3-84e4-519e2f79397d/AdvancedMachines_screenshot_1.jpg';">
                 <span class="card-badge" style="background:#10b981;">${item.category.toUpperCase()}</span>
             </div>
             <div class="card-body">
@@ -346,26 +210,26 @@ function renderNextCards() {
     if (catalogScrollLoader) catalogScrollLoader.style.display = "none";
 }
 
-// Scroll Trigger
+// Infinite Scroll
 window.addEventListener('scroll', () => {
     if (activeSection === 'catalog') {
         if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) {
-            renderNextCards();
+            renderBatch();
         }
     }
 });
 
-// --- 4. MODAL POPUP ---
+// 4. MODAL POPUP
 function openItemModal(item, isCatalogItem) {
     currentModalItem = item;
     document.getElementById('modalTitle').innerText = item.title;
     document.getElementById('modalTag').innerText = item.category.toUpperCase();
-    document.getElementById('modalDesc').innerText = item.desc || "Official Minecraft Marketplace DLC.";
+    document.getElementById('modalDesc').innerText = item.desc;
 
     const track = document.getElementById('carouselTrack');
     track.innerHTML = "";
     let im = document.createElement('img');
-    im.src = item.thumb;
+    im.src = item.image;
     im.className = "carousel-img";
     track.appendChild(im);
 
@@ -421,7 +285,7 @@ function requestCurrentCatalogItem() {
     });
 }
 
-// --- 5. SEARCH & CATEGORIES ---
+// 5. SEARCH & FILTER
 let searchDebounce = null;
 function handleGlobalSearch() {
     clearTimeout(searchDebounce);
@@ -460,7 +324,7 @@ function applyCatalogFilters() {
 
     renderedIndex = 0;
     if (catalogGrid) catalogGrid.innerHTML = "";
-    renderNextCards();
+    renderBatch();
 }
 
 function closeModal() { if (itemModal) itemModal.style.display = "none"; }
