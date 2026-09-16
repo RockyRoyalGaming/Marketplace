@@ -111,11 +111,11 @@ function renderAvailableItems(items) {
 // --- 2. LOCAL CATALOG LOADER (FROM GITHUB ACTIONS CATALOG.JSON) ---
 async function loadRealtimeMarketplaceCatalog() {
     if (!catalogGrid) return;
-    catalogGrid.innerHTML = "<p style='color:#38bdf8; text-align:center; grid-column:1/-1;'><i class='fas fa-spinner fa-spin'></i> Loading latest marketplace releases...</p>";
+    catalogGrid.innerHTML = "<p style='color:#38bdf8; text-align:center; grid-column:1/-1;'><i class='fas fa-spinner fa-spin'></i> Loading marketplace catalog...</p>";
 
     try {
-        const res = await fetch('catalog.json?v=' + Date.now());
-        if (!res.ok) throw new Error("Catalog file not generated yet.");
+        const res = await fetch('./catalog.json?cache=' + Date.now());
+        if (!res.ok) throw new Error("Catalog file not reachable");
         
         catalogItems = await res.json();
 
@@ -124,8 +124,13 @@ async function loadRealtimeMarketplaceCatalog() {
 
         renderCatalogItems(catalogItems);
     } catch (e) {
-        console.warn(e);
-        catalogGrid.innerHTML = "<p style='color:#888; text-align:center; grid-column:1/-1;'>Catalog updating... Please trigger the GitHub Action once.</p>";
+        console.warn("Direct JSON load failed, loading fallback items:", e);
+        // Fallback directly embedded so website never goes blank
+        catalogItems = [
+            { id: "5d1c2438-e6b7-4c01-bf13-463870cb1e46", title: "Monster Food Add-On", creator: "Noxcrew", category: "addon", rating: "4.7", thumbnail: "https://picsum.photos/seed/food/300/170", description: "Cook hostile mobs!" },
+            { id: "e1966205-83e0-40e9-9134-2e99f187a553", title: "Sonic the Hedgehog", creator: "Gamemode One", category: "world", rating: "4.8", thumbnail: "https://picsum.photos/seed/sonic/300/170", description: "Sonic in Minecraft!" }
+        ];
+        renderCatalogItems(catalogItems);
     }
 }
 
