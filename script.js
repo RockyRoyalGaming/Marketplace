@@ -279,3 +279,14 @@ function openStatsModal() { document.getElementById('statsModal').style.display 
 function closeStatsModal() { document.getElementById('statsModal').style.display = "none"; }
 function openTutorialModal() { document.getElementById('tutorialModal').style.display = "flex"; }
 function closeTutorialModal() { document.getElementById('tutorialModal').style.display = "none"; }
+
+// Ensure modals are strictly closed on startup
+document.addEventListener("DOMContentLoaded", () => {
+    if (itemModal) itemModal.style.display = "none";
+    let sm = document.getElementById('settingsModal');
+    if (sm) sm.style.display = "none";
+    let st = document.getElementById('statsModal');
+    if (st) st.style.display = "none";
+    let tm = document.getElementById('tutorialModal');
+    if (tm) tm.style.display = "none";
+});
