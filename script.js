@@ -20,9 +20,9 @@ let displayedList = [];
 let activeSection = 'catalog';
 let activeCategory = 'all';
 let currentSearch = '';
-let renderedIndex = 0;
-const BATCH_SIZE = 30;
-let isRendering = false;
+let currentPage = 1;
+const TOTAL_PAGES = 78; // 37,382 items / ~480 per page
+let isFetchingPage = false;
 let currentModalItem = null;
 
 // DOM
@@ -41,7 +41,7 @@ window.onload = function() {
     closeAllModals();
     loadAvailableDLCs();
     switchMainSection('catalog');
-    fetchRealCatalogData();
+    fetchMarketplacePage(1);
 };
 
 function closeAllModals() {
@@ -113,81 +113,87 @@ function renderAvailableItems(items) {
     });
 }
 
-// 2. REAL MARKETPLACE DATA FETCHER (ORIGINAL API)
-async function fetchRealCatalogData() {
-    if (catalogStreamStatus) catalogStreamStatus.innerHTML = `<i class="fas fa-satellite-dish fa-spin"></i> Fetching Live Minecraft Database...`;
+// 2. LIVE FETCH FROM THE EXACT SOURCE (v5-mcsrc.github.io)
+async function fetchMarketplacePage(page) {
+    if (isFetchingPage || page > TOTAL_PAGES) return;
+    isFetchingPage = true;
+
+    if (catalogScrollLoader) catalogScrollLoader.style.display = "block";
+    if (page === 1 && catalogStreamStatus) {
+        catalogStreamStatus.innerHTML = `<i class="fas fa-satellite-dish fa-spin"></i> Fetching official catalog page ${page}...`;
+    }
 
     try {
-        // MCF2P Production Backend Data Mirror
-        const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent("https://dlc-2.vercel.app/data/catalog.json");
-        let res = await fetch(proxyUrl);
+        const url = `https://v5-mcsrc.github.io/data/api/marketplace/page/page-${page}.json`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("HTTP error " + res.status);
         
-        if (!res.ok) {
-            // Backup direct CDN mirror of their catalog
-            res = await fetch("https://f2pmc.pages.dev/catalog.json");
-        }
-
-        if (!res.ok) throw new Error("Could not reach catalog host");
-
         const data = await res.json();
-        
-        // Asli items ko map karo bina kisi loop ke
-        fullCatalog = data.map(item => {
-            let img = item.thumbnail || item.image || (item.images && item.images[0]) || "";
-            // PlayFab image URL fix
-            if (!img && item.id) {
-                img = `https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${item.id}/Thumbnail_0.jpg`;
+        const items = data.items || data;
+
+        // Clean & format raw official items
+        const parsed = items.map(i => {
+            let img = i.thumbnail || i.image || i.keyArt || "";
+            // PlayFab image fallback
+            if (!img && i.id) {
+                img = `https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${i.id}/Thumbnail_0.jpg`;
             }
             return {
-                id: item.id || item.uuid,
-                title: item.title || item.name,
-                creator: item.creator || item.creatorName || "Mojang Partner",
-                category: (item.category || item.type || "addon").toLowerCase(),
-                rating: item.rating ? Number(item.rating).toFixed(1) : "4.8",
-                views: item.views ? Number(item.views).toLocaleString() : "1,200",
-                desc: item.description || item.desc || "Official Minecraft Marketplace DLC.",
+                id: i.id || i.uuid,
+                title: i.title || i.name || "Minecraft Item",
+                creator: i.creator || i.creatorName || (i.author ? i.author.name : "Mojang Partner"),
+                category: (i.category || i.type || "addon").toLowerCase(),
+                rating: i.rating ? Number(i.rating).toFixed(1) : "4.8",
+                views: i.views ? Number(i.views).toLocaleString() : Math.floor(Math.random() * 2000 + 100).toLocaleString(),
+                desc: i.description || i.desc || "Official Minecraft Marketplace DLC.",
                 image: img,
-                panorama: item.panorama || ""
+                panorama: i.panorama || ""
             };
         });
 
-        const total = fullCatalog.length;
-        if (catalogNavCount) catalogNavCount.innerText = total.toLocaleString();
-        if (catalogStreamStats) catalogStreamStats.innerText = `${total.toLocaleString()} ITEMS LOADED`;
-        if (catalogProgressBar) catalogProgressBar.style.width = "100%";
-        if (catalogStreamStatus) catalogStreamStatus.innerHTML = `<i class="fas fa-check-circle" style="color:#10b981;"></i> Complete`;
+        fullCatalog.push(...parsed);
+        currentPage = page;
 
-        setTimeout(() => {
-            if (catalogProgressContainer) catalogProgressContainer.style.display = "none";
-        }, 800);
+        // Progress bar updates
+        let pct = Math.floor((currentPage / TOTAL_PAGES) * 100);
+        if (catalogProgressBar) catalogProgressBar.style.width = pct + "%";
+        if (catalogStreamStats) catalogStreamStats.innerText = `${fullCatalog.length.toLocaleString()} ITEMS LOADED (${pct}%)`;
+        if (catalogNavCount) catalogNavCount.innerText = fullCatalog.length.toLocaleString();
 
-        displayedList = [...fullCatalog];
-        renderedIndex = 0;
-        if (catalogGrid) catalogGrid.innerHTML = "";
-        renderBatch();
+        if (page === 1) {
+            if (catalogProgressContainer) {
+                setTimeout(() => catalogProgressContainer.style.display = "none", 1200);
+            }
+        }
+
+        applyCatalogFilters();
 
     } catch (err) {
-        console.error("Live fetch failed:", err);
-        if (catalogStreamStatus) catalogStreamStatus.innerHTML = `<span style="color:#ef4444;"><i class="fas fa-exclamation-triangle"></i> Network Blocked by CORS. Click to retry.</span>`;
-        catalogStreamStatus.onclick = fetchRealCatalogData;
+        console.error("Fetch page error:", err);
+        if (catalogStreamStatus) {
+            catalogStreamStatus.innerHTML = `<span style="color:#ef4444;"><i class="fas fa-exclamation-circle"></i> Retry Page ${page}</span>`;
+            catalogStreamStatus.onclick = () => fetchMarketplacePage(page);
+        }
     }
+
+    isFetchingPage = false;
+    if (catalogScrollLoader) catalogScrollLoader.style.display = "none";
 }
 
-// 3. RENDER CARDS
-function renderBatch() {
-    if (isRendering || renderedIndex >= displayedList.length) return;
-    isRendering = true;
-    if (catalogScrollLoader) catalogScrollLoader.style.display = "block";
+// 3. RENDER ITEMS
+function renderCatalogCards(itemsToRender) {
+    if (!catalogGrid) return;
+    if (currentPage === 1 && !currentSearch && activeCategory === 'all') {
+        catalogGrid.innerHTML = "";
+    }
 
-    const slice = displayedList.slice(renderedIndex, renderedIndex + BATCH_SIZE);
-
-    slice.forEach(item => {
+    itemsToRender.forEach(item => {
         let card = document.createElement('div');
         card.className = "item-card";
 
         card.innerHTML = `
             <div class="card-img-wrap">
-                <img src="${item.image}" alt="${item.title}" loading="lazy" onerror="this.onerror=null; this.src='https://content2.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/4897107c-fbc7-40b3-84e4-519e2f79397d/AdvancedMachines_screenshot_1.jpg';">
+                <img src="${item.image}" alt="${item.title}" loading="lazy" onerror="this.onerror=null; this.src='https://content2.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${item.id}/${item.id}_Thumbnail_0.jpg';">
                 <span class="card-badge" style="background:#10b981;">${item.category.toUpperCase()}</span>
             </div>
             <div class="card-body">
@@ -204,17 +210,15 @@ function renderBatch() {
         card.onclick = () => openItemModal(item, true);
         catalogGrid.appendChild(card);
     });
-
-    renderedIndex += slice.length;
-    isRendering = false;
-    if (catalogScrollLoader) catalogScrollLoader.style.display = "none";
 }
 
-// Infinite Scroll
+// Infinite Scroll loads next page
 window.addEventListener('scroll', () => {
     if (activeSection === 'catalog') {
-        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) {
-            renderBatch();
+        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 900) {
+            if (!isFetchingPage && currentPage < TOTAL_PAGES) {
+                fetchMarketplacePage(currentPage + 1);
+            }
         }
     }
 });
@@ -232,6 +236,16 @@ function openItemModal(item, isCatalogItem) {
     im.src = item.image;
     im.className = "carousel-img";
     track.appendChild(im);
+
+    // Panorama
+    const panoSec = document.getElementById('panoramaSection');
+    const panoImg = document.getElementById('panoramaImg');
+    if (item.panorama && panoSec && panoImg) {
+        panoImg.src = item.panorama;
+        panoSec.style.display = "block";
+    } else if (panoSec) {
+        panoSec.style.display = "none";
+    }
 
     const dwnSec = document.getElementById('modalDownloadSection');
     const reqSec = document.getElementById('modalRequestSection');
@@ -322,9 +336,8 @@ function applyCatalogFilters() {
         return matchCat && matchQuery;
     });
 
-    renderedIndex = 0;
     if (catalogGrid) catalogGrid.innerHTML = "";
-    renderBatch();
+    renderCatalogCards(displayedList);
 }
 
 function closeModal() { if (itemModal) itemModal.style.display = "none"; }
