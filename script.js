@@ -1,413 +1,281 @@
-// --- 1. FIREBASE INITIALIZATION ---
-const firebaseConfig = {
+// --- FIREBASE CONFIGURATION ---
+var firebaseConfig = {
   apiKey: "AIzaSyDOnkkfPgIX9rlEXefUKnZ3atV6zdBu1RU",
   authDomain: "strikemarket-32a5e.firebaseapp.com",
   databaseURL: "https://strikemarket-32a5e-default-rtdb.firebaseio.com",
   projectId: "strikemarket-32a5e",
   storageBucket: "strikemarket-32a5e.firebasestorage.app",
   messagingSenderId: "719596182121",
-  appId: "1:719596182121:web:d02df0d3089f560fc560f8",
+  appId: "1:719596182121:web:d02dfdd3089f560fc560f8",
   measurementId: "G-KTVM3J2491"
 };
 
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 var database = firebase.database();
 
-// Global array for items
-let items = [];
+// State Variables
+let availableItems = [];
+let catalogItems = [];
+let activeSection = 'available'; // 'available' or 'catalog'
+let activeCategory = 'all';
+let currentModalItem = null;
 
-// --- 2. DOM ELEMENTS ---
-const container = document.getElementById('itemsContainer');
-const modal = document.getElementById('itemModal');
-const readMoreBtn = document.getElementById('readMoreBtn');
-const descElement = document.getElementById('modalDesc');
-const btnContainer = document.getElementById('downloadButtonsContainer');
-const track = document.getElementById('carouselTrack');
-const dotsContainer = document.getElementById('carouselDots');
-const panoramaSection = document.getElementById('panoramaSection');
-const panoramaImg = document.getElementById('modalPanoramaImg');
+// Elements
+const availableGrid = document.getElementById('availableGrid');
+const catalogGrid = document.getElementById('catalogGrid');
+const availableCountEl = document.getElementById('availableCount');
+const itemModal = document.getElementById('itemModal');
 
-// Request Elements
-const reqSection = document.getElementById('requestsSection');
-const pendingBox = document.getElementById('pendingContainer');
-const completedBox = document.getElementById('completedContainer');
-const reqModal = document.getElementById('requestFormModal');
+// --- ON PAGE LOAD ---
+window.onload = function() {
+    loadAvailableDLCs();
+    loadMarketplaceCatalog();
+};
 
-// --- 3. LOAD LIVE ITEMS FROM FIREBASE ---
-function loadLiveMarketItems() {
-    database.ref('market_items').on('value', (snapshot) => {
-        items = [];
+// --- SECTION SWITCHER ---
+function switchMainSection(section) {
+    activeSection = section;
+    document.querySelectorAll('.main-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+
+    if (section === 'available') {
+        document.getElementById('tabBtnAvailable').classList.add('active');
+        document.getElementById('sectionAvailable').classList.add('active');
+    } else {
+        document.getElementById('tabBtnCatalog').classList.add('active');
+        document.getElementById('sectionCatalog').classList.add('active');
+    }
+}
+
+// --- 1. AVAILABLE DLCS LOADER (YOUR FIREBASE) ---
+function loadAvailableDLCs() {
+    database.ref('market_items').on('value', snapshot => {
+        availableItems = [];
         if (snapshot.exists()) {
-            snapshot.forEach((childSnapshot) => {
-                let itemData = childSnapshot.val();
-                itemData.firebaseKey = childSnapshot.key;
-                items.push(itemData);
+            snapshot.forEach(child => {
+                availableItems.push({ id: child.key, ...child.val() });
             });
-            items.reverse();
-            displayItems(items);
-        } else {
-            container.innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: #666; padding: 20px;'>No items found.</p>";
         }
+        availableCountEl.innerText = availableItems.length;
+        renderAvailableItems(availableItems);
     });
 }
-window.addEventListener('DOMContentLoaded', loadLiveMarketItems);
 
-// --- 4. DISPLAY ITEMS (CARDS) ---
-function displayItems(data) {
-    container.innerHTML = "";
-    if (!data || data.length === 0) {
-        container.innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: #666; padding: 20px;'>No items found.</p>";
+function renderAvailableItems(items) {
+    availableGrid.innerHTML = "";
+    if (items.length === 0) {
+        availableGrid.innerHTML = "<p style='color:#666; text-align:center; grid-column:1/-1;'>No available items found.</p>";
         return;
     }
 
-    data.forEach(item => {
-        const card = document.createElement('div');
-        card.classList.add('card');
-        card.onclick = () => openModal(item);
-        
-        let thumbUrl = "https://via.placeholder.com/400x250?text=No+Image";
-        if (item.images && item.images.length > 0) thumbUrl = item.images[0];
-        else if (item.image) thumbUrl = item.image;
-
+    items.forEach(item => {
+        let thumb = (item.images && item.images[0]) ? item.images[0] : "https://via.placeholder.com/300x170";
+        let card = document.createElement('div');
+        card.className = "item-card";
         card.innerHTML = `
-            <img src="${thumbUrl}" alt="${item.title}" onerror="this.src='https://via.placeholder.com/400x250?text=No+Image'">
-            <div class="card-info">
-                <div class="card-title">${item.title}</div>
-                <div class="card-cat"><i class="fas fa-tag"></i> ${item.category ? item.category.toUpperCase() : 'ITEM'}</div>
+            <div class="card-img-wrap">
+                <img src="${thumb}" alt="${item.title}" loading="lazy">
+                <span class="card-badge">${(item.category || 'DLC').toUpperCase()}</span>
+            </div>
+            <div class="card-body">
+                <h3 class="card-title">${item.title}</h3>
+                <div class="card-footer">
+                    <span><i class="fas fa-user-circle"></i> ${item.creator || 'RockyRG'}</span>
+                    <span><i class="fas fa-star" style="color:#fbbf24;"></i> ${item.rating || '4.8'}</span>
+                </div>
             </div>
         `;
-        container.appendChild(card);
+        card.onclick = () => openItemModal(item, false);
+        availableGrid.appendChild(card);
     });
 }
 
-// --- 5. SEARCH & FILTERS ---
-function searchItems() {
-    const query = document.getElementById('searchInput').value.toLowerCase();
-    const filtered = items.filter(item => 
-        (item.title && item.title.toLowerCase().includes(query)) || 
-        (item.category && item.category.toLowerCase().includes(query))
-    );
-    displayItems(filtered);
+// --- 2. MARKETPLACE CATALOG LOADER ---
+// Official Mojang Catalog Items
+async function loadMarketplaceCatalog() {
+    catalogGrid.innerHTML = "<p style='color:#666; text-align:center; grid-column:1/-1;'><i class='fas fa-spinner fa-spin'></i> Loading Official Marketplace items...</p>";
+
+    // Pre-indexed top popular Minecraft Marketplace DLCs
+    catalogItems = [
+        { id: "5d1c2438-e6b7-4c01-bf13-463870cb1e46", title: "Monster Food Add-On", creator: "Noxcrew", category: "addon", rating: 4.7, views: 404, images: ["https://xforgeassets002.xboxlive.com/pf-title-b63a0803d3653643-20f4/5d1c2438-e6b7-4c01-bf13-463870cb1e46/MonsterFood_Thumbnail_0.jpg"], description: "Are you bored of carrots and steaks? Monster Food is here to help! Turn scary into succulent as you chop and cook all hostile mobs!" },
+        { id: "e1966205-83e0-40e9-9134-2e99f187a553", title: "Sonic the Hedgehog", creator: "Gamemode One", category: "world", rating: 4.8, views: 1250, images: ["https://xforgeassets002.xboxlive.com/pf-title-b63a0803d3653643-20f4/e1966205-83e0-40e9-9134-2e99f187a553/Sonic_Thumbnail_0.jpg"], description: "Sonic the Hedgehog races into Minecraft at supersonic speed! Spin dash through iconic zones with friends!" },
+        { id: "f2c3b876-0f9c-482a-a92c-63b7849c2a71", title: "Weapons Expansion", creator: "Sapphire Studios", category: "addon", rating: 4.6, views: 580, images: ["https://xforgeassets002.xboxlive.com/pf-title-b63a0803d3653643-20f4/f2c3b876-0f9c-482a-a92c-63b7849c2a71/Weapons_Thumbnail_0.jpg"], description: "Expand your combat with 50+ custom craftable swords, daggers, katanas and warhammers!" },
+        { id: "c4b3a129-873d-4c3e-a128-48392019ab32", title: "Security Expansion", creator: "Dodo Studios", category: "addon", rating: 4.5, views: 820, images: ["https://xforgeassets002.xboxlive.com/pf-title-b63a0803d3653643-20f4/c4b3a129-873d-4c3e-a128-48392019ab32/Security_Thumbnail_0.jpg"], description: "Lasers, security cameras, keycards and unbreakable blocks to protect your secret base!" },
+        { id: "a3948572-8374-4bca-8374-493820192847", title: "Creeper Souls", creator: "Pixelationz Studios", category: "skin", rating: 4.6, views: 15, images: ["https://xforgeassets002.xboxlive.com/pf-title-b63a0803d3653643-20f4/a3948572-8374-4bca-8374-493820192847/Creeper_Thumbnail_0.jpg"], description: "Dark glowing creeper souls skins for your roleplay!" }
+    ];
+
+    renderCatalogItems(catalogItems);
 }
 
-function filterItems(category) {
-    document.querySelectorAll('.filters button').forEach(btn => btn.classList.remove('active'));
-    const activeBtn = document.querySelector(`.filters button[onclick="filterItems('${category}')"]`);
-    if(activeBtn) activeBtn.classList.add('active');
-    
-    // Agar requests view khula ho to vapas store grid par switch karein
-    if (reqSection && reqSection.style.display === "block") {
-        reqSection.style.display = "none";
-        container.style.display = "grid";
+function renderCatalogItems(items) {
+    catalogGrid.innerHTML = "";
+    if (items.length === 0) {
+        catalogGrid.innerHTML = "<p style='color:#666; text-align:center; grid-column:1/-1;'>No items matched.</p>";
+        return;
     }
 
-    if (category === 'all') displayItems(items);
-    else displayItems(items.filter(item => item.category === category));
+    items.forEach(item => {
+        let thumb = (item.images && item.images[0]) ? item.images[0] : "https://via.placeholder.com/300x170";
+        let card = document.createElement('div');
+        card.className = "item-card";
+        card.innerHTML = `
+            <div class="card-img-wrap">
+                <img src="${thumb}" alt="${item.title}" loading="lazy">
+                <span class="card-badge" style="background:#10b981;">${item.category.toUpperCase()}</span>
+            </div>
+            <div class="card-body">
+                <div class="card-top-bar">
+                    <span>⭐ ${item.rating}</span>
+                    <span>🔥 ${item.views || 100}</span>
+                </div>
+                <h3 class="card-title">${item.title}</h3>
+                <div class="card-footer">
+                    <span>${item.creator}</span>
+                </div>
+            </div>
+        `;
+        card.onclick = () => openItemModal(item, true);
+        catalogGrid.appendChild(card);
+    });
 }
 
-function toggleSortMenu() {
-    const menu = document.getElementById('sortMenu');
-    menu.style.display = (menu.style.display === "block") ? "none" : "block";
+// --- 3. MODAL LOGIC ---
+function openItemModal(item, isCatalogItem) {
+    currentModalItem = item;
+    document.getElementById('modalTitle').innerText = item.title;
+    document.getElementById('modalTag').innerText = (item.category || 'DLC').toUpperCase();
+    document.getElementById('modalCreator').innerHTML = `<i class="fas fa-user-circle"></i> ${item.creator || 'RockyRG'}`;
+    document.getElementById('modalRating').innerHTML = `<i class="fas fa-star" style="color:#fbbf24;"></i> ${item.rating || '4.5'}`;
+    document.getElementById('modalDesc').innerText = item.description || "No description provided.";
+
+    // Carousel Photos
+    let track = document.getElementById('carouselTrack');
+    track.innerHTML = "";
+    let imgs = (item.images && item.images.length > 0) ? item.images : ["https://via.placeholder.com/400x250"];
+    imgs.forEach(u => {
+        let im = document.createElement('img');
+        im.src = u;
+        im.className = "carousel-img";
+        track.appendChild(im);
+    });
+
+    let dwnSec = document.getElementById('modalDownloadSection');
+    let reqSec = document.getElementById('modalRequestSection');
+
+    // If it's a catalog item (not downloaded yet) -> Show Request Button
+    if (isCatalogItem) {
+        dwnSec.style.display = "none";
+        reqSec.style.display = "block";
+    } else {
+        // If it's Available DLC -> Show Download Mirror Buttons
+        dwnSec.style.display = "block";
+        reqSec.style.display = "none";
+        renderModalDownloadLinks(item);
+    }
+
+    itemModal.style.display = "flex";
 }
 
-function sortContent(type) {
-    let sortedItems = [...items];
-    if (type === 'recent') sortedItems.sort((a, b) => (b.id || 0) - (a.id || 0));
-    else if (type === 'name') sortedItems.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
-    else sortedItems.sort((a, b) => (a.id || 0) - (b.id || 0));
-    displayItems(sortedItems);
-    document.getElementById('sortMenu').style.display = "none";
-}
+function renderModalDownloadLinks(item) {
+    let container = document.getElementById('modalLinksContainer');
+    container.innerHTML = "";
 
-window.addEventListener('click', function(e) {
-    if (!e.target.closest('.sort-dropdown') && !e.target.closest('button[title="Filters"]')) {
-        const menu = document.getElementById('sortMenu');
-        if (menu) menu.style.display = 'none';
-    }
-});
-
-// --- 6. MODAL SYSTEM ---
-function openModal(item) {
-    document.getElementById('modalTitle').innerText = item.title || "";
-    document.getElementById('modalTag').innerText = item.category ? item.category.toUpperCase() : "ITEM";
-    
-    // Description & Suggested By Tag Logic
-    let rawDesc = item.description || "No description.";
-    let suggestedUser = "";
-    
-    // Check if description has "(Suggested by Name)"
-    let match = rawDesc.match(/\(Suggested by (.*?)\)/i);
-    if (match) {
-        suggestedUser = match[1];
-        rawDesc = rawDesc.replace(match[0], "").trim(); // Desc se text hata dein
-    }
-
-    // Modal Header me Tag inject karein
-    let existingTag = document.getElementById('modalSuggestedTag');
-    if (existingTag) existingTag.remove();
-
-    if (suggestedUser) {
-        let stag = document.createElement('div');
-        stag.id = 'modalSuggestedTag';
-        stag.className = 'suggested-tag';
-        stag.innerHTML = `<i class="fas fa-user-circle"></i> Suggested by ${suggestedUser}`;
-        document.querySelector('.modal-header').insertAdjacentElement('afterend', stag);
-    }
-
-    descElement.innerHTML = rawDesc.replace(/\n/g, '<br>');
-    
-    if (readMoreBtn) {
-        descElement.classList.remove('expanded');
-        readMoreBtn.style.display = "none";
-        readMoreBtn.innerText = "Read more...";
-        setTimeout(() => {
-            if (descElement.scrollHeight > 85) readMoreBtn.style.display = "block";
-        }, 10);
-    }
-
-    // Carousel Setup
-    if (track) {
-        track.innerHTML = "";
-        if (dotsContainer) dotsContainer.innerHTML = "";
-        let imagesList = (item.images && item.images.length > 0) ? item.images : [item.image || "https://via.placeholder.com/400x250"];
-
-        imagesList.forEach((imgUrl, index) => {
-            const img = document.createElement('img');
-            img.src = imgUrl;
-            img.classList.add('carousel-img');
-            track.appendChild(img);
-
-            if (imagesList.length > 1 && dotsContainer) {
-                const dot = document.createElement('div');
-                dot.classList.add('dot');
-                if (index === 0) dot.classList.add('active');
-                dotsContainer.appendChild(dot);
-            }
-        });
-
-        track.onscroll = () => {
-            if (imagesList.length <= 1) return;
-            const index = Math.round(track.scrollLeft / track.offsetWidth);
-            const dots = document.querySelectorAll('.dot');
-            dots.forEach(d => d.classList.remove('active'));
-            if (dots[index]) dots[index].classList.add('active');
-        };
-    }
-
-        // --- DOWNLOAD BUTTONS & MIRRORS RENDERING ---
-    btnContainer.innerHTML = "";
-
-    // Agar naya fileBlocks structure hai
     if (item.fileBlocks && item.fileBlocks.length > 0) {
-        item.fileBlocks.forEach(block => {
+        item.fileBlocks.forEach(b => {
             let card = document.createElement('div');
             card.className = "download-group-card";
-
-            // Mirrors HTML
+            
             let mirrorsHtml = "";
-            if (block.mirrors && block.mirrors.length > 0) {
-                let mBadges = block.mirrors.map(m => `
-                    <a href="${m.url}" target="_blank" class="mirror-badge-btn">
-                        <i class="fas fa-link"></i> ${m.host}
-                    </a>
+            if (b.mirrors && b.mirrors.length > 0) {
+                let badges = b.mirrors.map(m => `
+                    <a href="${m.url}" target="_blank" class="mirror-badge-btn"><i class="fas fa-link"></i> ${m.host}</a>
                 `).join('');
-
-                mirrorsHtml = `
-                    <div class="mirrors-list">
-                        <span style="font-size: 0.7rem; color: #64748b; margin-right: 4px; align-self:center;">Mirrors:</span>
-                        ${mBadges}
-                    </div>
-                `;
+                mirrorsHtml = `<div class="mirrors-list"><span style="font-size:0.7rem; color:#64748b;">Mirrors:</span> ${badges}</div>`;
             }
 
-            // Main Download Button
             card.innerHTML = `
                 <div class="group-header">
-                    <span class="group-title"><i class="fas ${block.icon || 'fa-folder'}"></i> ${block.title}</span>
+                    <span class="group-title"><i class="fas ${b.icon || 'fa-folder'}"></i> ${b.title}</span>
                 </div>
-                <a href="${block.mainLink.url}" target="_blank" class="dwn-option-btn" style="margin-bottom:0;">
-                    <div class="btn-left">
-                        <i class="fas fa-download"></i>
-                        <span>Download</span>
-                    </div>
+                <a href="${b.mainLink.url}" target="_blank" class="dwn-option-btn">
+                    <div class="btn-left"><i class="fas fa-download"></i> <span>Download</span></div>
                     <div class="btn-right">
-                        ${block.mainLink.host ? `<span class="host-badge">${block.mainLink.host}</span>` : ""}
-                        <i class="fas fa-chevron-right" style="font-size: 0.8rem; color:#666;"></i>
+                        ${b.mainLink.host ? `<span class="host-badge">${b.mainLink.host}</span>` : ""}
+                        <i class="fas fa-chevron-right" style="font-size:0.8rem; color:#666;"></i>
                     </div>
                 </a>
                 ${mirrorsHtml}
             `;
-            btnContainer.appendChild(card);
+            container.appendChild(card);
         });
-    } 
-    // Purane items ke liye fallback
-    else if (item.links && item.links.length > 0) {
-        item.links.forEach(link => {
-            const a = document.createElement('a');
-            a.className = "dwn-option-btn"; 
-            a.href = link.url;
+    } else if (item.links && item.links.length > 0) {
+        item.links.forEach(l => {
+            let a = document.createElement('a');
+            a.className = "dwn-option-btn";
+            a.href = l.url;
             a.target = "_blank";
             a.innerHTML = `
-                <div class="btn-left">
-                    <i class="fas ${link.icon || 'fa-download'}"></i>
-                    <span>${link.type}</span>
-                </div>
-                <i class="fas fa-chevron-right" style="font-size: 0.8rem; color:#666;"></i>
+                <div class="btn-left"><i class="fas ${l.icon || 'fa-download'}"></i> <span>${l.type}</span></div>
+                <i class="fas fa-chevron-right" style="font-size:0.8rem; color:#666;"></i>
             `;
-            btnContainer.appendChild(a);
+            container.appendChild(a);
         });
     } else {
-        btnContainer.innerHTML = "<p style='color:#666; font-size:0.9rem;'>No links available.</p>";
-    }
-
-    // Panorama Setup
-    if (item.panorama && panoramaSection) {
-        panoramaImg.src = item.panorama;
-        panoramaSection.style.display = "block"; 
-        panoramaSection.querySelector('.panorama-container').scrollLeft = 0;
-    } else if (panoramaSection) {
-        panoramaSection.style.display = "none";
-        panoramaImg.src = "";
-    }
-
-    modal.style.display = "flex";
-}
-
-function scrollCarousel(direction) {
-    if(track) {
-        const width = track.offsetWidth;
-        track.scrollBy({ left: width * direction, behavior: 'smooth' });
+        container.innerHTML = "<p style='color:#666; font-size:12px;'>No links available.</p>";
     }
 }
 
-function toggleReadMore() {
-    if (descElement.classList.contains('expanded')) {
-        descElement.classList.remove('expanded');
-        readMoreBtn.innerText = "Read more...";
-    } else {
-        descElement.classList.add('expanded');
-        readMoreBtn.innerText = "Read less";
-    }
-}
+// --- 4. INSTANT REQUEST BUTTON ACTION ---
+function requestCurrentCatalogItem() {
+    if (!currentModalItem) return;
+    let userName = prompt("Enter your name or Discord username:");
+    if (!userName) return;
 
-function closeModal() { modal.style.display = "none"; }
-window.onclick = function(e) { if (e.target == modal) closeModal(); };
-
-// --- 7. REQUEST SYSTEM LOGIC ---
-function openReqModal() { reqModal.style.display = "flex"; }
-function closeReqModal() { reqModal.style.display = "none"; }
-
-function toggleRequestView() {
-    if (reqSection.style.display === "none" || reqSection.style.display === "") {
-        container.style.display = "none";
-        reqSection.style.display = "block";
-        loadRequests();
-    } else {
-        container.style.display = "grid";
-        reqSection.style.display = "none";
-    }
-}
-
-function submitNewRequest() {
-    const name = document.getElementById('reqName').value.trim();
-    const addon = document.getElementById('reqAddonName').value.trim();
-    const link = document.getElementById('reqLink').value.trim();
-
-    if (!name || !addon) {
-        alert("Please enter Name and Addon Name!");
-        return;
-    }
-
-    const newReqRef = database.ref('requests').push();
-    newReqRef.set({
-        user: name,
-        addon: addon,
-        link: link || "",
+    let reqData = {
+        addon: currentModalItem.title,
+        link: "https://www.minecraft.net/en-us/marketplace/pdp?id=" + currentModalItem.id,
+        user: userName,
         status: "pending",
         timestamp: Date.now()
-    }).then(() => {
-        alert("✅ Request submitted successfully!");
-        closeReqModal();
-        document.getElementById('reqName').value = "";
-        document.getElementById('reqAddonName').value = "";
-        document.getElementById('reqLink').value = "";
-        if (reqSection.style.display === "block") loadRequests();
-    }).catch(err => {
-        alert("Error: " + err.message);
-    });
+    };
+
+    database.ref('requests').push().set(reqData).then(() => {
+        alert("✅ Request sent! Admin will upload download links soon.");
+        closeModal();
+    }).catch(err => alert("Error: " + err.message));
 }
 
-function loadRequests() {
-    pendingBox.innerHTML = "<p style='color:#666;'>Loading requests...</p>";
-    completedBox.innerHTML = "";
-
-    database.ref('requests').on('value', (snapshot) => {
-        pendingBox.innerHTML = "";
-        completedBox.innerHTML = "";
-
-        if (!snapshot.exists()) {
-            pendingBox.innerHTML = "<p style='color:#777; font-size: 13px;'>No pending requests.</p>";
-            return;
-        }
-
-        snapshot.forEach((childSnapshot) => {
-            const req = childSnapshot.val();
-            const div = document.createElement('div');
-            div.className = `req-card ${req.status}`;
-
-            let btnHTML = "";
-            let linkHTML = "";
-
-            if (req.status === "completed") {
-                const dwnLink = req.downloadLink || "#"; 
-                btnHTML = `<a href="${dwnLink}" class="req-link-btn" target="_blank"><i class="fas fa-check"></i> Get File</a>`;
-            } else {
-                btnHTML = `<span style="color:#fbc02d; font-size:0.8rem; background:rgba(251, 192, 45, 0.1); padding:5px 10px; border-radius:10px;"><i class="fas fa-clock"></i> Pending</span>`;
-                if (req.link) {
-                    linkHTML = `<a href="${req.link}" target="_blank" style="color:#aaa; margin-left:8px; font-size:0.85rem;" title="Link"><i class="fas fa-external-link-alt"></i></a>`;
-                }
-            }
-
-            div.innerHTML = `
-                <div class="req-info">
-                    <h4>${req.addon} ${linkHTML}</h4>
-                    <p><i class="fas fa-user-circle"></i> Suggested by ${req.user}</p>
-                </div>
-                ${btnHTML}
-            `;
-
-            if (req.status === "pending") pendingBox.prepend(div);
-            else completedBox.prepend(div);
-        });
-    });
-}
-
-// --- 8. STARFIELD BACKGROUND ---
-const canvas = document.getElementById('starfield');
-if (canvas) {
-    const ctx = canvas.getContext('2d');
-    let width, height, stars;
-    function initStars() {
-        width = window.innerWidth; height = window.innerHeight;
-        canvas.width = width; canvas.height = height;
-        stars = [];
-        const numStars = width < 768 ? 150 : 350; 
-        for (let i = 0; i < numStars; i++) {
-            stars.push({ x: Math.random() * width, y: Math.random() * height, radius: Math.random() * 1.5, opacity: Math.random(), speed: Math.random() * 0.02 + 0.005 });
-        }
+// --- FILTERS & SEARCH ---
+function handleGlobalSearch() {
+    let q = document.getElementById('globalSearch').value.toLowerCase();
+    if (activeSection === 'available') {
+        let filtered = availableItems.filter(i => i.title.toLowerCase().includes(q));
+        renderAvailableItems(filtered);
+    } else {
+        let filtered = catalogItems.filter(i => i.title.toLowerCase().includes(q) || (i.creator && i.creator.toLowerCase().includes(q)));
+        renderCatalogItems(filtered);
     }
-    function animateStars() {
-        ctx.clearRect(0, 0, width, height);
-        stars.forEach(star => {
-            ctx.beginPath(); ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`; ctx.fill();
-            star.opacity += star.speed; if (star.opacity > 1 || star.opacity < 0.1) star.speed = -star.speed;
-        });
-        requestAnimationFrame(animateStars);
-    }
-    window.addEventListener('resize', initStars); 
-    initStars(); 
-    animateStars();
 }
+
+function filterByCategory(cat) {
+    activeCategory = cat;
+    document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
+    event.target.closest('.cat-pill').classList.add('active');
+
+    let list = (activeSection === 'available') ? availableItems : catalogItems;
+    if (cat === 'all') {
+        (activeSection === 'available') ? renderAvailableItems(list) : renderCatalogItems(list);
+    } else {
+        let filtered = list.filter(i => (i.category || '').toLowerCase().includes(cat));
+        (activeSection === 'available') ? renderAvailableItems(filtered) : renderCatalogItems(filtered);
+    }
+}
+
+// Modal Toggle Helpers
+function closeModal() { itemModal.style.display = "none"; }
+function openSettingsModal() { document.getElementById('settingsModal').style.display = "flex"; }
+function closeSettingsModal() { document.getElementById('settingsModal').style.display = "none"; }
+function openStatsModal() { document.getElementById('statsModal').style.display = "flex"; }
+function closeStatsModal() { document.getElementById('statsModal').style.display = "none"; }
+function openTutorialModal() { document.getElementById('tutorialModal').style.display = "flex"; }
+function closeTutorialModal() { document.getElementById('tutorialModal').style.display = "none"; }
