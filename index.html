@@ -31,173 +31,133 @@
 
     <!-- SECTION SWITCHER TABS -->
     <div class="main-nav-tabs">
-        <button id="tabBtnAvailable" class="main-tab active" onclick="switchMainSection('available')">
+        <button id="tabBtnAvailable" class="main-tab" onclick="switchMainSection('available')">
             <i class="fas fa-bolt"></i> Available DLCs (<span id="availableCount">0</span>)
         </button>
-        <button id="tabBtnCatalog" class="main-tab" onclick="switchMainSection('catalog')">
-            <i class="fas fa-globe"></i> Marketplace Catalog (<span id="catalogTotalCount">33,324</span>)
+        <button id="tabBtnCatalog" class="main-tab active" onclick="switchMainSection('catalog')">
+            <i class="fas fa-globe"></i> Marketplace Catalog (<span id="catalogNavCount">Loading...</span>)
         </button>
     </div>
 
-    <!-- SEARCH & FILTER BAR -->
+    <!-- SEARCH & CONTROLS -->
     <div class="controls-container">
         <div class="search-box">
             <i class="fas fa-search search-icon"></i>
             <input type="text" id="globalSearch" placeholder="Search by name, creator, or UUID..." onkeyup="handleGlobalSearch()">
         </div>
 
-        <!-- CATEGORY ICONS BAR -->
         <div class="category-pills">
             <button class="cat-pill active" onclick="filterByCategory('all')"><i class="fas fa-infinity"></i> All</button>
             <button class="cat-pill" onclick="filterByCategory('world')"><i class="fas fa-globe"></i> Worlds</button>
             <button class="cat-pill" onclick="filterByCategory('addon')"><i class="fas fa-puzzle-piece"></i> Addons</button>
             <button class="cat-pill" onclick="filterByCategory('texture')"><i class="fas fa-layer-group"></i> Textures</button>
             <button class="cat-pill" onclick="filterByCategory('skin')"><i class="fas fa-tshirt"></i> Skins</button>
-            <button class="cat-pill" onclick="filterByCategory('mashup')"><i class="fas fa-cubes"></i> Mashups</button>
         </div>
     </div>
 
-    <!-- ================= SECTION 1: AVAILABLE DLCS (FIREBASE LIVE) ================= -->
-    <main id="sectionAvailable" class="content-section active">
+    <!-- ================= SECTION 1: AVAILABLE DLCS (FIREBASE) ================= -->
+    <main id="sectionAvailable" class="content-section">
         <div id="availableGrid" class="items-grid">
             <div class="loader-spinner"><i class="fas fa-spinner fa-spin"></i> Loading Available DLCs...</div>
         </div>
     </main>
 
-        <!-- SECTION 2: MARKETPLACE CATALOG -->
-    <main id="sectionCatalog" class="content-section">
-        <!-- LIVE STREAM PROGRESS -->
-        <div id="catalogProgressContainer" style="background: #131d31; border: 1px solid #1e293b; padding: 12px; border-radius: 10px; margin-bottom: 15px;">
-            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 6px;">
-                <span id="catalogStreamStatus" style="color: #38bdf8;"><i class="fas fa-spinner fa-spin"></i> Initializing Minecraft Feed...</span>
-                <span id="catalogStreamStats" style="color: #94a3b8; font-weight: bold;">0 / 33,324 (0%)</span>
+    <!-- ================= SECTION 2: MARKETPLACE CATALOG (PLAYFAB ENGINE) ================= -->
+    <main id="sectionCatalog" class="content-section active">
+        <!-- LIVE STREAM PROGRESS BAR -->
+        <div id="catalogProgressContainer" class="progress-box">
+            <div class="progress-labels">
+                <span id="catalogStreamStatus"><i class="fas fa-satellite-dish fa-spin"></i> Connecting to PlayFab CDN...</span>
+                <span id="catalogStreamStats">0% Loaded</span>
             </div>
-            <div style="width: 100%; height: 6px; background: #0b0f19; border-radius: 4px; overflow: hidden;">
-                <div id="catalogProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #0ea5e9, #10b981); transition: width 0.2s ease;"></div>
+            <div class="progress-track">
+                <div id="catalogProgressBar" class="progress-fill"></div>
             </div>
         </div>
 
         <div id="catalogGrid" class="items-grid"></div>
-        
-        <div id="catalogScrollLoader" style="text-align: center; padding: 20px; display: none; color: #64748b; font-size: 0.8rem;">
-            <i class="fas fa-spinner fa-spin"></i> Rendering more DLCs...
+
+        <div id="catalogScrollLoader" class="scroll-loader">
+            <i class="fas fa-spinner fa-spin"></i> Loading more items...
         </div>
     </main>
 
-    <!-- ================= DOWNLOAD & DETAILS MODAL ================= -->
+    <!-- ================= ITEM MODAL (DOWNLOAD, PREVIEW & PANORAMA) ================= -->
     <div id="itemModal" class="modal-overlay">
         <div class="modal-content">
             <button class="modal-close" onclick="closeModal()">&times;</button>
             
             <div class="modal-header">
-                <h2 id="modalTitle">Addon Title</h2>
+                <h2 id="modalTitle">Item Title</h2>
                 <span id="modalTag" class="tag-pill">ADDON</span>
             </div>
 
-            <!-- Suggested Tag will be injected here -->
-            <div id="modalSuggestedTagSlot"></div>
-
-            <!-- Carousel Gallery -->
+            <!-- In-Game Screenshots Track -->
             <div class="carousel-container">
                 <div id="carouselTrack" class="carousel-track"></div>
-                <div id="carouselDots" class="carousel-dots"></div>
             </div>
 
             <!-- Description -->
             <div class="desc-box">
-                <p id="modalDesc">Description goes here...</p>
-                <button id="readMoreBtn" class="read-more-btn" onclick="toggleReadMore()">Read more...</button>
+                <p id="modalDesc">Loading description...</p>
             </div>
 
-            <!-- Meta Stats (Rating, Creator, Version) -->
-            <div class="meta-row">
-                <span id="modalRating" class="meta-item"><i class="fas fa-star" style="color:#fbbf24;"></i> 4.5</span>
-                <span id="modalCreator" class="meta-item"><i class="fas fa-user-circle"></i> Creator</span>
-                <span id="modalVersion" class="meta-item"><i class="fas fa-code-branch" style="color:#10b981;"></i> Bedrock 1.21+</span>
+            <!-- 360 PANORAMA SECTION -->
+            <div id="panoramaSection" class="panorama-section" style="display: none;">
+                <div class="section-title"><i class="fas fa-vr-cardboard"></i> 360° Panorama View</div>
+                <div class="panorama-wrapper">
+                    <img id="panoramaImg" src="" alt="Panorama 360">
+                </div>
             </div>
 
-            <!-- Download Links Container (Available DLCs) -->
-            <div id="modalDownloadSection">
+            <!-- DOWNLOAD SECTION (FOR AVAILABLE DLCS) -->
+            <div id="modalDownloadSection" style="display: none;">
                 <div class="section-title">DOWNLOAD FILES</div>
                 <div id="modalLinksContainer"></div>
             </div>
 
-            <!-- Request Button Container (Catalog Items) -->
+            <!-- REQUEST SECTION (FOR CATALOG ITEMS) -->
             <div id="modalRequestSection" style="display: none;">
-                <button id="btnRequestThis" class="request-this-btn" onclick="requestCurrentCatalogItem()">
+                <button class="request-action-btn" onclick="requestCurrentCatalogItem()">
                     <i class="fas fa-paper-plane"></i> ⚡ REQUEST THIS DLC FOR FREE
                 </button>
-                <p style="font-size: 11px; color: #888; text-align: center; margin-top: 8px;">
-                    Admins will get notified and upload download mirrors soon!
-                </p>
-            </div>
-
-            <!-- Panorama 360 -->
-            <div id="panoramaSection" class="panorama-section" style="display: none;">
-                <div class="section-title"><i class="fas fa-vr-cardboard"></i> 360 Panorama View</div>
-                <div class="panorama-container">
-                    <img id="panoramaImg" src="" alt="Panorama">
-                </div>
+                <p class="request-hint">Admin will get notified and upload download mirrors soon!</p>
             </div>
         </div>
     </div>
 
-    <!-- ================= SETTINGS & STATS MODAL ================= -->
+    <!-- ================= SETTINGS MODAL ================= -->
     <div id="settingsModal" class="modal-overlay">
-        <div class="modal-content settings-modal-box">
+        <div class="modal-content small-modal">
             <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
-            <h2 style="text-align: center; color:#38bdf8; margin-top:0;"><i class="fas fa-cog"></i> Settings & Info</h2>
+            <h2 class="modal-title-center"><i class="fas fa-cog"></i> Settings & Community</h2>
             
-            <div class="social-links-row">
-                <a href="https://discord.gg/yourserver" target="_blank" class="soc-btn discord"><i class="fab fa-discord"></i> Discord</a>
-                <a href="https://youtube.com/@StrikeMafia" target="_blank" class="soc-btn youtube"><i class="fab fa-youtube"></i> YouTube</a>
-                <a href="https://chat.whatsapp.com/JdeFaKUFV9E3rtpYgk6XdP" target="_blank" class="soc-btn whatsapp"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+            <div class="social-row">
+                <a href="https://discord.gg/yourserver" target="_blank" class="soc-pill discord"><i class="fab fa-discord"></i> Discord</a>
+                <a href="https://youtube.com/@StrikeMafia" target="_blank" class="soc-pill youtube"><i class="fab fa-youtube"></i> YouTube</a>
+                <a href="https://chat.whatsapp.com/JdeFaKUFV9E3rtpYgk6XdP" target="_blank" class="soc-pill whatsapp"><i class="fab fa-whatsapp"></i> WhatsApp</a>
             </div>
 
-            <div class="settings-list">
-                <button class="setting-item-btn" onclick="openTutorialModal()">
-                    <span><i class="fas fa-graduation-cap"></i> Download Tutorial (Mobile & PC)</span>
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-                <button class="setting-item-btn" onclick="openStatsModal()">
-                    <span><i class="fas fa-chart-pie"></i> Marketplace Statistics</span>
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ================= STATISTICS MODAL ================= -->
-    <div id="statsModal" class="modal-overlay">
-        <div class="modal-content stats-box">
-            <button class="modal-close" onclick="closeStatsModal()">&times;</button>
-            <h2 style="text-align:center; color:#38bdf8;"><i class="fas fa-chart-bar"></i> Statistics</h2>
-            
-            <div class="stats-grid">
-                <div class="stat-card"><i class="fas fa-infinity"></i><span class="stat-num" id="statTotal">33,324</span><span class="stat-lbl">Total Items</span></div>
-                <div class="stat-card"><i class="fas fa-globe"></i><span class="stat-num" id="statWorlds">8,805</span><span class="stat-lbl">Worlds</span></div>
-                <div class="stat-card"><i class="fas fa-puzzle-piece"></i><span class="stat-num" id="statAddons">916</span><span class="stat-lbl">Addons</span></div>
-                <div class="stat-card"><i class="fas fa-layer-group"></i><span class="stat-num" id="statMashups">74</span><span class="stat-lbl">Mashups</span></div>
-                <div class="stat-card"><i class="fas fa-paint-brush"></i><span class="stat-num" id="statTextures">358</span><span class="stat-lbl">Textures</span></div>
-                <div class="stat-card"><i class="fas fa-tshirt"></i><span class="stat-num" id="statSkins">23,171</span><span class="stat-lbl">Skins</span></div>
-            </div>
+            <button class="menu-list-btn" onclick="openTutorialModal()">
+                <span><i class="fas fa-book-open"></i> How to Download & Install</span>
+                <i class="fas fa-chevron-right"></i>
+            </button>
         </div>
     </div>
 
     <!-- ================= TUTORIAL MODAL ================= -->
     <div id="tutorialModal" class="modal-overlay">
-        <div class="modal-content">
+        <div class="modal-content small-modal">
             <button class="modal-close" onclick="closeTutorialModal()">&times;</button>
-            <h2 style="text-align:center; color:#38bdf8;"><i class="fas fa-book-open"></i> How To Download</h2>
-            <div style="padding: 10px; font-size: 13px; line-height: 1.6; color:#cbd5e1;">
-                <p><strong>Step 1:</strong> Select the item and click on the download button (e.g. Mediafire, Gofile).</p>
-                <p><strong>Step 2:</strong> Wait 5-10 seconds on the shortener verification page to unlock the link.</p>
-                <p><strong>Step 3:</strong> Open the downloaded file with Minecraft Bedrock, and it will import automatically!</p>
+            <h2 class="modal-title-center"><i class="fas fa-graduation-cap"></i> Download Guide</h2>
+            <div class="guide-text">
+                <p><strong>1.</strong> Select an item from Available DLCs and click Download.</p>
+                <p><strong>2.</strong> Complete the shortener step to unlock the direct cloud link.</p>
+                <p><strong>3.</strong> Tap the downloaded <code>.mcaddon</code> or <code>.mcworld</code> file to import directly into Minecraft.</p>
             </div>
         </div>
     </div>
 
-    <!-- JAVASCRIPT -->
     <script src="script.js"></script>
 </body>
 </html>
