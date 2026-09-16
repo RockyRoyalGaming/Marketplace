@@ -8,7 +8,7 @@
 body {
     background-color: #0b0f19;
     color: #f1f5f9;
-    padding-bottom: 40px;
+    padding-bottom: 50px;
 }
 
 /* Header */
@@ -16,7 +16,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 14px 16px;
+    padding: 12px 16px;
     background: #0f172a;
     border-bottom: 1px solid #1e293b;
 }
@@ -26,8 +26,9 @@ body {
     align-items: center;
     gap: 8px;
     font-weight: 800;
-    font-size: 1rem;
+    font-size: 1.05rem;
     color: #38bdf8;
+    letter-spacing: 0.5px;
 }
 
 .header-actions {
@@ -49,7 +50,7 @@ body {
     background: #0ea5e9;
     color: white;
     border: none;
-    padding: 0 12px;
+    padding: 0 14px;
     height: 36px;
     border-radius: 8px;
     font-weight: 600;
@@ -57,7 +58,7 @@ body {
     cursor: pointer;
 }
 
-/* Nav Tabs */
+/* Tabs */
 .main-nav-tabs {
     display: flex;
     gap: 8px;
@@ -75,6 +76,7 @@ body {
     font-size: 0.78rem;
     font-weight: 600;
     cursor: pointer;
+    transition: 0.2s;
 }
 
 .main-tab.active {
@@ -100,12 +102,12 @@ body {
     margin-bottom: 10px;
 }
 
+.search-icon { color: #64748b; margin-right: 8px; }
 .search-box input {
     background: transparent;
     border: none;
     color: white;
     width: 100%;
-    margin-left: 8px;
     outline: none;
     font-size: 0.85rem;
 }
@@ -135,7 +137,7 @@ body {
     border-color: #38bdf8;
 }
 
-/* Sections */
+/* Content Sections */
 .content-section {
     display: none;
     padding: 14px;
@@ -144,12 +146,36 @@ body {
     display: block;
 }
 
-.catalog-status-bar {
+/* Progress Bar */
+.progress-box {
+    background: #131d31;
+    border: 1px solid #1e293b;
+    padding: 10px 14px;
+    border-radius: 10px;
+    margin-bottom: 14px;
+}
+
+.progress-labels {
     display: flex;
     justify-content: space-between;
-    font-size: 0.72rem;
+    font-size: 0.75rem;
+    margin-bottom: 6px;
     color: #94a3b8;
-    margin-bottom: 12px;
+}
+
+.progress-track {
+    width: 100%;
+    height: 6px;
+    background: #0b0f19;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #0ea5e9, #10b981);
+    transition: width 0.2s ease;
 }
 
 /* Grids & Cards */
@@ -165,12 +191,17 @@ body {
     border-radius: 10px;
     overflow: hidden;
     cursor: pointer;
+    transition: transform 0.15s;
+}
+
+.item-card:hover {
+    transform: translateY(-3px);
 }
 
 .card-img-wrap {
     position: relative;
     width: 100%;
-    height: 100px;
+    height: 105px;
     background: #090e17;
 }
 
@@ -186,7 +217,7 @@ body {
     right: 6px;
     background: rgba(0, 0, 0, 0.75);
     color: #38bdf8;
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     font-weight: 700;
     padding: 2px 6px;
     border-radius: 4px;
@@ -216,16 +247,22 @@ body {
 .card-footer {
     font-size: 0.68rem;
     color: #64748b;
-    display: flex;
-    justify-content: space-between;
 }
 
-/* ================= MODALS (MUST BE HIDDEN BY DEFAULT) ================= */
+.scroll-loader {
+    text-align: center;
+    padding: 20px;
+    display: none;
+    color: #64748b;
+    font-size: 0.8rem;
+}
+
+/* Modals */
 .modal-overlay {
-    display: none; /* बिल्कुल छुपा हुआ रहेगा */
+    display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(5px);
     z-index: 9999;
     align-items: center;
@@ -245,6 +282,10 @@ body {
     position: relative;
 }
 
+.small-modal {
+    max-width: 380px !important;
+}
+
 .modal-close {
     position: absolute;
     top: 10px;
@@ -260,22 +301,22 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     padding-right: 25px;
 }
 
 .modal-header h2 { font-size: 1rem; }
 .tag-pill { font-size: 0.65rem; background: #10b981; color: white; padding: 2px 6px; border-radius: 4px; }
 
-/* Carousel */
 .carousel-container {
     width: 100%;
-    height: 180px;
+    height: 190px;
     border-radius: 8px;
     overflow: hidden;
     background: #000;
     margin-bottom: 10px;
 }
+
 .carousel-track {
     display: flex;
     width: 100%;
@@ -283,6 +324,7 @@ body {
     overflow-x: auto;
     scroll-snap-type: x mandatory;
 }
+
 .carousel-track img {
     min-width: 100%;
     height: 100%;
@@ -294,89 +336,92 @@ body {
     font-size: 0.78rem;
     color: #94a3b8;
     line-height: 1.4;
-    margin-bottom: 10px;
-}
-
-.meta-row {
-    display: flex;
-    gap: 12px;
-    font-size: 0.75rem;
-    color: #94a3b8;
     margin-bottom: 12px;
 }
 
-/* Download / Request Options */
+/* Panorama 360 */
+.panorama-section {
+    margin-top: 10px;
+    margin-bottom: 14px;
+}
+
 .section-title {
     font-size: 0.72rem;
     font-weight: bold;
     color: #64748b;
     margin-bottom: 6px;
+    text-transform: uppercase;
+}
+
+.panorama-wrapper {
+    width: 100%;
+    height: 120px;
+    border-radius: 8px;
+    overflow-x: auto;
+    border: 1px solid #1e293b;
+    background: #000;
+}
+
+.panorama-wrapper img {
+    height: 100%;
+    width: auto;
+    object-fit: cover;
+}
+
+/* Actions */
+.request-action-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 0.88rem;
+    cursor: pointer;
+}
+
+.request-hint {
+    font-size: 0.7rem;
+    color: #64748b;
+    text-align: center;
+    margin-top: 6px;
 }
 
 .download-group-card {
     background: #131d31;
     border: 1px solid #1e293b;
     border-radius: 8px;
-    padding: 8px;
-    margin-bottom: 6px;
+    padding: 10px;
+    margin-bottom: 8px;
 }
 
 .dwn-option-btn {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #1e293b;
+    display: block;
+    text-align: center;
+    background: #0ea5e9;
     color: white;
     text-decoration: none;
-    padding: 8px 10px;
+    padding: 8px;
     border-radius: 6px;
-    font-size: 0.8rem;
-}
-
-.host-badge {
-    background: #38bdf8;
-    color: #0b0f19;
-    font-size: 0.65rem;
+    font-size: 0.82rem;
     font-weight: bold;
-    padding: 1px 5px;
-    border-radius: 3px;
-    margin-right: 6px;
 }
 
-.mirrors-list {
-    display: flex;
-    gap: 4px;
-    margin-top: 6px;
-    flex-wrap: wrap;
+.modal-title-center {
+    text-align: center;
+    color: #38bdf8;
+    font-size: 1rem;
+    margin-bottom: 14px;
 }
 
-.mirror-badge-btn {
-    background: #1e293b;
-    color: #94a3b8;
-    font-size: 0.68rem;
-    padding: 3px 6px;
-    border-radius: 4px;
-    text-decoration: none;
-}
-
-.request-this-btn {
-    width: 100%;
-    background: #10b981;
-    color: white;
-    border: none;
-    padding: 12px;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-/* Social & Settings */
-.social-links-row {
+.social-row {
     display: flex;
     gap: 6px;
-    margin: 12px 0;
+    margin-bottom: 14px;
 }
-.soc-btn {
+
+.soc-pill {
     flex: 1;
     text-align: center;
     padding: 8px;
@@ -384,36 +429,27 @@ body {
     text-decoration: none;
     border-radius: 6px;
     font-size: 0.75rem;
+    font-weight: bold;
 }
-.soc-btn.discord { background: #5865F2; }
-.soc-btn.youtube { background: #FF0000; }
-.soc-btn.whatsapp { background: #25D366; }
+.soc-pill.discord { background: #5865F2; }
+.soc-pill.youtube { background: #FF0000; }
+.soc-pill.whatsapp { background: #25D366; }
 
-.setting-item-btn {
+.menu-list-btn {
     width: 100%;
     display: flex;
     justify-content: space-between;
     background: #131d31;
     border: 1px solid #1e293b;
     color: white;
-    padding: 10px;
+    padding: 10px 12px;
     border-radius: 6px;
-    margin-bottom: 6px;
+    font-size: 0.82rem;
     cursor: pointer;
 }
 
-.stats-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-top: 10px;
+.guide-text {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    line-height: 1.5;
 }
-.stat-card {
-    background: #131d31;
-    border: 1px solid #1e293b;
-    border-radius: 8px;
-    padding: 10px;
-    text-align: center;
-}
-.stat-num { display: block; font-size: 1.1rem; font-weight: bold; }
-.stat-lbl { font-size: 0.7rem; color: #64748b; }
