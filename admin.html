@@ -193,7 +193,7 @@
         return;
     }
 
-    // Extract UUID
+    // 1. UUID Extract karein
     let uuid = "";
     let match = input.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
     if (match) {
@@ -204,45 +204,45 @@
         uuid = input;
     }
 
-    status.innerText = `⏳ UUID: ${uuid} fetch ho raha hai...`;
+    status.innerText = `⏳ UUID: ${uuid} ढूँढा जा रहा है...`;
     status.style.color = "#38bdf8";
 
     try {
-        // Direct call to your own Render backend
-        let res = await fetch(`/api/market-details?id=${uuid}`);
-        if (!res.ok) throw new Error("Server returned status " + res.status);
+        // MCF2P और बाकी टूल्स इसी पब्लिक API गेटवे का इस्तेमाल करते हैं
+        let proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent('https://catalog.minecraftservices.com/v1.0/items/details?itemIds=' + uuid)}`;
+        
+        let res = await fetch(proxyUrl);
+        if (!res.ok) throw new Error("Network issue");
+        let wrapper = await res.json();
+        
+        if (!wrapper.contents) throw new Error("Mojang ने डेटा नहीं दिया");
+        let data = JSON.parse(wrapper.contents);
 
-        let data = await res.json();
-        let itemsArray = data.items || data;
-        if (!Array.isArray(itemsArray) || itemsArray.length === 0) {
-            throw new Error("Item not found on Marketplace");
+        let itm = (data.items && data.items.length > 0) ? data.items[0] : null;
+
+        if (!itm) {
+            throw new Error("Item नहीं मिला! कृपया UUID चेक करें।");
         }
 
-        let itm = itemsArray[0];
-
-        // Fill Form
-        document.getElementById('addonTitle').value = itm.title || itm.name || "";
+        // Details Form me ਭਰੇin
+        document.getElementById('addonTitle').value = itm.title || "";
         document.getElementById('addonCreator').value = itm.creatorName || "";
         document.getElementById('addonRating').value = itm.averageRating ? itm.averageRating.toFixed(1) : "4.5";
         document.getElementById('addonDesc').value = itm.description || "";
 
-        // Category
         let cat = (itm.primaryCategory || "").toLowerCase();
         if (cat.includes("addon")) document.getElementById('addonCategory').value = "addon";
         else if (cat.includes("world")) document.getElementById('addonCategory').value = "world";
         else if (cat.includes("skin")) document.getElementById('addonCategory').value = "skin";
         else if (cat.includes("texture")) document.getElementById('addonCategory').value = "texture";
 
-        // Extract HD Images
         autoFetchedImages = [];
         if (itm.images && Array.isArray(itm.images)) {
             itm.images.forEach(img => {
-                let u = img.url || img;
-                if (typeof u === "string") autoFetchedImages.push(u);
+                if (img.url) autoFetchedImages.push(img.url);
             });
         }
 
-        // Preview Render
         let prevBox = document.getElementById('fetchedImagesPreview');
         prevBox.innerHTML = "";
         if (autoFetchedImages.length > 0) {
@@ -259,11 +259,10 @@
 
     } catch (err) {
         console.error(err);
-        status.innerText = "❌ Fetch failed: " + err.message;
+        status.innerText = "❌ Auto-fetch connect nahi hua. Kripya niche manual details bharein.";
         status.style.color = "#ef4444";
     }
 }
-
 
         // --- REALTIME DATA LISTENERS ---
         function bindData() {
