@@ -1,0 +1,57 @@
+[
+  {
+    "id": "5d1c2438-e6b7-4c01-bf13-463870cb1e46",
+    "title": "Monster Food Add-On",
+    "creator": "Noxcrew",
+    "category": "addon",
+    "rating": "4.7",
+    "views": 404,
+    "thumbnail": "https://xforgeassets002.xboxlive.com/pf-title-b63a0803d3653643-20f4/5d1c2438-e6b7-4c01-bf13-463870cb1e46/MonsterFood_Thumbnail_0.jpg",
+    "description": "Turn scary into succulent as you chop and cook hostile mobs into delicious meals!",
+    "marketplaceUrl": "https://www.minecraft.net/en-us/marketplace/pdp?id=5d1c2438-e6b7-4c01-bf13-463870cb1e46"
+  },
+  {
+    "id": "e1966205-83e0-40e9-9134-2e99f187a553",
+    "title": "Sonic the Hedgehog",
+    "creator": "Gamemode One",
+    "category": "world",
+    "rating": "4.8",
+    "views": 1250,
+    "thumbnail": "https://xforgeassets002.xboxlive.com/pf-title-b63a0803d3653643-20f4/e1966205-83e0-40e9-9134-2e99f187a553/Sonic_Thumbnail_0.jpg",
+    "description": "Sonic races into Minecraft at supersonic speed with Green Hill Zone and custom mechanics!",
+    "marketplaceUrl": "https://www.minecraft.net/en-us/marketplace/pdp?id=e1966205-83e0-40e9-9134-2e99f187a553"
+  },
+  {
+    "id": "f2c3b876-0f9c-482a-a92c-63b7849c2a71",
+    "title": "Weapons Expansion",
+    "creator": "Sapphire Studios",
+    "category": "addon",
+    "rating": "4.6",
+    "views": 580,
+    "thumbnail": "https://picsum.photos/seed/weapons/300/170",
+    "description": "Expand combat with 50+ custom craftable swords, katanas, and weapons!",
+    "marketplaceUrl": "https://www.minecraft.net/en-us/marketplace/pdp?id=f2c3b876-0f9c-482a-a92c-63b7849c2a71"
+  },
+  {
+    "id": "c4b3a129-873d-4c3e-a128-48392019ab32",
+    "title": "Security Expansion",
+    "creator": "Dodo Studios",
+    "category": "addon",
+    "rating": "4.5",
+    "views": 820,
+    "thumbnail": "https://picsum.photos/seed/security/300/170",
+    "description": "Lasers, security cameras, keycards and unbreakable blocks to protect your secret base!",
+    "marketplaceUrl": "https://www.minecraft.net/en-us/marketplace/pdp?id=c4b3a129-873d-4c3e-a128-48392019ab32"
+  },
+  {
+    "id": "a3948572-8374-4bca-8374-493820192847",
+    "title": "Creeper Souls",
+    "creator": "Pixelationz Studios",
+    "category": "skin",
+    "rating": "4.6",
+    "views": 15,
+    "thumbnail": "https://picsum.photos/seed/creeper/300/170",
+    "description": "Dark glowing creeper souls skins for your roleplay!",
+    "marketplaceUrl": "https://www.minecraft.net/en-us/marketplace/pdp?id=a3948572-8374-4bca-8374-493820192847"
+  }
+]
