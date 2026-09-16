@@ -1,0 +1,27 @@
+name: Auto-Sync Minecraft Marketplace
+
+on:
+  schedule:
+    # Har 2 ghante me apne-aap chalega
+    - cron: '0 */2 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install Dependencies
+        run: npm install firebase-admin axios
+
+      - name: Run Fetcher
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node fetcher.js
