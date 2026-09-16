@@ -185,8 +185,7 @@
         }
 
         // --- MULTI-PROXY AUTO FETCHER ENGINE ---
-        // --- 100% WORKING OFFICIAL MINECRAFT STORE FETCHER ---
-async function fetchMarketDetails() {
+        async function fetchMarketDetails() {
     let input = document.getElementById('marketplaceInput').value.trim();
     let status = document.getElementById('fetchStatus');
     if (!input) {
@@ -194,7 +193,7 @@ async function fetchMarketDetails() {
         return;
     }
 
-    // UUID Extract (Handles full links & direct UUIDs)
+    // Extract UUID
     let uuid = "";
     let match = input.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
     if (match) {
@@ -208,70 +207,38 @@ async function fetchMarketDetails() {
     status.innerText = `⏳ UUID: ${uuid} fetch ho raha hai...`;
     status.style.color = "#38bdf8";
 
-    // Minecraft Web Front API Endpoints
-    let targetEndpoints = [
-        `https://www.minecraft.net/api/v1/product/details/${uuid}`,
-        `https://catalog.minecraftservices.com/v1.0/items/details?itemIds=${uuid}`
-    ];
-
-    let itm = null;
-
-    for (let targetUrl of targetEndpoints) {
-        let proxyList = [
-            `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`,
-            `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`
-        ];
-
-        for (let pUrl of proxyList) {
-            try {
-                let res = await fetch(pUrl);
-                if (!res.ok) continue;
-                let rawData = await res.json();
-
-                let data = rawData.contents ? JSON.parse(rawData.contents) : rawData;
-
-                if (data.items && data.items.length > 0) {
-                    itm = data.items[0];
-                    break;
-                } else if (data.title || data.name || data.id) {
-                    itm = data;
-                    break;
-                }
-            } catch (e) {
-                // Try next
-            }
-        }
-        if (itm) break;
-    }
-
-    if (!itm) {
-        status.innerText = "❌ Auto-fetch connect nahi hua. Kripya niche manual details bharein.";
-        status.style.color = "#ef4444";
-        return;
-    }
-
     try {
-        // Auto Fill Details
-        document.getElementById('addonTitle').value = itm.title || itm.name || "";
-        document.getElementById('addonCreator').value = itm.creatorName || (itm.creator ? itm.creator.name : "") || "";
-        document.getElementById('addonRating').value = itm.averageRating ? itm.averageRating.toFixed(1) : (itm.rating || "4.5");
-        document.getElementById('addonDesc').value = itm.description || itm.summary || "";
+        // Direct call to your own Render backend
+        let res = await fetch(`/api/market-details?id=${uuid}`);
+        if (!res.ok) throw new Error("Server returned status " + res.status);
 
-        // Category Auto Detect
-        let cat = (itm.primaryCategory || itm.category || "").toLowerCase();
-        if (cat.includes("addon") || cat.includes("behavior")) document.getElementById('addonCategory').value = "addon";
+        let data = await res.json();
+        let itemsArray = data.items || data;
+        if (!Array.isArray(itemsArray) || itemsArray.length === 0) {
+            throw new Error("Item not found on Marketplace");
+        }
+
+        let itm = itemsArray[0];
+
+        // Fill Form
+        document.getElementById('addonTitle').value = itm.title || itm.name || "";
+        document.getElementById('addonCreator').value = itm.creatorName || "";
+        document.getElementById('addonRating').value = itm.averageRating ? itm.averageRating.toFixed(1) : "4.5";
+        document.getElementById('addonDesc').value = itm.description || "";
+
+        // Category
+        let cat = (itm.primaryCategory || "").toLowerCase();
+        if (cat.includes("addon")) document.getElementById('addonCategory').value = "addon";
         else if (cat.includes("world")) document.getElementById('addonCategory').value = "world";
         else if (cat.includes("skin")) document.getElementById('addonCategory').value = "skin";
         else if (cat.includes("texture")) document.getElementById('addonCategory').value = "texture";
-        else if (cat.includes("mashup")) document.getElementById('addonCategory').value = "mashup";
 
         // Extract HD Images
         autoFetchedImages = [];
-        let rawImgs = itm.images || itm.screenshots || [];
-        if (Array.isArray(rawImgs)) {
-            rawImgs.forEach(img => {
-                let u = (typeof img === 'string') ? img : (img.url || img.imageUrl || "");
-                if (u && !u.includes("icon")) autoFetchedImages.push(u);
+        if (itm.images && Array.isArray(itm.images)) {
+            itm.images.forEach(img => {
+                let u = img.url || img;
+                if (typeof u === "string") autoFetchedImages.push(u);
             });
         }
 
@@ -283,20 +250,20 @@ async function fetchMarketDetails() {
             autoFetchedImages.forEach(u => {
                 let im = document.createElement('img');
                 im.src = u;
-                im.onerror = () => im.remove();
                 prevBox.appendChild(im);
             });
         }
 
-        status.innerText = `✅ Loaded: ${document.getElementById('addonTitle').value} (${autoFetchedImages.length} HD photos ready)`;
+        status.innerText = `✅ Loaded: ${itm.title} (${autoFetchedImages.length} HD photos ready)`;
         status.style.color = "#10b981";
 
-    } catch (parseErr) {
-        console.error(parseErr);
-        status.innerText = "❌ Data parse error: " + parseErr.message;
+    } catch (err) {
+        console.error(err);
+        status.innerText = "❌ Fetch failed: " + err.message;
         status.style.color = "#ef4444";
     }
 }
+
 
         // --- REALTIME DATA LISTENERS ---
         function bindData() {
