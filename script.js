@@ -15,17 +15,17 @@ var database = firebase.database();
 
 // State
 let availableItems = [];
-let allKeys = [];
+let fullCatalog = [];
+let displayedList = [];
 let activeSection = 'catalog';
 let activeCategory = 'all';
 let currentSearch = '';
-let renderedIndex = 0;
-const BATCH_SIZE = 24;
-let isRendering = false;
+let currentPage = 1;
+const TOTAL_PAGES = 78;
+let isFetchingPage = false;
 let currentModalItem = null;
-let itemCache = new Map();
 
-// DOM
+// DOM Elements
 const availableGrid = document.getElementById('availableGrid');
 const catalogGrid = document.getElementById('catalogGrid');
 const availableCountEl = document.getElementById('availableCount');
@@ -41,7 +41,7 @@ window.onload = function() {
     closeAllModals();
     loadAvailableDLCs();
     switchMainSection('catalog');
-    loadKeysCatalog();
+    initMarketplaceStream();
 };
 
 function closeAllModals() {
@@ -113,169 +113,130 @@ function renderAvailableItems(items) {
     });
 }
 
-// 2. LOAD 37,382 KEYS AND POPULATE ON SCREEN
-async function loadKeysCatalog() {
+// 2. STABLE LIVE STREAM (NO PLACEHOLDER CARDS, DIRECT REAL DATA)
+async function initMarketplaceStream() {
     if (catalogProgressContainer) catalogProgressContainer.style.display = "block";
-    if (catalogProgressBar) catalogProgressBar.style.width = "40%";
+    
+    // First load Page 1 instantly
+    await loadSingleCatalogPage(1);
 
+    // Stream remaining pages in background
+    streamAllPagesBackground();
+}
+
+async function loadSingleCatalogPage(page) {
+    if (page > TOTAL_PAGES) return;
     try {
-        const res = await fetch("https://yf2pv10.github.io/tempkeys/api/keys/keys.json");
-        if (!res.ok) throw new Error("Keys API Failed");
-        const raw = await res.json();
+        const res = await fetch(`https://v5-mcsrc.github.io/data/api/marketplace/page/page-${page}.json`);
+        if (!res.ok) return;
 
-        // Extract UUIDs
-        if (Array.isArray(raw)) {
-            allKeys = raw.map(x => typeof x === 'string' ? x : (x.id || x.uuid)).filter(Boolean);
-        } else if (typeof raw === 'object') {
-            allKeys = Object.keys(raw);
+        const raw = await res.json();
+        const rawList = Array.isArray(raw) ? raw : (raw.items || []);
+
+        const parsed = rawList.map(item => {
+            let id = item.id || item.uuid;
+            let img = item.thumbnail || item.image || item.keyArt || "";
+            if (!img && id) {
+                img = `https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${id}/Thumbnail_0.jpg`;
+            }
+
+            return {
+                id: id,
+                title: item.title || item.name || "Minecraft DLC",
+                creator: item.author || item.creator || item.creatorName || "Mojang Partner",
+                category: (item.packType || item.category || item.type || "addon").toLowerCase(),
+                rating: item.rating ? Number(item.rating).toFixed(1) : "4.8",
+                views: item.totalRatings ? Number(item.totalRatings).toLocaleString() : (item.views ? Number(item.views).toLocaleString() : "1,850"),
+                desc: item.description || item.snippet || item.desc || "Official Minecraft Marketplace DLC.",
+                image: img,
+                coinPrice: item.price || item.coins || null,
+                panorama: item.panorama || ""
+            };
+        });
+
+        fullCatalog.push(...parsed);
+        currentPage = page;
+
+        // Render directly to screen if on initial load or filters match
+        if (page === 1) {
+            displayedList = [...fullCatalog];
+            if (catalogGrid) catalogGrid.innerHTML = "";
+            renderCardsList(displayedList);
+        } else if (!currentSearch && activeCategory === 'all') {
+            renderCardsList(parsed);
         }
 
-        if (catalogNavCount) catalogNavCount.innerText = allKeys.length.toLocaleString();
-        if (catalogStreamStats) catalogStreamStats.innerText = `${allKeys.length.toLocaleString()} Items Live`;
-        if (catalogProgressBar) catalogProgressBar.style.width = "100%";
-
-        setTimeout(() => {
-            if (catalogProgressContainer) catalogProgressContainer.style.display = "none";
-        }, 700);
-
-        renderedIndex = 0;
-        if (catalogGrid) catalogGrid.innerHTML = "";
-        renderBatch();
+        updateProgressUI();
 
     } catch (e) {
-        console.error("Keys load error:", e);
-        if (catalogStreamStatus) {
-            catalogStreamStatus.innerHTML = `<span style="color:#ef4444;">Failed to load catalog. Tap to retry.</span>`;
-            catalogStreamStatus.onclick = loadKeysCatalog;
-        }
+        console.warn(`Failed loading page ${page}:`, e);
     }
 }
 
-// 3. RENDER PLACEHOLDER CARDS AND HYDRATE IN REAL TIME
-async function renderBatch() {
-    if (isRendering || renderedIndex >= allKeys.length) return;
-    isRendering = true;
-    if (catalogScrollLoader) catalogScrollLoader.style.display = "block";
+async function streamAllPagesBackground() {
+    for (let p = 2; p <= TOTAL_PAGES; p++) {
+        await loadSingleCatalogPage(p);
+        await new Promise(r => setTimeout(r, 60)); // Prevents GitHub rate-limiting
+    }
 
-    const slice = allKeys.slice(renderedIndex, renderedIndex + BATCH_SIZE);
-    renderedIndex += slice.length;
+    if (catalogStreamStatus) catalogStreamStatus.innerHTML = `<i class="fas fa-check-circle" style="color:#10b981;"></i> All Items Synced!`;
+    if (catalogProgressBar) catalogProgressBar.style.width = "100%";
+    setTimeout(() => {
+        if (catalogProgressContainer) catalogProgressContainer.style.display = "none";
+    }, 1000);
+}
 
-    for (const uuid of slice) {
-        const card = document.createElement('div');
+function updateProgressUI() {
+    let pct = Math.floor((currentPage / TOTAL_PAGES) * 100);
+    if (catalogProgressBar) catalogProgressBar.style.width = pct + "%";
+    if (catalogStreamStats) catalogStreamStats.innerText = `${fullCatalog.length.toLocaleString()} Loaded (${pct}%)`;
+    if (catalogNavCount) catalogNavCount.innerText = fullCatalog.length.toLocaleString();
+}
+
+// 3. RENDER FUNCTION
+function renderCardsList(items) {
+    if (!catalogGrid) return;
+
+    items.forEach(item => {
+        let card = document.createElement('div');
         card.className = "item-card";
-        card.id = `card-${uuid}`;
+
         card.innerHTML = `
             <div class="card-img-wrap">
-                <img id="img-${uuid}" src="https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${uuid}/Thumbnail_0.jpg" alt="DLC" loading="lazy" onerror="this.onerror=null; this.src='https://content2.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${uuid}/${uuid}_Thumbnail_0.jpg';">
-                <span id="badge-${uuid}" class="card-badge" style="background:#10b981;">ADDON</span>
+                <img src="${item.image}" alt="${item.title}" loading="lazy" 
+                     onerror="this.onerror=null; this.src='https://content2.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${item.id}/Thumbnail_0.jpg';">
+                <span class="card-badge" style="background:#10b981;">${item.category.toUpperCase()}</span>
             </div>
             <div class="card-body">
                 <div class="card-top-bar">
-                    <span id="rating-${uuid}">⭐ 4.8</span>
-                    <span id="views-${uuid}">🔥 2,100</span>
+                    <span>⭐ ${item.rating}</span>
+                    <span>🔥 ${item.views}</span>
                 </div>
-                <h3 id="title-${uuid}" class="card-title">Loading...</h3>
+                <h3 class="card-title">${item.title}</h3>
                 <div class="card-footer">
-                    <span id="creator-${uuid}">Mojang Partner</span>
+                    <span>${item.creator}</span>
                 </div>
             </div>
         `;
+        card.onclick = () => openItemModal(item, true);
         catalogGrid.appendChild(card);
-
-        // Hydrate card asynchronously
-        hydrateCardData(uuid);
-    }
-
-    isRendering = false;
-    if (catalogScrollLoader) catalogScrollLoader.style.display = "none";
+    });
 }
-
-async function hydrateCardData(uuid) {
-    if (itemCache.has(uuid)) {
-        applyDataToCard(uuid, itemCache.get(uuid));
-        return;
-    }
-
-    try {
-        const res = await fetch(`https://v5-mcsrc.github.io/data/api/marketplace/item/${uuid}.json`);
-        if (!res.ok) return;
-        const data = await res.json();
-        itemCache.set(uuid, data);
-        applyDataToCard(uuid, data);
-    } catch (e) {
-        // Suppress background network noise
-    }
-}
-
-function applyDataToCard(uuid, data) {
-    const titleEl = document.getElementById(`title-${uuid}`);
-    const creatorEl = document.getElementById(`creator-${uuid}`);
-    const badgeEl = document.getElementById(`badge-${uuid}`);
-    const ratingEl = document.getElementById(`rating-${uuid}`);
-    const cardEl = document.getElementById(`card-${uuid}`);
-
-    if (titleEl && data.title) titleEl.innerText = data.title;
-    if (creatorEl && data.creator) creatorEl.innerText = data.creator;
-    if (badgeEl && data.category) badgeEl.innerText = data.category.toUpperCase();
-    if (ratingEl && data.rating) ratingEl.innerText = `⭐ ${Number(data.rating).toFixed(1)}`;
-
-    if (cardEl) {
-        cardEl.onclick = () => openItemModal({
-            id: uuid,
-            title: data.title || "Minecraft Item",
-            creator: data.creator || "Mojang Partner",
-            category: (data.category || "addon").toLowerCase(),
-            desc: data.description || data.desc || "Official Minecraft Marketplace DLC.",
-            image: `https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${uuid}/Thumbnail_0.jpg`,
-            details: data
-        }, true);
-    }
-}
-
-// Infinite Scroll
-window.addEventListener('scroll', () => {
-    if (activeSection === 'catalog') {
-        const scrollPos = window.innerHeight + window.pageYOffset;
-        const threshold = document.documentElement.scrollHeight - 1000;
-        if (scrollPos >= threshold) {
-            renderBatch();
-        }
-    }
-}, { passive: true });
 
 // 4. MODAL POPUP
-function openItemModal(item, isCatalogItem) {
+async function openItemModal(item, isCatalogItem) {
     currentModalItem = item;
     document.getElementById('modalTitle').innerText = item.title;
-    document.getElementById('modalTag').innerText = (item.category || "ADDON").toUpperCase();
+    document.getElementById('modalTag').innerText = item.category.toUpperCase();
     document.getElementById('modalDesc').innerText = item.desc;
 
+    // Carousel Image
     const track = document.getElementById('carouselTrack');
     track.innerHTML = `<img src="${item.image}" class="carousel-img">`;
 
-    // Load full details if available
-    const data = item.details || {};
-    if (data.images && data.images.length > 0) {
-        track.innerHTML = "";
-        data.images.forEach(img => {
-            let imgUrl = typeof img === 'string' ? img : (img.url || "");
-            if (imgUrl) {
-                let im = document.createElement('img');
-                im.src = imgUrl;
-                im.className = "carousel-img";
-                track.appendChild(im);
-            }
-        });
-    }
-
-    const priceRow = document.getElementById('modalPriceRow');
-    const priceText = document.getElementById('modalPriceText');
-    if (data.price && priceRow && priceText) {
-        priceText.innerText = `🪙 ${data.price} Minecoins`;
-        priceRow.style.display = "flex";
-    } else if (priceRow) {
-        priceRow.style.display = "none";
-    }
+    // Reset Panorama
+    const panoSec = document.getElementById('panoramaSection');
+    if (panoSec) panoSec.style.display = "none";
 
     const dwnSec = document.getElementById('modalDownloadSection');
     const reqSec = document.getElementById('modalRequestSection');
@@ -283,6 +244,7 @@ function openItemModal(item, isCatalogItem) {
     if (isCatalogItem) {
         if (dwnSec) dwnSec.style.display = "none";
         if (reqSec) reqSec.style.display = "block";
+        fetchItemDetails(item.id);
     } else {
         if (dwnSec) dwnSec.style.display = "block";
         if (reqSec) reqSec.style.display = "none";
@@ -290,6 +252,57 @@ function openItemModal(item, isCatalogItem) {
     }
 
     if (itemModal) itemModal.style.display = "flex";
+}
+
+async function fetchItemDetails(uuid) {
+    if (!uuid) return;
+    try {
+        const res = await fetch(`https://v5-mcsrc.github.io/data/api/marketplace/item/${uuid}.json`);
+        if (!res.ok) return;
+        const details = await res.json();
+
+        // 1. In-game Screenshots
+        const track = document.getElementById('carouselTrack');
+        if (details.images && details.images.length > 0) {
+            track.innerHTML = "";
+            details.images.forEach(img => {
+                let imgUrl = typeof img === 'string' ? img : (img.url || "");
+                if (imgUrl) {
+                    let im = document.createElement('img');
+                    im.src = imgUrl;
+                    im.className = "carousel-img";
+                    track.appendChild(im);
+                }
+            });
+        }
+
+        // 2. Panorama 360 View
+        const panoSec = document.getElementById('panoramaSection');
+        const panoImg = document.getElementById('panoramaImg');
+        let panoramaUrl = details.panorama || (details.images && details.images.find(im => im.type === 'Panorama' || (im.url && im.url.includes('Panorama'))));
+        if (typeof panoramaUrl === 'object') panoramaUrl = panoramaUrl.url;
+
+        if (panoramaUrl && panoSec && panoImg) {
+            panoImg.src = panoramaUrl;
+            panoSec.style.display = "block";
+        }
+
+        // 3. Price & Full Description
+        const priceRow = document.getElementById('modalPriceRow');
+        const priceText = document.getElementById('modalPriceText');
+        let coins = details.price || details.coins || details.coinPrice;
+        if (coins && priceRow && priceText) {
+            priceText.innerText = `🪙 ${coins} Minecoins`;
+            priceRow.style.display = "flex";
+        }
+
+        if (details.description || details.desc) {
+            document.getElementById('modalDesc').innerText = details.description || details.desc;
+        }
+
+    } catch (e) {
+        // PDP failure fallback
+    }
 }
 
 function renderModalDownloadLinks(item) {
@@ -327,6 +340,47 @@ function requestCurrentCatalogItem() {
         alert("✅ Request Sent to Admin! Download link will be uploaded soon.");
         closeModal();
     });
+}
+
+// 5. SEARCH & FILTER
+let searchDebounce = null;
+function handleGlobalSearch() {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => {
+        let q = document.getElementById('globalSearch').value.toLowerCase().trim();
+        currentSearch = q;
+
+        if (activeSection === 'available') {
+            let filtered = availableItems.filter(i => (i.title || '').toLowerCase().includes(q) || (i.creator || '').toLowerCase().includes(q));
+            renderAvailableItems(filtered);
+        } else {
+            applyCatalogFilters();
+        }
+    }, 150);
+}
+
+function filterByCategory(cat) {
+    activeCategory = cat;
+    document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
+    if (event && event.target) event.target.closest('.cat-pill').classList.add('active');
+
+    if (activeSection === 'available') {
+        let filtered = (cat === 'all') ? availableItems : availableItems.filter(i => (i.category || '').toLowerCase().includes(cat));
+        renderAvailableItems(filtered);
+    } else {
+        applyCatalogFilters();
+    }
+}
+
+function applyCatalogFilters() {
+    displayedList = fullCatalog.filter(i => {
+        let matchCat = (activeCategory === 'all') || (i.category.includes(activeCategory));
+        let matchQuery = !currentSearch || i.title.toLowerCase().includes(currentSearch) || i.creator.toLowerCase().includes(currentSearch) || (i.id && i.id.toLowerCase().includes(currentSearch));
+        return matchCat && matchQuery;
+    });
+
+    if (catalogGrid) catalogGrid.innerHTML = "";
+    renderCardsList(displayedList);
 }
 
 function closeModal() { if (itemModal) itemModal.style.display = "none"; }
