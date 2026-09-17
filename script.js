@@ -13,7 +13,7 @@ var firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 var database = firebase.database();
 
-// --- MCF2P DECRYPTED ENGINE CONFIG ---
+// --- CORE ENGINE CONFIG ---
 const MARKETPLACE_API = 'https://v5-mcsrc.github.io/data/api/marketplace';
 const MARKETPLACE_ITEM_API = 'https://v5-mcsrc.github.io/data/api/marketplace/item';
 const MARKETPLACE_IDB_NAME = 'marketplace_db';
@@ -121,7 +121,7 @@ function renderAvailableItems(items) {
     });
 }
 
-// 2. RANDOMIZER (SHUFFLE ITEMS LIKE MCF2P)
+// 2. SHUFFLE / RANDOMIZER (MCF2P STYLE)
 function shuffleItems(items) {
     const shuffled = [...items];
     for (let i = shuffled.length - 1; i > 0; i -= 1) {
@@ -131,7 +131,7 @@ function shuffleItems(items) {
     return shuffled;
 }
 
-// 3. INDEXEDDB STORAGE
+// 3. INDEXEDDB PERSISTENT CACHE
 function idbOpen() {
     return new Promise((resolve, reject) => {
         const req = indexedDB.open(MARKETPLACE_IDB_NAME, 1);
@@ -174,7 +174,6 @@ async function idbSet(key, val) {
 async function initMarketplaceEngine() {
     if (catalogProgressContainer) catalogProgressContainer.style.display = "block";
 
-    // Check Cached Data
     try {
         const cached = await idbGet(MARKETPLACE_IDB_KEY);
         if (cached && Array.isArray(cached.items) && cached.items.length >= 20000) {
@@ -279,7 +278,6 @@ function onAllItemsReady(total) {
         if (catalogProgressContainer) catalogProgressContainer.style.display = "none";
     }, 1200);
 
-    // Refresh pe random items har baar aayenge
     displayedList = shuffleItems(fullCatalog);
     renderedIndex = 0;
     if (catalogGrid) catalogGrid.innerHTML = "";
@@ -334,7 +332,7 @@ window.addEventListener('scroll', () => {
     }
 }, { passive: true });
 
-// 6. MODAL & MULTI-SCREENSHOT PDP FETCHER
+// 6. MODAL & COMPLETE SCREENSHOTS/PANORAMA RESOLVER
 async function openItemModal(item, isCatalogItem) {
     currentModalItem = item;
     document.getElementById('modalTitle').innerText = item.title;
@@ -371,39 +369,47 @@ async function fetchItemDetails(uuid) {
         const details = await res.json();
         const data = details.item || details;
 
-        // In-game multi-screenshots load
+        // 1. Extra Screenshots
         const track = document.getElementById('carouselTrack');
         let imageList = [];
+
+        if (currentModalItem && currentModalItem.image) {
+            imageList.push(currentModalItem.image);
+        }
 
         if (Array.isArray(data.images)) imageList.push(...data.images);
         if (Array.isArray(data.extraImages)) imageList.push(...data.extraImages);
         if (Array.isArray(data.imageUrls)) imageList.push(...data.imageUrls);
 
-        if (imageList.length > 0) {
+        const validUrls = [...new Set(imageList.map(img => typeof img === 'string' ? img : (img.url || "")).filter(Boolean))];
+
+        if (validUrls.length > 0) {
             track.innerHTML = "";
-            imageList.forEach(img => {
-                let url = typeof img === 'string' ? img : (img.url || "");
-                if (url) {
-                    let im = document.createElement('img');
-                    im.src = url;
-                    im.className = "carousel-img";
-                    track.appendChild(im);
-                }
+            validUrls.forEach(url => {
+                let im = document.createElement('img');
+                im.src = url;
+                im.className = "carousel-img";
+                track.appendChild(im);
             });
         }
 
-        // 360 Panorama View
+        // 2. Panorama View (Official or Banner Fallback)
         const panoSec = document.getElementById('panoramaSection');
         const panoImg = document.getElementById('panoramaImg');
+        
         let panoUrl = data.panoramaUrl || data.panoramaImage || data.panorama;
         if (typeof panoUrl === 'object') panoUrl = panoUrl?.url;
+
+        if (!panoUrl && validUrls.length > 0) {
+            panoUrl = validUrls[0];
+        }
 
         if (panoUrl && panoSec && panoImg) {
             panoImg.src = panoUrl;
             panoSec.style.display = "block";
         }
 
-        // Minecoins Price
+        // 3. Minecoin Price
         const priceRow = document.getElementById('modalPriceRow');
         const priceText = document.getElementById('modalPriceText');
         let coins = data.price || data.coins || data.coinPrice;
