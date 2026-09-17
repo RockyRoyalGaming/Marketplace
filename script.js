@@ -13,7 +13,7 @@ var firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 var database = firebase.database();
 
-// --- ENGINE CONFIG ---
+// --- CORE ENGINE CONFIG ---
 const MARKETPLACE_API = 'https://v5-mcsrc.github.io/data/api/marketplace';
 const MARKETPLACE_ITEM_API = 'https://v5-mcsrc.github.io/data/api/marketplace/item';
 const MARKETPLACE_IDB_NAME = 'marketplace_db';
@@ -121,7 +121,7 @@ function renderAvailableItems(items) {
     });
 }
 
-// 2. SHUFFLE / RANDOMIZER (MCF2P STYLE)
+// 2. SHUFFLE / RANDOMIZER
 function shuffleItems(items) {
     const shuffled = [...items];
     for (let i = shuffled.length - 1; i > 0; i -= 1) {
@@ -332,16 +332,25 @@ window.addEventListener('scroll', () => {
     }
 }, { passive: true });
 
-// 6. MODAL & FULL MEDIA CAROUSEL ENGINE
+// 6. YOUTUBE EXTRACTOR HELPER
+function extractYouTubeId(url) {
+    if (!url) return null;
+    const match = url.match(/(?:youtube\.com\/(?:embed\/|v\/|watch\?v=)|youtu\.be\/)([^"&?/\s]{11})/);
+    return match ? match[1] : null;
+}
+
+// 7. MODAL WITH FULL MEDIA (TRAILER, SCREENSHOTS & THUMBNAILS)
 async function openItemModal(item, isCatalogItem) {
     currentModalItem = item;
     document.getElementById('modalTitle').innerText = item.title;
     document.getElementById('modalTag').innerText = item.category.toUpperCase();
     document.getElementById('modalDesc').innerText = item.desc;
 
-    // First image in carousel is ALWAYS the main thumbnail
-    const track = document.getElementById('carouselTrack');
-    track.innerHTML = `<img src="${item.image}" class="carousel-img">`;
+    // Reset Media Stage
+    const stage = document.getElementById('mediaStage');
+    const strip = document.getElementById('thumbStrip');
+    if (stage) stage.innerHTML = `<img src="${item.image}" alt="Preview">`;
+    if (strip) strip.innerHTML = "";
 
     const panoSec = document.getElementById('panoramaSection');
     if (panoSec) panoSec.style.display = "none";
@@ -372,40 +381,98 @@ async function fetchItemDetails(uuid) {
             data = details.item || details;
         }
 
-        // 1. In-game Screenshots (Thumb is preserved at index 0)
-        const track = document.getElementById('carouselTrack');
-        let imageList = [];
+        // 1. Trailer & Screenshots Setup
+        let mediaItems = [];
+        let ytUrl = data.trailer || data.videoUrl || data.youtubeUrl || data.yt_embed;
+        let ytId = extractYouTubeId(ytUrl);
 
-        // Primary thumbnail is always slot 0
-        if (currentModalItem && currentModalItem.image) {
-            imageList.push(currentModalItem.image);
-        }
-
-        if (Array.isArray(data.images)) imageList.push(...data.images);
-        if (Array.isArray(data.extraImages)) imageList.push(...data.extraImages);
-        if (Array.isArray(data.imageUrls)) imageList.push(...data.imageUrls);
-
-        // Fallback Mojang CDN Screenshots for packs like Actions & Stuff
-        if (imageList.length <= 1) {
-            imageList.push(`https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${uuid}/Screenshot_0.jpg`);
-            imageList.push(`https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${uuid}/Screenshot_1.jpg`);
-            imageList.push(`https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${uuid}/KeyArt.jpg`);
-        }
-
-        const validUrls = [...new Set(imageList.map(img => typeof img === 'string' ? img : (img.url || "")).filter(Boolean))];
-
-        if (validUrls.length > 0) {
-            track.innerHTML = "";
-            validUrls.forEach(url => {
-                let im = document.createElement('img');
-                im.src = url;
-                im.className = "carousel-img";
-                im.onerror = function() { this.remove(); }; // Remove if not found on server
-                track.appendChild(im);
+        if (ytId) {
+            mediaItems.push({
+                type: 'video',
+                thumb: `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`,
+                embed: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`
             });
         }
 
-        // 2. Panorama 360 View (Only for packs that actually have it, like Worlds & Maps)
+        // Main thumbnail
+        if (currentModalItem && currentModalItem.image) {
+            mediaItems.push({ type: 'image', url: currentModalItem.image, thumb: currentModalItem.image });
+        }
+
+        // Extra Screenshots from API
+        let extra = [];
+        if (Array.isArray(data.images)) extra.push(...data.images);
+        if (Array.isArray(data.extraImages)) extra.push(...data.extraImages);
+        if (Array.isArray(data.imageUrls)) extra.push(...data.imageUrls);
+
+        // Fallback for packs like Actions & Stuff
+        if (extra.length === 0) {
+            extra.push(`https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${uuid}/Screenshot_0.jpg`);
+            extra.push(`https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${uuid}/Screenshot_1.jpg`);
+            extra.push(`https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${uuid}/KeyArt.jpg`);
+        }
+
+        extra.forEach(img => {
+            let u = typeof img === 'string' ? img : (img.url || "");
+            if (u) mediaItems.push({ type: 'image', url: u, thumb: u });
+        });
+
+        // Render Media Stage & Thumb Strip
+        const stage = document.getElementById('mediaStage');
+        const strip = document.getElementById('thumbStrip');
+        if (stage && strip && mediaItems.length > 0) {
+            strip.innerHTML = "";
+
+            const setStageMedia = (item, activeIndex) => {
+                if (item.type === 'video') {
+                    stage.innerHTML = `<iframe src="${item.embed}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+                } else {
+                    stage.innerHTML = `<img src="${item.url}" alt="Screen">`;
+                }
+                strip.querySelectorAll('.thumb-strip-item').forEach((el, i) => {
+                    el.classList.toggle('active', i === activeIndex);
+                });
+            };
+
+            mediaItems.forEach((item, index) => {
+                const thumbBtn = document.createElement('div');
+                thumbBtn.className = `thumb-strip-item ${index === 0 ? 'active' : ''}`;
+                thumbBtn.innerHTML = `
+                    <img src="${item.thumb}" alt="thumb" onerror="this.parentElement.remove();">
+                    ${item.type === 'video' ? '<div class="video-play-icon"><i class="fas fa-play"></i></div>' : ''}
+                `;
+                thumbBtn.onclick = () => setStageMedia(item, index);
+                strip.appendChild(thumbBtn);
+            });
+
+            // Play trailer or display first image
+            setStageMedia(mediaItems[0], 0);
+        }
+
+        // 2. Official Minecoins Price
+        const priceRow = document.getElementById('modalPriceRow');
+        const priceText = document.getElementById('modalPriceText');
+        let coins = data.price || data.coins || data.coinPrice || (currentModalItem && currentModalItem.coinPrice);
+        if (coins && priceRow && priceText) {
+            priceText.innerText = `🪙 ${coins} Minecoins`;
+            priceRow.style.display = "block";
+        }
+
+        // 3. Ratings & Total Votes
+        const votesEl = document.getElementById('modalRatingVotes');
+        let votes = data.totalRatings || data.ratingCount || data.total_ratings;
+        if (votes && votesEl) {
+            votesEl.innerText = Number(votes).toLocaleString();
+        }
+
+        // 4. Complete Description
+        const descEl = document.getElementById('modalDesc');
+        let fullDesc = data.longDescription || data.description || data.desc;
+        if (fullDesc && descEl) {
+            descEl.innerText = fullDesc;
+        }
+
+        // 5. Official 360 Panorama View
         const panoSec = document.getElementById('panoramaSection');
         const panoImg = document.getElementById('panoramaImg');
         let panoUrl = data.panoramaUrl || data.panoramaImage || data.panorama;
@@ -414,23 +481,6 @@ async function fetchItemDetails(uuid) {
         if (panoUrl && panoSec && panoImg) {
             panoImg.src = panoUrl;
             panoSec.style.display = "block";
-        } else if (panoSec) {
-            panoSec.style.display = "none";
-        }
-
-        // 3. Real Minecoin Price
-        const priceRow = document.getElementById('modalPriceRow');
-        const priceText = document.getElementById('modalPriceText');
-        let coins = data.price || data.coins || data.coinPrice;
-        if (coins && priceRow && priceText) {
-            priceText.innerText = `🪙 ${coins} Minecoins`;
-            priceRow.style.display = "flex";
-        }
-
-        // 4. Complete Uncut Description
-        const fullDesc = data.longDescription || data.description || data.desc || (currentModalItem ? currentModalItem.desc : "");
-        if (fullDesc) {
-            document.getElementById('modalDesc').innerText = fullDesc;
         }
 
     } catch (e) {
@@ -475,7 +525,7 @@ function requestCurrentCatalogItem() {
     });
 }
 
-// 7. REAL-TIME SEARCH & FILTERS
+// 8. REAL-TIME SEARCH & FILTERS
 let searchDebounce = null;
 function handleGlobalSearch() {
     clearTimeout(searchDebounce);
