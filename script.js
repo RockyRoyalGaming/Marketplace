@@ -121,17 +121,17 @@ function renderAvailableItems(items) {
     });
 }
 
-// 2. SHUFFLE ITEMS
+// 2. SHUFFLE / RANDOMIZER (FISHER-YATES ALGORITHM)
 function shuffleItems(items) {
-    const shuffled = [...items];
-    for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const arr = [...items];
+    for (let i = arr.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        [arr[i], arr[j]] = [arr[j], arr[i]];
     }
-    return shuffled;
+    return arr;
 }
 
-// 3. INDEXEDDB PERSISTENT CACHE
+// 3. INDEXEDDB CACHE
 function idbOpen() {
     return new Promise((resolve, reject) => {
         const req = indexedDB.open(MARKETPLACE_IDB_NAME, 1);
@@ -223,7 +223,6 @@ async function initMarketplaceEngine() {
                     img = `https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${id}/Thumbnail_0.jpg`;
                 }
 
-                // Real votes extraction (No fake 2100)
                 let actualVotes = item.ratingCount || item.totalRatings || item.total_ratings || null;
 
                 allItems.push({
@@ -252,9 +251,6 @@ async function initMarketplaceEngine() {
             if (catalogNavCount) catalogNavCount.innerText = fullCatalog.length.toLocaleString();
 
             if (currentPage === 1 && fullCatalog.length > 0) {
-                displayedList = shuffleItems(fullCatalog);
-                renderBatchCards();
-            } else if (currentSearch || activeCategory !== 'all') {
                 applyCatalogFilters();
             }
 
@@ -281,13 +277,10 @@ function onAllItemsReady(total) {
         if (catalogProgressContainer) catalogProgressContainer.style.display = "none";
     }, 1200);
 
-    displayedList = shuffleItems(fullCatalog);
-    renderedIndex = 0;
-    if (catalogGrid) catalogGrid.innerHTML = "";
-    renderBatchCards();
+    applyCatalogFilters();
 }
 
-// 5. RENDER CARDS BATCH
+// 5. RENDER BATCH CARDS (INFINITE SCROLL)
 function renderBatchCards() {
     if (isRendering || renderedIndex >= displayedList.length) return;
     isRendering = true;
@@ -324,7 +317,6 @@ function renderBatchCards() {
     if (catalogScrollLoader) catalogScrollLoader.style.display = "none";
 }
 
-// Infinite Scroll
 window.addEventListener('scroll', () => {
     if (activeSection === 'catalog') {
         const scrollPos = window.innerHeight + window.pageYOffset;
@@ -341,14 +333,13 @@ function extractYouTubeId(url) {
     return match ? match[1] : null;
 }
 
-// 6. MODAL & DYNAMIC PDP FETCHER
+// 6. MODAL & PDP
 async function openItemModal(item, isCatalogItem) {
     currentModalItem = item;
     document.getElementById('modalTitle').innerText = item.title;
     document.getElementById('modalTag').innerText = item.category.toUpperCase();
     document.getElementById('modalDesc').innerText = item.desc;
 
-    // Default Price setup
     const priceText = document.getElementById('modalPriceText');
     const priceRow = document.getElementById('modalPriceRow');
     if (item.coinPrice) {
@@ -359,13 +350,11 @@ async function openItemModal(item, isCatalogItem) {
         priceText.innerText = "";
     }
 
-    // Default Rating setup (No fake 2100)
     const votesEl = document.getElementById('modalRatingVotes');
     const starsEl = document.getElementById('modalRatingStars');
     votesEl.innerText = item.views ? `${item.views}` : "";
     starsEl.innerText = "⭐".repeat(Math.round(Number(item.rating || 5)));
 
-    // Media Stage Reset
     const stage = document.getElementById('mediaStage');
     const strip = document.getElementById('thumbStrip');
     if (stage) stage.innerHTML = `<img src="${item.image}" alt="Preview">`;
@@ -400,7 +389,6 @@ async function fetchItemDetails(uuid) {
             data = details.item || details;
         }
 
-        // 1. Trailer & Screenshots
         let mediaItems = [];
         let ytUrl = data.trailer || data.videoUrl || data.youtubeUrl || data.yt_embed;
         let ytId = extractYouTubeId(ytUrl);
@@ -463,12 +451,9 @@ async function fetchItemDetails(uuid) {
             setStageMedia(mediaItems[0], 0);
         }
 
-        // 2. Real Minecoins Price Fetch (Fallback check for skinpacks)
         const priceRow = document.getElementById('modalPriceRow');
         const priceText = document.getElementById('modalPriceText');
         let coins = data.price || data.coins || data.coinPrice || (currentModalItem && currentModalItem.coinPrice);
-        
-        // Standard skinpack pricing fallback if API omitted it
         if (!coins && currentModalItem && currentModalItem.category === 'skinpack') {
             coins = 310;
         }
@@ -478,7 +463,6 @@ async function fetchItemDetails(uuid) {
             priceRow.style.display = "block";
         }
 
-        // 3. True Real Votes & Star Rating
         const votesEl = document.getElementById('modalRatingVotes');
         const starsEl = document.getElementById('modalRatingStars');
         let votes = data.ratingCount || data.totalRatings || data.total_ratings || (currentModalItem && currentModalItem.views);
@@ -494,14 +478,12 @@ async function fetchItemDetails(uuid) {
             starsEl.innerText = "⭐".repeat(Math.max(1, Math.min(5, numStars)));
         }
 
-        // 4. Complete Description
         const descEl = document.getElementById('modalDesc');
         let fullDesc = data.longDescription || data.description || data.desc;
         if (fullDesc && descEl) {
             descEl.innerText = fullDesc;
         }
 
-        // 5. Official 360 Panorama View
         const panoSec = document.getElementById('panoramaSection');
         const panoImg = document.getElementById('panoramaImg');
         let panoUrl = data.panoramaUrl || data.panoramaImage || data.panorama;
@@ -554,7 +536,7 @@ function requestCurrentCatalogItem() {
     });
 }
 
-// 7. REAL-TIME SEARCH & FILTERS
+// 7. REAL-TIME SEARCH & DYNAMIC FILTER RANDOMIZER
 let searchDebounce = null;
 function handleGlobalSearch() {
     clearTimeout(searchDebounce);
@@ -574,22 +556,29 @@ function handleGlobalSearch() {
 function filterByCategory(cat) {
     activeCategory = cat;
     document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
-    if (event && event.target) event.target.closest('.cat-pill').classList.add('active');
+    if (event && event.target) {
+        let btn = event.target.closest('.cat-pill');
+        if (btn) btn.classList.add('active');
+    }
 
     if (activeSection === 'available') {
         let filtered = (cat === 'all') ? availableItems : availableItems.filter(i => (i.category || '').toLowerCase().includes(cat));
         renderAvailableItems(filtered);
     } else {
+        // Tab switch karte hi alag random items aayenge
         applyCatalogFilters();
     }
 }
 
 function applyCatalogFilters() {
-    displayedList = fullCatalog.filter(i => {
+    let matches = fullCatalog.filter(i => {
         let matchCat = (activeCategory === 'all') || (i.category.includes(activeCategory));
         let matchQuery = !currentSearch || i.title.toLowerCase().includes(currentSearch) || i.creator.toLowerCase().includes(currentSearch) || (i.id && i.id.toLowerCase().includes(currentSearch));
         return matchCat && matchQuery;
     });
+
+    // Har switch aur refresh pe fresh randomized assortment
+    displayedList = shuffleItems(matches);
 
     renderedIndex = 0;
     if (catalogGrid) catalogGrid.innerHTML = "";
