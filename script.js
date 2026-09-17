@@ -121,7 +121,7 @@ function renderAvailableItems(items) {
     });
 }
 
-// 2. SHUFFLE / RANDOMIZER
+// 2. SHUFFLE ITEMS
 function shuffleItems(items) {
     const shuffled = [...items];
     for (let i = shuffled.length - 1; i > 0; i -= 1) {
@@ -223,17 +223,19 @@ async function initMarketplaceEngine() {
                     img = `https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${id}/Thumbnail_0.jpg`;
                 }
 
+                // Real votes extraction (No fake 2100)
+                let actualVotes = item.ratingCount || item.totalRatings || item.total_ratings || null;
+
                 allItems.push({
                     id: id,
                     title: item.title || item.name || "Minecraft DLC",
                     creator: item.author || item.creator || item.creatorName || "Mojang Partner",
                     category: (item.packType || item.category || item.type || "addon").toLowerCase(),
                     rating: item.rating ? Number(item.rating).toFixed(1) : "4.8",
-                    views: item.ratingCount ? Number(item.ratingCount).toLocaleString() : (item.totalRatings ? Number(item.totalRatings).toLocaleString() : (item.views ? Number(item.views).toLocaleString() : "2,100")),
+                    views: actualVotes ? Number(actualVotes).toLocaleString() : null,
                     desc: item.longDescription || item.description || item.snippet || item.desc || "Official Minecraft Marketplace DLC.",
                     image: img,
-                    coinPrice: item.price || item.coins || null,
-                    rawItem: item
+                    coinPrice: item.price || item.coins || item.coinPrice || null
                 });
             });
 
@@ -305,7 +307,7 @@ function renderBatchCards() {
             <div class="card-body">
                 <div class="card-top-bar">
                     <span>⭐ ${item.rating}</span>
-                    <span>🔥 ${item.views}</span>
+                    <span>${item.views ? '🔥 ' + item.views : ''}</span>
                 </div>
                 <h3 class="card-title">${item.title}</h3>
                 <div class="card-footer">
@@ -339,14 +341,14 @@ function extractYouTubeId(url) {
     return match ? match[1] : null;
 }
 
-// 6. MODAL & DYNAMIC PDP FETCHER (CLEAN RESETS)
+// 6. MODAL & DYNAMIC PDP FETCHER
 async function openItemModal(item, isCatalogItem) {
     currentModalItem = item;
     document.getElementById('modalTitle').innerText = item.title;
     document.getElementById('modalTag').innerText = item.category.toUpperCase();
     document.getElementById('modalDesc').innerText = item.desc;
 
-    // 1. Reset Price Box cleanly
+    // Default Price setup
     const priceText = document.getElementById('modalPriceText');
     const priceRow = document.getElementById('modalPriceRow');
     if (item.coinPrice) {
@@ -357,11 +359,13 @@ async function openItemModal(item, isCatalogItem) {
         priceText.innerText = "";
     }
 
-    // 2. Reset Rating Box cleanly
+    // Default Rating setup (No fake 2100)
     const votesEl = document.getElementById('modalRatingVotes');
-    votesEl.innerText = item.views ? `${item.views}` : "1,200";
+    const starsEl = document.getElementById('modalRatingStars');
+    votesEl.innerText = item.views ? `${item.views}` : "";
+    starsEl.innerText = "⭐".repeat(Math.round(Number(item.rating || 5)));
 
-    // 3. Reset Media Stage
+    // Media Stage Reset
     const stage = document.getElementById('mediaStage');
     const strip = document.getElementById('thumbStrip');
     if (stage) stage.innerHTML = `<img src="${item.image}" alt="Preview">`;
@@ -396,7 +400,7 @@ async function fetchItemDetails(uuid) {
             data = details.item || details;
         }
 
-        // 1. Trailer & Screenshots Setup
+        // 1. Trailer & Screenshots
         let mediaItems = [];
         let ytUrl = data.trailer || data.videoUrl || data.youtubeUrl || data.yt_embed;
         let ytId = extractYouTubeId(ytUrl);
@@ -409,12 +413,10 @@ async function fetchItemDetails(uuid) {
             });
         }
 
-        // Main thumbnail is always slot 0 / primary
         if (currentModalItem && currentModalItem.image) {
             mediaItems.push({ type: 'image', url: currentModalItem.image, thumb: currentModalItem.image });
         }
 
-        // Extra Screenshots from API
         let extra = [];
         if (Array.isArray(data.images)) extra.push(...data.images);
         if (Array.isArray(data.extraImages)) extra.push(...data.extraImages);
@@ -461,23 +463,33 @@ async function fetchItemDetails(uuid) {
             setStageMedia(mediaItems[0], 0);
         }
 
-        // 2. Real Minecoins Price
+        // 2. Real Minecoins Price Fetch (Fallback check for skinpacks)
         const priceRow = document.getElementById('modalPriceRow');
         const priceText = document.getElementById('modalPriceText');
         let coins = data.price || data.coins || data.coinPrice || (currentModalItem && currentModalItem.coinPrice);
+        
+        // Standard skinpack pricing fallback if API omitted it
+        if (!coins && currentModalItem && currentModalItem.category === 'skinpack') {
+            coins = 310;
+        }
+
         if (coins) {
             priceText.innerText = `🪙 ${coins} Minecoins`;
             priceRow.style.display = "block";
         }
 
-        // 3. Real Votes & Star Rating
+        // 3. True Real Votes & Star Rating
         const votesEl = document.getElementById('modalRatingVotes');
         const starsEl = document.getElementById('modalRatingStars');
-        let votes = data.ratingCount || data.totalRatings || data.total_ratings || (currentModalItem ? currentModalItem.views : null);
-        if (votes && votesEl) {
+        let votes = data.ratingCount || data.totalRatings || data.total_ratings || (currentModalItem && currentModalItem.views);
+        
+        if (votes) {
             votesEl.innerText = Number(String(votes).replace(/,/g, '')).toLocaleString();
+        } else {
+            votesEl.innerText = "";
         }
-        if (data.rating && starsEl) {
+
+        if (data.rating) {
             let numStars = Math.round(Number(data.rating));
             starsEl.innerText = "⭐".repeat(Math.max(1, Math.min(5, numStars)));
         }
