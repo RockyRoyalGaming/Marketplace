@@ -13,19 +13,19 @@ var firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 var database = firebase.database();
 
-// State
+// State Variables
 let availableItems = [];
-let fullCatalog = [];
-let displayedList = [];
+let catalogItems = [];
 let activeSection = 'catalog';
 let activeCategory = 'all';
 let currentSearch = '';
 let currentPage = 1;
-const TOTAL_PAGES = 78; // 37,382 items / ~480 per page
-let isFetchingPage = false;
+const PAGE_SIZE = 24;
+let isLoadingPage = false;
+let hasMorePages = true;
 let currentModalItem = null;
 
-// DOM
+// DOM Elements
 const availableGrid = document.getElementById('availableGrid');
 const catalogGrid = document.getElementById('catalogGrid');
 const availableCountEl = document.getElementById('availableCount');
@@ -41,7 +41,7 @@ window.onload = function() {
     closeAllModals();
     loadAvailableDLCs();
     switchMainSection('catalog');
-    fetchMarketplacePage(1);
+    fetchOfficialMarketplace(1, true);
 };
 
 function closeAllModals() {
@@ -113,117 +113,124 @@ function renderAvailableItems(items) {
     });
 }
 
-// 2. LIVE FETCH FROM THE EXACT SOURCE (v5-mcsrc.github.io)
-async function fetchMarketplacePage(page) {
-    if (isFetchingPage || page > TOTAL_PAGES) return;
-    isFetchingPage = true;
+// 2. LIVE OFFICIAL MOJANG API VIA YOUR RENDER BACKEND
+async function fetchOfficialMarketplace(page, isReset = false) {
+    if (isLoadingPage || (!hasMorePages && !isReset)) return;
+    isLoadingPage = true;
+
+    if (isReset) {
+        currentPage = 1;
+        catalogItems = [];
+        hasMorePages = true;
+        if (catalogGrid) catalogGrid.innerHTML = "";
+        if (catalogProgressContainer) catalogProgressContainer.style.display = "block";
+        if (catalogProgressBar) catalogProgressBar.style.width = "40%";
+        if (catalogStreamStats) catalogStreamStats.innerText = "Connecting to Mojang...";
+    }
 
     if (catalogScrollLoader) catalogScrollLoader.style.display = "block";
-    if (page === 1 && catalogStreamStatus) {
-        catalogStreamStatus.innerHTML = `<i class="fas fa-satellite-dish fa-spin"></i> Fetching official catalog page ${page}...`;
-    }
 
     try {
-        const url = `https://v5-mcsrc.github.io/data/api/marketplace/page/page-${page}.json`;
-        const res = await fetch(url);
+        let apiUrl = `/api/search?page=${page}&pageSize=${PAGE_SIZE}`;
+        if (activeCategory !== 'all') apiUrl += `&packType=${activeCategory}`;
+        if (currentSearch) apiUrl += `&keyword=${encodeURIComponent(currentSearch)}`;
+
+        const res = await fetch(apiUrl);
         if (!res.ok) throw new Error("HTTP error " + res.status);
-        
         const data = await res.json();
-        const items = data.items || data;
 
-        // Clean & format raw official items
-        const parsed = items.map(i => {
-            let img = i.thumbnail || i.image || i.keyArt || "";
-            // PlayFab image fallback
-            if (!img && i.id) {
-                img = `https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${i.id}/Thumbnail_0.jpg`;
-            }
-            return {
-                id: i.id || i.uuid,
-                title: i.title || i.name || "Minecraft Item",
-                creator: i.creator || i.creatorName || (i.author ? i.author.name : "Mojang Partner"),
-                category: (i.category || i.type || "addon").toLowerCase(),
-                rating: i.rating ? Number(i.rating).toFixed(1) : "4.8",
-                views: i.views ? Number(i.views).toLocaleString() : Math.floor(Math.random() * 2000 + 100).toLocaleString(),
-                desc: i.description || i.desc || "Official Minecraft Marketplace DLC.",
-                image: img,
-                panorama: i.panorama || ""
-            };
-        });
+        const rawList = data.results || data.items || [];
+        const totalCount = data.totalResults || data.totalCount || 37382;
 
-        fullCatalog.push(...parsed);
-        currentPage = page;
-
-        // Progress bar updates
-        let pct = Math.floor((currentPage / TOTAL_PAGES) * 100);
-        if (catalogProgressBar) catalogProgressBar.style.width = pct + "%";
-        if (catalogStreamStats) catalogStreamStats.innerText = `${fullCatalog.length.toLocaleString()} ITEMS LOADED (${pct}%)`;
-        if (catalogNavCount) catalogNavCount.innerText = fullCatalog.length.toLocaleString();
-
-        if (page === 1) {
-            if (catalogProgressContainer) {
-                setTimeout(() => catalogProgressContainer.style.display = "none", 1200);
-            }
+        if (rawList.length < PAGE_SIZE) {
+            hasMorePages = false;
         }
 
-        applyCatalogFilters();
+        if (catalogNavCount) catalogNavCount.innerText = totalCount.toLocaleString();
+        if (catalogStreamStats) catalogStreamStats.innerText = `${totalCount.toLocaleString()} ITEMS LIVE`;
+        if (catalogProgressBar) catalogProgressBar.style.width = "100%";
+
+        setTimeout(() => {
+            if (catalogProgressContainer) catalogProgressContainer.style.display = "none";
+        }, 800);
+
+        rawList.forEach(item => {
+            // Official Mojang Media Resolution
+            let img = "";
+            if (item.thumbnail) img = item.thumbnail;
+            else if (item.images && item.images.length > 0) {
+                let found = item.images.find(im => im.type === "Thumbnail" || im.type === "KeyArt");
+                img = found ? found.url : (item.images[0].url || item.images[0]);
+            }
+            if (!img && item.id) {
+                img = `https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${item.id}/Thumbnail_0.jpg`;
+            }
+
+            let parsedItem = {
+                id: item.id || item.uuid,
+                title: item.title || item.name || "Minecraft Item",
+                creator: item.author || item.creatorName || (item.creator ? item.creator.name : "Mojang Partner"),
+                category: (item.packType || item.category || "addon").toLowerCase(),
+                rating: item.rating ? Number(item.rating).toFixed(1) : "4.8",
+                views: item.totalRatings ? Number(item.totalRatings).toLocaleString() : Math.floor(Math.random() * 2000 + 200).toLocaleString(),
+                desc: item.description || item.snippet || "Official Minecraft Marketplace DLC.",
+                image: img,
+                panorama: item.panorama || ""
+            };
+
+            catalogItems.push(parsedItem);
+            renderCard(parsedItem);
+        });
+
+        currentPage = page;
 
     } catch (err) {
-        console.error("Fetch page error:", err);
+        console.error("Backend proxy error:", err);
         if (catalogStreamStatus) {
-            catalogStreamStatus.innerHTML = `<span style="color:#ef4444;"><i class="fas fa-exclamation-circle"></i> Retry Page ${page}</span>`;
-            catalogStreamStatus.onclick = () => fetchMarketplacePage(page);
+            catalogStreamStatus.innerHTML = `<span style="color:#ef4444;"><i class="fas fa-exclamation-triangle"></i> Error loading page. Check server logs.</span>`;
         }
     }
 
-    isFetchingPage = false;
+    isLoadingPage = false;
     if (catalogScrollLoader) catalogScrollLoader.style.display = "none";
 }
 
-// 3. RENDER ITEMS
-function renderCatalogCards(itemsToRender) {
-    if (!catalogGrid) return;
-    if (currentPage === 1 && !currentSearch && activeCategory === 'all') {
-        catalogGrid.innerHTML = "";
-    }
+function renderCard(item) {
+    let card = document.createElement('div');
+    card.className = "item-card";
 
-    itemsToRender.forEach(item => {
-        let card = document.createElement('div');
-        card.className = "item-card";
-
-        card.innerHTML = `
-            <div class="card-img-wrap">
-                <img src="${item.image}" alt="${item.title}" loading="lazy" onerror="this.onerror=null; this.src='https://content2.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${item.id}/${item.id}_Thumbnail_0.jpg';">
-                <span class="card-badge" style="background:#10b981;">${item.category.toUpperCase()}</span>
+    card.innerHTML = `
+        <div class="card-img-wrap">
+            <img src="${item.image}" alt="${item.title}" loading="lazy" onerror="this.onerror=null; this.src='https://content2.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/4897107c-fbc7-40b3-84e4-519e2f79397d/AdvancedMachines_screenshot_1.jpg';">
+            <span class="card-badge" style="background:#10b981;">${item.category.toUpperCase()}</span>
+        </div>
+        <div class="card-body">
+            <div class="card-top-bar">
+                <span>⭐ ${item.rating}</span>
+                <span>🔥 ${item.views}</span>
             </div>
-            <div class="card-body">
-                <div class="card-top-bar">
-                    <span>⭐ ${item.rating}</span>
-                    <span>🔥 ${item.views}</span>
-                </div>
-                <h3 class="card-title">${item.title}</h3>
-                <div class="card-footer">
-                    <span>${item.creator}</span>
-                </div>
+            <h3 class="card-title">${item.title}</h3>
+            <div class="card-footer">
+                <span>${item.creator}</span>
             </div>
-        `;
-        card.onclick = () => openItemModal(item, true);
-        catalogGrid.appendChild(card);
-    });
+        </div>
+    `;
+    card.onclick = () => openItemModal(item, true);
+    catalogGrid.appendChild(card);
 }
 
-// Infinite Scroll loads next page
+// Infinite Scroll
 window.addEventListener('scroll', () => {
     if (activeSection === 'catalog') {
         if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 900) {
-            if (!isFetchingPage && currentPage < TOTAL_PAGES) {
-                fetchMarketplacePage(currentPage + 1);
+            if (!isLoadingPage && hasMorePages) {
+                fetchOfficialMarketplace(currentPage + 1, false);
             }
         }
     }
 });
 
-// 4. MODAL POPUP
+// 3. MODAL POPUP
 function openItemModal(item, isCatalogItem) {
     currentModalItem = item;
     document.getElementById('modalTitle').innerText = item.title;
@@ -299,7 +306,7 @@ function requestCurrentCatalogItem() {
     });
 }
 
-// 5. SEARCH & FILTER
+// 4. SEARCH & FILTER
 let searchDebounce = null;
 function handleGlobalSearch() {
     clearTimeout(searchDebounce);
@@ -311,9 +318,9 @@ function handleGlobalSearch() {
             let filtered = availableItems.filter(i => (i.title || '').toLowerCase().includes(q) || (i.creator || '').toLowerCase().includes(q));
             renderAvailableItems(filtered);
         } else {
-            applyCatalogFilters();
+            fetchOfficialMarketplace(1, true);
         }
-    }, 200);
+    }, 300);
 }
 
 function filterByCategory(cat) {
@@ -325,19 +332,8 @@ function filterByCategory(cat) {
         let filtered = (cat === 'all') ? availableItems : availableItems.filter(i => (i.category || '').toLowerCase().includes(cat));
         renderAvailableItems(filtered);
     } else {
-        applyCatalogFilters();
+        fetchOfficialMarketplace(1, true);
     }
-}
-
-function applyCatalogFilters() {
-    displayedList = fullCatalog.filter(i => {
-        let matchCat = (activeCategory === 'all') || (i.category.includes(activeCategory));
-        let matchQuery = !currentSearch || i.title.toLowerCase().includes(currentSearch) || i.creator.toLowerCase().includes(currentSearch);
-        return matchCat && matchQuery;
-    });
-
-    if (catalogGrid) catalogGrid.innerHTML = "";
-    renderCatalogCards(displayedList);
 }
 
 function closeModal() { if (itemModal) itemModal.style.display = "none"; }
