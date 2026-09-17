@@ -1,7 +1,22 @@
+// --- FIREBASE CONFIGURATION ---
+var firebaseConfig = {
+  apiKey: "AIzaSyDOnkkfPgIX9rlEXefUKnZ3atV6zdBu1RU",
+  authDomain: "strikemarket-32a5e.firebaseapp.com",
+  databaseURL: "https://strikemarket-32a5e-default-rtdb.firebaseio.com",
+  projectId: "strikemarket-32a5e",
+  storageBucket: "strikemarket-32a5e.firebasestorage.app",
+  messagingSenderId: "719596182121",
+  appId: "1:719596182121:web:d02dfdd3089f560fc560f8",
+  measurementId: "G-KTVM3J2491"
+};
+
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+var database = firebase.database();
+
 // --- CONFIGURATION ---
 const MARKETPLACE_API = 'https://v5-mcsrc.github.io/data/api/marketplace';
 const MARKETPLACE_ITEM_API = 'https://v5-mcsrc.github.io/data/api/marketplace/item';
-const MARKETPLACE_IDB_NAME = 'mcf2p_db_v4';
+const MARKETPLACE_IDB_NAME = 'strike_db_final';
 const MARKETPLACE_IDB_STORE = 'catalog_cache';
 const MARKETPLACE_IDB_KEY = 'all_items';
 const PARALLEL_BATCH_SIZE = 15;
@@ -25,13 +40,13 @@ const searchInput = document.getElementById('searchInput');
 const searchBtn = document.getElementById('searchBtn');
 const downloadOverlay = document.getElementById('downloadOverlay');
 const closeModal = document.getElementById('closeModal');
+const modalRequestBtn = document.getElementById('modalRequestBtn');
 
 window.onload = function() {
     createStars();
     initMarketplaceStream();
 };
 
-// 1. STARS ANIMATION
 function createStars() {
     const container = document.getElementById('stars');
     if (!container) return;
@@ -49,7 +64,6 @@ function createStars() {
     container.appendChild(frag);
 }
 
-// 2. SHUFFLE (MCF2P STYLE)
 function shuffleItems(items) {
     const arr = [...items];
     for (let i = arr.length - 1; i > 0; i--) {
@@ -66,7 +80,6 @@ function formatLargeNumber(value) {
     return String(Math.round(num));
 }
 
-// 3. INDEXEDDB
 function idbOpen() {
     return new Promise((resolve, reject) => {
         const req = indexedDB.open(MARKETPLACE_IDB_NAME, 1);
@@ -105,7 +118,7 @@ async function idbSet(key, val) {
     } catch (e) { return false; }
 }
 
-// 4. PARALLEL LOADER
+// Parallel Stream Loader
 async function initMarketplaceStream() {
     try {
         const cached = await idbGet(MARKETPLACE_IDB_KEY);
@@ -196,7 +209,7 @@ function onStreamComplete() {
     applyCategoryFilter(activeCategory);
 }
 
-// 5. CARDS RENDERER (MCF2P STYLE)
+// Render Batch Cards
 function renderBatch() {
     if (isRendering || renderedIndex >= displayedList.length) return;
     isRendering = true;
@@ -208,7 +221,6 @@ function renderBatch() {
         itemEl.className = "item";
         itemEl.dataset.uuid = item.uuid;
 
-        // Rating Block: sirf tab dikhega agar data ho
         let ratingHtml = item.rating ? `<div class="rating-block"><i class="fas fa-star"></i><span>${item.rating}</span></div>` : `<div></div>`;
         let votesHtml = item.total_ratings ? `<div class="rating-block total-ratings-block"><i class="fas fa-fire"></i><span>${formatLargeNumber(item.total_ratings)}</span></div>` : ``;
 
@@ -235,11 +247,10 @@ function renderBatch() {
     renderedIndex += slice.length;
     isRendering = false;
 
-    // Visible cards ki live real ratings fetch karo
     setTimeout(fetchDetailsForVisibleCards, 120);
 }
 
-// 6. MCF2P VISIBLE CARDS HYDRATOR (FETCHES TRUE RATINGS & VOTES LIVE)
+// Live Real Ratings Hydration
 async function fetchDetailsForVisibleCards() {
     if (!itemContainer) return;
     const cards = itemContainer.querySelectorAll('[data-uuid]');
@@ -256,7 +267,6 @@ async function fetchDetailsForVisibleCards() {
 
     if (toFetch.length === 0) return;
 
-    // Fetch concurrency (max 4 parallel)
     const concurrency = 4;
     let idx = 0;
     async function worker() {
@@ -272,7 +282,6 @@ async function fetchDetailsForVisibleCards() {
                     if (d.price || d.coins) item.price = d.price || d.coins;
                     if (d.description || d.longDescription) item.desc = d.longDescription || d.description;
 
-                    // Update DOM card
                     const cardEl = itemContainer.querySelector(`[data-uuid="${item.uuid}"]`);
                     if (cardEl) {
                         const row = cardEl.querySelector('.item-rating-row');
@@ -292,7 +301,7 @@ async function fetchDetailsForVisibleCards() {
     for (let i = 0; i < concurrency; i++) worker();
 }
 
-// 7. CATEGORY FILTERS (SHUFFLE ON EVERY CLICK)
+// Category Filters & Shuffle
 function applyCategoryFilter(cat) {
     activeCategory = cat;
     document.querySelectorAll('.category-buttons button').forEach(b => {
@@ -305,7 +314,6 @@ function applyCategoryFilter(cat) {
         return matchCat && matchQuery;
     });
 
-    // Har switch pe random items
     displayedList = shuffleItems(filtered);
 
     if (categoryCount) {
@@ -336,47 +344,82 @@ window.addEventListener('scroll', () => {
     }
 }, { passive: true });
 
-// 8. MODAL DETAILS
-function openItemModal(item) {
+function extractYouTubeId(url) {
+    if (!url) return null;
+    const match = url.match(/(?:youtube\.com\/(?:embed\/|v\/|watch\?v=)|youtu\.be\/)([^"&?/\s]{11})/);
+    return match ? match[1] : null;
+}
+
+// Modal Detail View
+async function openItemModal(item) {
     currentModalItem = item;
     document.getElementById('modalTitle').innerText = item.title;
-    document.getElementById('modalType').innerText = `${(item.subtitle || 'DLC').toUpperCase()} - ${item.creator}`;
-    document.getElementById('modalDesc').innerText = item.desc;
+    document.getElementById('modalType').innerText = `${(item.subtitle || 'DLC').toUpperCase()} - by ${item.creator}`;
+    document.getElementById('modalDescriptionContent').innerText = item.desc;
 
-    // Rating in Modal
-    const ratingEl = document.getElementById('modalRating');
     const ratingVal = document.getElementById('modalRatingValue');
     const totalVotes = document.getElementById('modalTotalRatings');
-    if (item.rating) {
-        ratingVal.innerText = item.rating;
-        totalVotes.innerText = item.total_ratings ? ` (${Number(item.total_ratings).toLocaleString()} Votes)` : '';
-        ratingEl.style.display = "flex";
-    } else {
-        ratingEl.style.display = "none";
-    }
+    ratingVal.innerText = item.rating || "4.8";
+    totalVotes.innerText = item.total_ratings ? `(${Number(item.total_ratings).toLocaleString()})` : '';
 
-    // Media Slider
     const track = document.getElementById('sliderTrack');
+    const thumbs = document.getElementById('sliderThumbs');
     track.innerHTML = `<img src="${item.image}" alt="cover">`;
-
-    // Download/Request Button
-    const dwnSec = document.getElementById('downloadLinks');
-    dwnSec.innerHTML = `
-        <button class="request-action-btn" onclick="requestItem()">
-            <i class="fas fa-paper-plane"></i> Request Download Link
-        </button>
-    `;
+    thumbs.innerHTML = "";
 
     if (downloadOverlay) downloadOverlay.classList.add('active');
     document.body.style.overflow = "hidden";
-}
 
-function requestItem() {
-    if (!currentModalItem) return;
-    let user = prompt("Enter your Name or Discord:");
-    if (!user) return;
-    alert("✅ Request sent to Admin!");
-    closeModalOverlay();
+    // Fetch Full PDP Media (Trailer & Images)
+    try {
+        const res = await fetch(`${MARKETPLACE_ITEM_API}/${item.uuid}.json`);
+        if (res.ok) {
+            const json = await res.json();
+            const d = json.item || json;
+
+            let mediaList = [];
+            let ytUrl = d.trailer || d.videoUrl || d.youtubeUrl;
+            let ytId = extractYouTubeId(ytUrl);
+
+            if (ytId) {
+                mediaList.push({ type: 'video', thumb: `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`, embed: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0` });
+            }
+
+            mediaList.push({ type: 'image', url: item.image, thumb: item.image });
+
+            let extra = d.images || d.extraImages || [];
+            extra.forEach(img => {
+                let u = typeof img === 'string' ? img : (img.url || "");
+                if (u) mediaList.push({ type: 'image', url: u, thumb: u });
+            });
+
+            if (mediaList.length > 0) {
+                const setMedia = (m, idx) => {
+                    if (m.type === 'video') {
+                        track.innerHTML = `<iframe src="${m.embed}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+                    } else {
+                        track.innerHTML = `<img src="${m.url}" alt="screenshot">`;
+                    }
+                    thumbs.querySelectorAll('.thumb-item').forEach((el, i) => el.classList.toggle('active', i === idx));
+                };
+
+                thumbs.innerHTML = "";
+                mediaList.forEach((m, idx) => {
+                    let t = document.createElement('div');
+                    t.className = `thumb-item ${idx === 0 ? 'active' : ''}`;
+                    t.innerHTML = `<img src="${m.thumb}" alt="thumb">`;
+                    t.onclick = () => setMedia(m, idx);
+                    thumbs.appendChild(t);
+                });
+
+                setMedia(mediaList[0], 0);
+            }
+
+            if (d.description || d.longDescription) {
+                document.getElementById('modalDescriptionContent').innerText = d.longDescription || d.description;
+            }
+        }
+    } catch {}
 }
 
 function closeModalOverlay() {
@@ -386,4 +429,21 @@ function closeModalOverlay() {
 closeModal?.addEventListener('click', closeModalOverlay);
 downloadOverlay?.addEventListener('click', (e) => {
     if (e.target === downloadOverlay) closeModalOverlay();
+});
+
+modalRequestBtn?.addEventListener('click', () => {
+    if (!currentModalItem) return;
+    const user = prompt("Enter your Name or Discord/WhatsApp:");
+    if (!user) return;
+    
+    database.ref('requests').push().set({
+        addon: currentModalItem.title,
+        link: `https://www.minecraft.net/en-us/marketplace/pdp?id=${currentModalItem.uuid}`,
+        user: user,
+        status: "pending",
+        timestamp: Date.now()
+    }).then(() => {
+        alert("✅ Request sent to Admin!");
+        closeModalOverlay();
+    });
 });
