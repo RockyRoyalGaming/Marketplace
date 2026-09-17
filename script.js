@@ -16,15 +16,17 @@ var database = firebase.database();
 // --- CONFIGURATION ---
 const MARKETPLACE_API = 'https://v5-mcsrc.github.io/data/api/marketplace';
 const MARKETPLACE_ITEM_API = 'https://v5-mcsrc.github.io/data/api/marketplace/item';
-const MARKETPLACE_IDB_NAME = 'strike_db_final';
+const MARKETPLACE_IDB_NAME = 'strike_core_v5';
 const MARKETPLACE_IDB_STORE = 'catalog_cache';
 const MARKETPLACE_IDB_KEY = 'all_items';
 const PARALLEL_BATCH_SIZE = 15;
-const ITEMS_PER_PAGE = 30;
+const BATCH_SIZE = 30;
 
 // State
+let availableItems = [];
 let fullCatalog = [];
 let displayedList = [];
+let activeSection = 'catalog';
 let activeCategory = 'all';
 let currentSearch = '';
 let renderedIndex = 0;
@@ -32,38 +34,88 @@ let isRendering = false;
 let currentModalItem = null;
 let detailFetchQueue = new Set();
 
-// DOM
-const itemContainer = document.getElementById('itemContainer');
-const logoLoadIndicator = document.getElementById('logoLoadIndicator');
-const categoryCount = document.getElementById('categoryCount');
-const searchInput = document.getElementById('searchInput');
-const searchBtn = document.getElementById('searchBtn');
-const downloadOverlay = document.getElementById('downloadOverlay');
-const closeModal = document.getElementById('closeModal');
-const modalRequestBtn = document.getElementById('modalRequestBtn');
+// DOM Elements
+const availableGrid = document.getElementById('availableGrid');
+const catalogGrid = document.getElementById('catalogGrid');
+const availableCountEl = document.getElementById('availableCount');
+const catalogNavCount = document.getElementById('catalogNavCount');
+const categoryFilterCount = document.getElementById('categoryFilterCount');
+const catalogScrollLoader = document.getElementById('catalogScrollLoader');
+const itemModal = document.getElementById('itemModal');
 
 window.onload = function() {
-    createStars();
-    initMarketplaceStream();
+    closeAllModals();
+    loadAvailableDLCs();
+    switchMainSection('catalog');
+    initMarketplaceEngine();
 };
 
-function createStars() {
-    const container = document.getElementById('stars');
-    if (!container) return;
-    const frag = document.createDocumentFragment();
-    for (let i = 0; i < 50; i++) {
-        const star = document.createElement('div');
-        star.className = 'star';
-        const size = Math.random() * 2 + 1;
-        star.style.width = star.style.height = `${size}px`;
-        star.style.left = `${Math.random() * 100}%`;
-        star.style.top = `${Math.random() * 100}%`;
-        star.style.setProperty('--anim-dur', `${Math.random() * 3 + 2}s`);
-        frag.appendChild(star);
-    }
-    container.appendChild(frag);
+function closeAllModals() {
+    if (itemModal) itemModal.style.display = "none";
+    let sm = document.getElementById('settingsModal');
+    if (sm) sm.style.display = "none";
+    let tm = document.getElementById('tutorialModal');
+    if (tm) tm.style.display = "none";
 }
 
+function switchMainSection(section) {
+    activeSection = section;
+    document.querySelectorAll('.main-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+
+    if (section === 'available') {
+        document.getElementById('tabBtnAvailable').classList.add('active');
+        document.getElementById('sectionAvailable').classList.add('active');
+    } else {
+        document.getElementById('tabBtnCatalog').classList.add('active');
+        document.getElementById('sectionCatalog').classList.add('active');
+    }
+}
+
+// 1. FIREBASE AVAILABLE DLCS
+function loadAvailableDLCs() {
+    database.ref('market_items').on('value', snapshot => {
+        availableItems = [];
+        if (snapshot.exists()) {
+            snapshot.forEach(child => {
+                availableItems.push({ id: child.key, ...child.val() });
+            });
+        }
+        if (availableCountEl) availableCountEl.innerText = availableItems.length;
+        renderAvailableItems(availableItems);
+    });
+}
+
+function renderAvailableItems(items) {
+    if (!availableGrid) return;
+    availableGrid.innerHTML = "";
+    if (items.length === 0) {
+        availableGrid.innerHTML = "<p style='color:#666; text-align:center; grid-column:1/-1; padding:30px;'>No available packs uploaded yet.</p>";
+        return;
+    }
+
+    items.forEach(item => {
+        let thumb = (item.images && item.images[0]) ? item.images[0] : "https://placehold.co/300x170/1e293b/38bdf8?text=Strike+DLC";
+        let card = document.createElement('div');
+        card.className = "item-card";
+        card.innerHTML = `
+            <div class="card-img-wrap">
+                <img src="${thumb}" alt="${item.title}" loading="lazy">
+                <span class="card-badge">${(item.category || 'DLC').toUpperCase()}</span>
+            </div>
+            <div class="card-body">
+                <h3 class="card-title">${item.title}</h3>
+                <div class="card-footer">
+                    <span>${item.creator || 'Strike Partner'}</span>
+                </div>
+            </div>
+        `;
+        card.onclick = () => openItemModal(item, false);
+        availableGrid.appendChild(card);
+    });
+}
+
+// 2. SHUFFLE RANDOMIZER
 function shuffleItems(items) {
     const arr = [...items];
     for (let i = arr.length - 1; i > 0; i--) {
@@ -80,6 +132,16 @@ function formatLargeNumber(value) {
     return String(Math.round(num));
 }
 
+// Map Mojang raw type to standard filter key
+function normalizeCategory(type) {
+    let t = String(type || '').toLowerCase();
+    if (t.includes('world')) return 'world';
+    if (t.includes('skin')) return 'skin';
+    if (t.includes('texture') || t.includes('mashup')) return 'texture';
+    return 'addon';
+}
+
+// 3. INDEXEDDB
 function idbOpen() {
     return new Promise((resolve, reject) => {
         const req = indexedDB.open(MARKETPLACE_IDB_NAME, 1);
@@ -103,7 +165,7 @@ async function idbGet(key) {
             req.onsuccess = () => resolve(req.result || null);
             req.onerror = () => resolve(null);
         });
-    } catch (e) { return null; }
+    } catch { return null; }
 }
 
 async function idbSet(key, val) {
@@ -115,19 +177,19 @@ async function idbSet(key, val) {
             tx.oncomplete = () => resolve(true);
             tx.onerror = () => resolve(false);
         });
-    } catch (e) { return false; }
+    } catch { return false; }
 }
 
-// Parallel Stream Loader
-async function initMarketplaceStream() {
+// 4. STREAMING ENGINE
+async function initMarketplaceEngine() {
     try {
         const cached = await idbGet(MARKETPLACE_IDB_KEY);
         if (cached && Array.isArray(cached.items) && cached.items.length >= 20000) {
             fullCatalog = cached.items;
-            onStreamComplete();
+            applyCatalogFilters();
             return;
         }
-    } catch (e) {}
+    } catch {}
 
     let allItems = [];
     let currentPage = 1;
@@ -162,33 +224,34 @@ async function initMarketplaceStream() {
                     img = `https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${id}/Thumbnail_0.jpg`;
                 }
 
+                let normCat = normalizeCategory(item.packType || item.category || item.type);
+
                 allItems.push({
-                    uuid: id,
+                    id: id,
                     title: item.title || item.name || "Minecraft DLC",
                     creator: item.author || item.creator || item.creatorName || "Mojang Partner",
-                    category: (item.packType || item.category || item.type || "addons").toLowerCase(),
-                    subtitle: item.type || "DLC",
+                    category: normCat,
+                    displayCategory: (item.type || normCat).toUpperCase(),
                     rating: item.rating ? Number(item.rating).toFixed(1) : null,
                     total_ratings: item.ratingCount || item.totalRatings || null,
                     desc: item.longDescription || item.description || item.snippet || item.desc || "Official Minecraft Marketplace DLC.",
                     image: img,
-                    price: item.price || item.coins || null,
+                    coinPrice: item.price || item.coins || null,
                     _detailLoaded: false
                 });
             });
 
             const seen = new Set();
             fullCatalog = allItems.filter(el => {
-                const dup = seen.has(el.uuid);
-                seen.add(el.uuid);
+                const dup = seen.has(el.id);
+                seen.add(el.id);
                 return !dup;
             });
 
-            let pct = Math.min(100, Math.floor((fullCatalog.length / TOTAL_EXPECTED) * 100));
-            if (logoLoadIndicator) logoLoadIndicator.innerText = `LOADING ITEMS ${pct}%`;
+            if (catalogNavCount) catalogNavCount.innerText = fullCatalog.length.toLocaleString();
 
             if (currentPage === 1 && fullCatalog.length > 0) {
-                applyCategoryFilter('all');
+                applyCatalogFilters();
             }
 
             currentPage += PARALLEL_BATCH_SIZE;
@@ -201,64 +264,61 @@ async function initMarketplaceStream() {
         await new Promise(r => setTimeout(r, 60));
     }
 
-    onStreamComplete();
+    applyCatalogFilters();
 }
 
-function onStreamComplete() {
-    if (logoLoadIndicator) logoLoadIndicator.innerText = `${fullCatalog.length.toLocaleString()} ITEMS LOADED`;
-    applyCategoryFilter(activeCategory);
-}
-
-// Render Batch Cards
-function renderBatch() {
+// 5. RENDER BATCH
+function renderBatchCards() {
     if (isRendering || renderedIndex >= displayedList.length) return;
     isRendering = true;
+    if (catalogScrollLoader) catalogScrollLoader.style.display = "block";
 
-    const slice = displayedList.slice(renderedIndex, renderedIndex + ITEMS_PER_PAGE);
+    const slice = displayedList.slice(renderedIndex, renderedIndex + BATCH_SIZE);
 
     slice.forEach(item => {
-        const itemEl = document.createElement('div');
-        itemEl.className = "item";
-        itemEl.dataset.uuid = item.uuid;
+        let card = document.createElement('div');
+        card.className = "item-card";
+        card.dataset.uuid = item.id;
 
-        let ratingHtml = item.rating ? `<div class="rating-block"><i class="fas fa-star"></i><span>${item.rating}</span></div>` : `<div></div>`;
-        let votesHtml = item.total_ratings ? `<div class="rating-block total-ratings-block"><i class="fas fa-fire"></i><span>${formatLargeNumber(item.total_ratings)}</span></div>` : ``;
+        let ratingHtml = item.rating ? `<span>⭐ ${item.rating}</span>` : `<span>⭐ 4.5</span>`;
+        let votesHtml = item.total_ratings ? `<span>🔥 ${formatLargeNumber(item.total_ratings)}</span>` : ``;
 
-        itemEl.innerHTML = `
-            <div class="item-content">
-                <h2>${item.title}</h2>
-                <div class="title-row">
-                    <p class="subtitle">${item.subtitle || 'DLC'} by ${item.creator}</p>
-                </div>
-                <div class="item-rating-row">
+        card.innerHTML = `
+            <div class="card-img-wrap">
+                <img src="${item.image}" alt="${item.title}" loading="lazy" onerror="this.onerror=null; this.src='https://content2.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${item.id}/Thumbnail_0.jpg';">
+                <span class="card-badge">${item.displayCategory}</span>
+            </div>
+            <div class="card-body">
+                <div class="card-top-bar">
                     ${ratingHtml}
                     ${votesHtml}
                 </div>
-                <div class="img-wrapper">
-                    <img src="${item.image}" alt="${item.title}" loading="lazy" onerror="this.onerror=null; this.src='https://content2.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${item.uuid}/Thumbnail_0.jpg';">
+                <h3 class="card-title">${item.title}</h3>
+                <div class="card-footer">
+                    <span>${item.creator}</span>
                 </div>
             </div>
         `;
-
-        itemEl.onclick = () => openItemModal(item);
-        itemContainer.appendChild(itemEl);
+        card.onclick = () => openItemModal(item, true);
+        catalogGrid.appendChild(card);
     });
 
     renderedIndex += slice.length;
     isRendering = false;
+    if (catalogScrollLoader) catalogScrollLoader.style.display = "none";
 
-    setTimeout(fetchDetailsForVisibleCards, 120);
+    setTimeout(fetchDetailsForVisibleCards, 150);
 }
 
-// Live Real Ratings Hydration
+// Visible Cards Live Hydration
 async function fetchDetailsForVisibleCards() {
-    if (!itemContainer) return;
-    const cards = itemContainer.querySelectorAll('[data-uuid]');
+    if (!catalogGrid) return;
+    const cards = catalogGrid.querySelectorAll('[data-uuid]');
     const toFetch = [];
 
     cards.forEach(el => {
         const uuid = el.dataset.uuid;
-        const item = fullCatalog.find(i => i.uuid === uuid);
+        const item = fullCatalog.find(i => i.id === uuid);
         if (item && !item._detailLoaded && !detailFetchQueue.has(uuid)) {
             toFetch.push(item);
             detailFetchQueue.add(uuid);
@@ -273,22 +333,22 @@ async function fetchDetailsForVisibleCards() {
         while (idx < toFetch.length) {
             const item = toFetch[idx++];
             try {
-                const res = await fetch(`${MARKETPLACE_ITEM_API}/${item.uuid}.json`);
+                const res = await fetch(`${MARKETPLACE_ITEM_API}/${item.id}.json`);
                 if (res.ok) {
                     const json = await res.json();
                     const d = json.item || json;
                     if (d.rating) item.rating = Number(d.rating).toFixed(1);
                     if (d.ratingCount || d.totalRatings) item.total_ratings = d.ratingCount || d.totalRatings;
-                    if (d.price || d.coins) item.price = d.price || d.coins;
+                    if (d.price || d.coins) item.coinPrice = d.price || d.coins;
                     if (d.description || d.longDescription) item.desc = d.longDescription || d.description;
 
-                    const cardEl = itemContainer.querySelector(`[data-uuid="${item.uuid}"]`);
+                    const cardEl = catalogGrid.querySelector(`[data-uuid="${item.id}"]`);
                     if (cardEl) {
-                        const row = cardEl.querySelector('.item-rating-row');
-                        if (row) {
-                            row.innerHTML = `
-                                <div class="rating-block"><i class="fas fa-star"></i><span>${item.rating || '4.8'}</span></div>
-                                ${item.total_ratings ? `<div class="rating-block total-ratings-block"><i class="fas fa-fire"></i><span>${formatLargeNumber(item.total_ratings)}</span></div>` : ''}
+                        const topBar = cardEl.querySelector('.card-top-bar');
+                        if (topBar) {
+                            topBar.innerHTML = `
+                                <span>⭐ ${item.rating || '4.8'}</span>
+                                ${item.total_ratings ? `<span>🔥 ${formatLargeNumber(item.total_ratings)}</span>` : ''}
                             `;
                         }
                     }
@@ -301,46 +361,14 @@ async function fetchDetailsForVisibleCards() {
     for (let i = 0; i < concurrency; i++) worker();
 }
 
-// Category Filters & Shuffle
-function applyCategoryFilter(cat) {
-    activeCategory = cat;
-    document.querySelectorAll('.category-buttons button').forEach(b => {
-        b.classList.toggle('active', b.dataset.filter === cat);
-    });
-
-    let filtered = fullCatalog.filter(i => {
-        let matchCat = (cat === 'all') || (i.category.includes(cat));
-        let matchQuery = !currentSearch || i.title.toLowerCase().includes(currentSearch) || i.creator.toLowerCase().includes(currentSearch);
-        return matchCat && matchQuery;
-    });
-
-    displayedList = shuffleItems(filtered);
-
-    if (categoryCount) {
-        categoryCount.innerText = `${displayedList.length.toLocaleString()} ${cat.toUpperCase()}`;
-    }
-
-    renderedIndex = 0;
-    if (itemContainer) itemContainer.innerHTML = "";
-    renderBatch();
-}
-
-document.querySelectorAll('.category-buttons button').forEach(btn => {
-    btn.onclick = () => applyCategoryFilter(btn.dataset.filter || 'all');
-});
-
-// Search
-function handleSearch() {
-    currentSearch = (searchInput.value || '').trim().toLowerCase();
-    applyCategoryFilter(activeCategory);
-}
-searchInput?.addEventListener('keyup', handleSearch);
-searchBtn?.addEventListener('click', handleSearch);
-
 // Infinite Scroll
 window.addEventListener('scroll', () => {
-    if (window.innerHeight + window.pageYOffset >= document.documentElement.scrollHeight - 600) {
-        renderBatch();
+    if (activeSection === 'catalog') {
+        const scrollPos = window.innerHeight + window.pageYOffset;
+        const threshold = document.documentElement.scrollHeight - 1000;
+        if (scrollPos >= threshold) {
+            renderBatchCards();
+        }
     }
 }, { passive: true });
 
@@ -350,100 +378,248 @@ function extractYouTubeId(url) {
     return match ? match[1] : null;
 }
 
-// Modal Detail View
-async function openItemModal(item) {
+// 6. PDP MODAL (TRAILER, PRICE & SCREENSHOTS)
+async function openItemModal(item, isCatalogItem) {
     currentModalItem = item;
     document.getElementById('modalTitle').innerText = item.title;
-    document.getElementById('modalType').innerText = `${(item.subtitle || 'DLC').toUpperCase()} - by ${item.creator}`;
-    document.getElementById('modalDescriptionContent').innerText = item.desc;
+    document.getElementById('modalTag').innerText = item.displayCategory;
+    document.getElementById('modalDesc').innerText = item.desc;
 
-    const ratingVal = document.getElementById('modalRatingValue');
-    const totalVotes = document.getElementById('modalTotalRatings');
-    ratingVal.innerText = item.rating || "4.8";
-    totalVotes.innerText = item.total_ratings ? `(${Number(item.total_ratings).toLocaleString()})` : '';
+    // Reset Price
+    const priceText = document.getElementById('modalPriceText');
+    const priceRow = document.getElementById('modalPriceRow');
+    if (item.coinPrice) {
+        priceText.innerText = `🪙 ${item.coinPrice} Minecoins`;
+        priceRow.style.display = "block";
+    } else {
+        priceRow.style.display = "none";
+    }
 
-    const track = document.getElementById('sliderTrack');
-    const thumbs = document.getElementById('sliderThumbs');
-    track.innerHTML = `<img src="${item.image}" alt="cover">`;
-    thumbs.innerHTML = "";
+    // Reset Votes
+    const votesEl = document.getElementById('modalRatingVotes');
+    const starsEl = document.getElementById('modalRatingStars');
+    votesEl.innerText = item.total_ratings ? `(${Number(item.total_ratings).toLocaleString()})` : "";
+    starsEl.innerText = "⭐".repeat(Math.round(Number(item.rating || 5)));
 
-    if (downloadOverlay) downloadOverlay.classList.add('active');
-    document.body.style.overflow = "hidden";
+    const stage = document.getElementById('mediaStage');
+    const strip = document.getElementById('thumbStrip');
+    if (stage) stage.innerHTML = `<img src="${item.image}" alt="Preview">`;
+    if (strip) strip.innerHTML = "";
 
-    // Fetch Full PDP Media (Trailer & Images)
+    const panoSec = document.getElementById('panoramaSection');
+    if (panoSec) panoSec.style.display = "none";
+
+    const dwnSec = document.getElementById('modalDownloadSection');
+    const reqSec = document.getElementById('modalRequestSection');
+
+    if (isCatalogItem) {
+        if (dwnSec) dwnSec.style.display = "none";
+        if (reqSec) reqSec.style.display = "block";
+        fetchItemDetails(item.id);
+    } else {
+        if (dwnSec) dwnSec.style.display = "block";
+        if (reqSec) reqSec.style.display = "none";
+        renderModalDownloadLinks(item);
+    }
+
+    if (itemModal) itemModal.style.display = "flex";
+}
+
+async function fetchItemDetails(uuid) {
+    if (!uuid) return;
     try {
-        const res = await fetch(`${MARKETPLACE_ITEM_API}/${item.uuid}.json`);
-        if (res.ok) {
-            const json = await res.json();
-            const d = json.item || json;
+        const res = await fetch(`${MARKETPLACE_ITEM_API}/${uuid}.json`);
+        if (!res.ok) return;
+        const details = await res.json();
+        const data = details.item || details;
 
-            let mediaList = [];
-            let ytUrl = d.trailer || d.videoUrl || d.youtubeUrl;
-            let ytId = extractYouTubeId(ytUrl);
+        let mediaItems = [];
+        let ytUrl = data.trailer || data.videoUrl || data.youtubeUrl;
+        let ytId = extractYouTubeId(ytUrl);
 
-            if (ytId) {
-                mediaList.push({ type: 'video', thumb: `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`, embed: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0` });
-            }
+        if (ytId) {
+            mediaItems.push({
+                type: 'video',
+                thumb: `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`,
+                embed: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`
+            });
+        }
 
-            mediaList.push({ type: 'image', url: item.image, thumb: item.image });
+        if (currentModalItem && currentModalItem.image) {
+            mediaItems.push({ type: 'image', url: currentModalItem.image, thumb: currentModalItem.image });
+        }
 
-            let extra = d.images || d.extraImages || [];
-            extra.forEach(img => {
-                let u = typeof img === 'string' ? img : (img.url || "");
-                if (u) mediaList.push({ type: 'image', url: u, thumb: u });
+        let extra = [];
+        if (Array.isArray(data.images)) extra.push(...data.images);
+        if (Array.isArray(data.extraImages)) extra.push(...data.extraImages);
+
+        extra.forEach(img => {
+            let u = typeof img === 'string' ? img : (img.url || "");
+            if (u) mediaItems.push({ type: 'image', url: u, thumb: u });
+        });
+
+        const stage = document.getElementById('mediaStage');
+        const strip = document.getElementById('thumbStrip');
+        if (stage && strip && mediaItems.length > 0) {
+            strip.innerHTML = "";
+
+            const setStageMedia = (mediaItem, activeIndex) => {
+                if (mediaItem.type === 'video') {
+                    stage.innerHTML = `<iframe src="${mediaItem.embed}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+                } else {
+                    stage.innerHTML = `<img src="${mediaItem.url}" alt="Screen">`;
+                }
+                strip.querySelectorAll('.thumb-strip-item').forEach((el, i) => {
+                    el.classList.toggle('active', i === activeIndex);
+                });
+            };
+
+            mediaItems.forEach((mediaItem, index) => {
+                const thumbBtn = document.createElement('div');
+                thumbBtn.className = `thumb-strip-item ${index === 0 ? 'active' : ''}`;
+                thumbBtn.innerHTML = `
+                    <img src="${mediaItem.thumb}" alt="thumb" onerror="this.parentElement.remove();">
+                    ${mediaItem.type === 'video' ? '<div class="video-play-icon"><i class="fas fa-play"></i></div>' : ''}
+                `;
+                thumbBtn.onclick = () => setStageMedia(mediaItem, index);
+                strip.appendChild(thumbBtn);
             });
 
-            if (mediaList.length > 0) {
-                const setMedia = (m, idx) => {
-                    if (m.type === 'video') {
-                        track.innerHTML = `<iframe src="${m.embed}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
-                    } else {
-                        track.innerHTML = `<img src="${m.url}" alt="screenshot">`;
-                    }
-                    thumbs.querySelectorAll('.thumb-item').forEach((el, i) => el.classList.toggle('active', i === idx));
-                };
-
-                thumbs.innerHTML = "";
-                mediaList.forEach((m, idx) => {
-                    let t = document.createElement('div');
-                    t.className = `thumb-item ${idx === 0 ? 'active' : ''}`;
-                    t.innerHTML = `<img src="${m.thumb}" alt="thumb">`;
-                    t.onclick = () => setMedia(m, idx);
-                    thumbs.appendChild(t);
-                });
-
-                setMedia(mediaList[0], 0);
-            }
-
-            if (d.description || d.longDescription) {
-                document.getElementById('modalDescriptionContent').innerText = d.longDescription || d.description;
-            }
+            setStageMedia(mediaItems[0], 0);
         }
-    } catch {}
+
+        let coins = data.price || data.coins || data.coinPrice;
+        if (coins) {
+            document.getElementById('modalPriceText').innerText = `🪙 ${coins} Minecoins`;
+            document.getElementById('modalPriceRow').style.display = "block";
+        }
+
+        let votes = data.ratingCount || data.totalRatings;
+        if (votes) {
+            document.getElementById('modalRatingVotes').innerText = `(${Number(votes).toLocaleString()})`;
+        }
+
+        let fullDesc = data.longDescription || data.description;
+        if (fullDesc) {
+            document.getElementById('modalDesc').innerText = fullDesc;
+        }
+
+        let panoUrl = data.panoramaUrl || data.panoramaImage || data.panorama;
+        if (typeof panoUrl === 'object') panoUrl = panoUrl?.url;
+        const panoSec = document.getElementById('panoramaSection');
+        const panoImg = document.getElementById('panoramaImg');
+        if (panoUrl && panoSec && panoImg) {
+            panoImg.src = panoUrl;
+            panoSec.style.display = "block";
+        }
+
+    } catch (e) {
+        console.warn(e);
+    }
 }
 
-function closeModalOverlay() {
-    if (downloadOverlay) downloadOverlay.classList.remove('active');
-    document.body.style.overflow = "";
-}
-closeModal?.addEventListener('click', closeModalOverlay);
-downloadOverlay?.addEventListener('click', (e) => {
-    if (e.target === downloadOverlay) closeModalOverlay();
-});
+function renderModalDownloadLinks(item) {
+    const container = document.getElementById('modalLinksContainer');
+    if (!container) return;
+    container.innerHTML = "";
 
-modalRequestBtn?.addEventListener('click', () => {
+    if (item.fileBlocks && item.fileBlocks.length > 0) {
+        item.fileBlocks.forEach(b => {
+            const card = document.createElement('div');
+            card.className = "download-group-card";
+            card.innerHTML = `
+                <div class="section-title">${b.title}</div>
+                <a href="${b.mainLink.url}" target="_blank" class="dwn-option-btn">Download Now</a>
+            `;
+            container.appendChild(card);
+        });
+    } else {
+        container.innerHTML = "<p style='color:#666; font-size:12px;'>No links available.</p>";
+    }
+}
+
+function requestCurrentCatalogItem() {
     if (!currentModalItem) return;
-    const user = prompt("Enter your Name or Discord/WhatsApp:");
-    if (!user) return;
-    
+    const userName = prompt("Enter your Name or Discord/WhatsApp:");
+    if (!userName) return;
+
     database.ref('requests').push().set({
         addon: currentModalItem.title,
-        link: `https://www.minecraft.net/en-us/marketplace/pdp?id=${currentModalItem.uuid}`,
-        user: user,
+        link: `https://www.minecraft.net/en-us/marketplace/pdp?id=${currentModalItem.id}`,
+        user: userName,
         status: "pending",
         timestamp: Date.now()
     }).then(() => {
-        alert("✅ Request sent to Admin!");
-        closeModalOverlay();
+        alert("✅ Request Sent to Admin! Download link will be uploaded soon.");
+        closeModal();
     });
-});
+}
+
+// 7. REAL-TIME SEARCH & CATEGORY FILTERS
+let searchDebounce = null;
+function handleGlobalSearch() {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => {
+        let q = document.getElementById('globalSearch').value.toLowerCase().trim();
+        currentSearch = q;
+
+        if (activeSection === 'available') {
+            let filtered = availableItems.filter(i => (i.title || '').toLowerCase().includes(q) || (i.creator || '').toLowerCase().includes(q));
+            renderAvailableItems(filtered);
+        } else {
+            applyCatalogFilters();
+        }
+    }, 150);
+}
+
+function filterByCategory(cat) {
+    activeCategory = cat;
+    document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
+    if (event && event.target) {
+        let btn = event.target.closest('.cat-pill');
+        if (btn) btn.classList.add('active');
+    }
+
+    if (activeSection === 'available') {
+        let filtered = (cat === 'all') ? availableItems : availableItems.filter(i => (i.category || '').toLowerCase().includes(cat));
+        renderAvailableItems(filtered);
+    } else {
+        applyCatalogFilters();
+    }
+}
+
+function applyCatalogFilters() {
+    let matches = fullCatalog.filter(i => {
+        let matchCat = (activeCategory === 'all') || (i.category === activeCategory);
+        let matchQuery = !currentSearch || i.title.toLowerCase().includes(currentSearch) || i.creator.toLowerCase().includes(currentSearch) || (i.id && i.id.toLowerCase().includes(currentSearch));
+        return matchCat && matchQuery;
+    });
+
+    displayedList = shuffleItems(matches);
+
+    if (categoryFilterCount) {
+        categoryFilterCount.innerText = `${displayedList.length.toLocaleString()} ${activeCategory.toUpperCase()} ITEMS`;
+    }
+
+    renderedIndex = 0;
+    if (catalogGrid) catalogGrid.innerHTML = "";
+    renderBatchCards();
+}
+
+function closeModal() { if (itemModal) itemModal.style.display = "none"; }
+function openSettingsModal() { document.getElementById('settingsModal').style.display = "flex"; }
+function closeSettingsModal() { document.getElementById('settingsModal').style.display = "none"; }
+function openTutorialModal() { document.getElementById('tutorialModal').style.display = "flex"; }
+function closeTutorialModal() { document.getElementById('tutorialModal').style.display = "none"; }
+function openGeneralRequestModal() {
+    let addon = prompt("Which Addon / World do you want?");
+    if (!addon) return;
+    let user = prompt("Your Name / Discord ID:");
+    if (!user) return;
+    database.ref('requests').push().set({
+        addon: addon,
+        user: user,
+        status: "pending",
+        timestamp: Date.now()
+    }).then(() => alert("✅ Request submitted to Admin!"));
+}
