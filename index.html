@@ -1,175 +1,87 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Strike Market - Minecraft Bedrock DLCs</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1" name="viewport"/>
+    <title>Strike Market - Marketplace Catalog</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700&display=swap" rel="stylesheet"/>
+    <link href="./style.css" rel="stylesheet"/>
     
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
+    <div class="stars" id="stars"></div>
+    <div class="themes-overlay" id="themesOverlay"></div>
 
-    <!-- TOP HEADER -->
-    <header class="main-header">
-        <div class="brand">
-            <i class="fas fa-cube brand-icon"></i>
-            <span class="brand-name">STRIKE MARKET</span>
+    <header>
+        <h1 id="logo">STRIKE MARKET</h1>
+        <div class="logo-load-indicator" id="logoLoadIndicator">LOADING ITEMS 0%</div>
+        
+        <div class="search-container">
+            <div class="input-group">
+                <div class="search-wrapper">
+                    <button aria-label="Send request" id="requestButton" type="button"><i class="fas fa-paper-plane"></i></button>
+                    <input autocomplete="off" id="searchInput" placeholder="Search item, creator, UUID..." type="text"/>
+                    <button aria-label="Search" id="searchBtn" type="button"><i class="fas fa-search"></i></button>
+                </div>
+            </div>
         </div>
-        <div class="header-actions">
-            <button class="icon-btn" onclick="openSettingsModal()" title="Settings">
-                <i class="fas fa-cog"></i>
-            </button>
-            <button class="request-btn" onclick="openGeneralRequestModal()">
-                <i class="fas fa-paper-plane"></i> Request
-            </button>
+
+        <div class="category-container">
+            <div class="category-buttons">
+                <button class="active" data-filter="all"><i class="fas fa-infinity" title="All"></i></button>
+                <button data-filter="worlds"><i class="fas fa-globe" title="Worlds"></i></button>
+                <button data-filter="addons"><i class="fas fa-puzzle-piece" title="Addons"></i></button>
+                <button data-filter="textures"><i class="fas fa-image" title="Textures"></i></button>
+                <button data-filter="skins"><i class="fas fa-tshirt" title="Skins"></i></button>
+            </div>
+            <div class="category-count" id="categoryCount">0 ALL</div>
         </div>
     </header>
 
-    <!-- SECTION SWITCHER TABS -->
-    <div class="main-nav-tabs">
-        <button id="tabBtnAvailable" class="main-tab" onclick="switchMainSection('available')">
-            <i class="fas fa-bolt"></i> Available DLCs (<span id="availableCount">0</span>)
-        </button>
-        <button id="tabBtnCatalog" class="main-tab active" onclick="switchMainSection('catalog')">
-            <i class="fas fa-globe"></i> Marketplace Catalog (<span id="catalogNavCount">0</span>)
-        </button>
-    </div>
+    <!-- Main Grid for 37,000+ Items -->
+    <main class="grid-container" id="itemContainer"></main>
 
-    <!-- SEARCH & CONTROLS -->
-    <div class="controls-container">
-        <div class="search-box">
-            <i class="fas fa-search search-icon"></i>
-            <input type="text" id="globalSearch" placeholder="Search by name, creator, or UUID..." onkeyup="handleGlobalSearch()">
-        </div>
-
-        <div class="category-pills">
-            <button class="cat-pill active" onclick="filterByCategory('all')"><i class="fas fa-infinity"></i> All</button>
-            <button class="cat-pill" onclick="filterByCategory('world')"><i class="fas fa-globe"></i> Worlds</button>
-            <button class="cat-pill" onclick="filterByCategory('addon')"><i class="fas fa-puzzle-piece"></i> Addons</button>
-            <button class="cat-pill" onclick="filterByCategory('texture')"><i class="fas fa-layer-group"></i> Textures</button>
-            <button class="cat-pill" onclick="filterByCategory('skin')"><i class="fas fa-tshirt"></i> Skins</button>
-        </div>
-    </div>
-
-    <!-- SECTION 1: AVAILABLE DLCS -->
-    <main id="sectionAvailable" class="content-section">
-        <div id="availableGrid" class="items-grid">
-            <div class="loader-spinner"><i class="fas fa-spinner fa-spin"></i> Loading Available DLCs...</div>
-        </div>
-    </main>
-
-    <!-- SECTION 2: MARKETPLACE CATALOG -->
-    <main id="sectionCatalog" class="content-section active">
-        <div id="catalogProgressContainer" class="progress-box">
-            <div class="progress-labels">
-                <span id="catalogStreamStatus"><i class="fas fa-satellite-dish fa-spin"></i> Initializing Marketplace Catalog...</span>
-                <span id="catalogStreamStats">0 Items (0%)</span>
-            </div>
-            <div class="progress-track">
-                <div id="catalogProgressBar" class="progress-fill"></div>
-            </div>
-        </div>
-
-        <div id="catalogGrid" class="items-grid"></div>
-
-        <div id="catalogScrollLoader" class="scroll-loader">
-            <i class="fas fa-spinner fa-spin"></i> Loading more items...
-        </div>
-    </main>
-
-    <!-- ITEM MODAL -->
-    <div id="itemModal" class="modal-overlay">
-        <div class="modal-content">
-            <button class="modal-close" onclick="closeModal()">&times;</button>
-            
+    <!-- MCF2P Original Detail Modal -->
+    <div class="overlay" id="downloadOverlay">
+        <div class="download-modal">
             <div class="modal-header">
-                <h2 id="modalTitle">Item Title</h2>
-                <span id="modalTag" class="tag-pill">ADDON</span>
-            </div>
-
-            <!-- Video/Main Image Player Screen -->
-            <div class="carousel-container">
-                <div id="mediaStage" class="media-stage"></div>
-            </div>
-
-            <!-- Multi-Image & Video Strip -->
-            <div id="thumbStrip" class="thumb-strip-row"></div>
-
-            <!-- Price & Ratings Bar (Clean, Dynamic) -->
-            <div class="pdp-meta-bar">
-                <div class="price-badge" id="modalPriceRow">
-                    <span id="modalPriceText"></span>
-                </div>
-                <div class="rating-badge" id="modalRatingRow">
-                    <span id="modalRatingStars">⭐⭐⭐⭐⭐</span>
-                    <span id="modalRatingVotes"></span>
+                <h3 class="modal-title" id="modalTitle">Item Title</h3>
+                <div class="modal-actions">
+                    <button class="close-btn" id="closeModal"><i class="fas fa-times"></i></button>
                 </div>
             </div>
-
-            <div class="desc-box">
-                <p id="modalDesc">Loading description...</p>
-            </div>
-
-            <!-- 360 PANORAMA SECTION -->
-            <div id="panoramaSection" class="panorama-section" style="display: none;">
-                <div class="section-title"><i class="fas fa-vr-cardboard"></i> 360° Panorama View</div>
-                <div class="panorama-wrapper">
-                    <img id="panoramaImg" src="" alt="Panorama 360">
-                </div>
-            </div>
-
-            <!-- DOWNLOAD SECTION -->
-            <div id="modalDownloadSection" style="display: none;">
-                <div class="section-title">DOWNLOAD FILES</div>
-                <div id="modalLinksContainer"></div>
-            </div>
-
-            <!-- REQUEST SECTION -->
-            <div id="modalRequestSection" style="display: none;">
-                <button class="request-action-btn" onclick="requestCurrentCatalogItem()">
-                    <i class="fas fa-paper-plane"></i> ⚡ REQUEST THIS DLC FOR FREE
-                </button>
-                <p class="request-hint">Admin will get notified and upload download mirrors soon!</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- SETTINGS MODAL -->
-    <div id="settingsModal" class="modal-overlay">
-        <div class="modal-content small-modal">
-            <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
-            <h2 class="modal-title-center"><i class="fas fa-cog"></i> Settings & Community</h2>
             
-            <div class="social-row">
-                <a href="https://discord.gg/yourserver" target="_blank" class="soc-pill discord"><i class="fab fa-discord"></i> Discord</a>
-                <a href="https://youtube.com/@StrikeMafia" target="_blank" class="soc-pill youtube"><i class="fab fa-youtube"></i> YouTube</a>
-                <a href="https://chat.whatsapp.com/JdeFaKUFV9E3rtpYgk6XdP" target="_blank" class="soc-pill whatsapp"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+            <div class="slider-container" id="modalSliderContainer">
+                <div class="slider-track" id="sliderTrack"></div>
             </div>
 
-            <button class="menu-list-btn" onclick="openTutorialModal()">
-                <span><i class="fas fa-book-open"></i> How to Download & Install</span>
-                <i class="fas fa-chevron-right"></i>
-            </button>
+            <div class="slider-thumbs" id="sliderThumbs"></div>
+
+            <div class="modal-meta-row">
+                <p class="modal-type" id="modalType">Type</p>
+                <div class="modal-rating" id="modalRating">
+                    <i class="fas fa-star"></i>
+                    <span id="modalRatingValue">4.8</span>
+                    <span id="modalTotalRatings"></span>
+                </div>
+            </div>
+
+            <div class="modal-description" id="modalDescription">
+                <div id="modalDescriptionContent">Loading description...</div>
+            </div>
+
+            <div class="download-links" id="downloadLinks">
+                <button class="request-action-btn" id="modalRequestBtn">
+                    <i class="fas fa-paper-plane"></i> Request Download Link
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- TUTORIAL MODAL -->
-    <div id="tutorialModal" class="modal-overlay">
-        <div class="modal-content small-modal">
-            <button class="modal-close" onclick="closeTutorialModal()">&times;</button>
-            <h2 class="modal-title-center"><i class="fas fa-graduation-cap"></i> Download Guide</h2>
-            <div class="guide-text">
-                <p><strong>1.</strong> Select an item from Available DLCs and click Download.</p>
-                <p><strong>2.</strong> Complete the shortener step to unlock the direct cloud link.</p>
-                <p><strong>3.</strong> Tap the downloaded <code>.mcaddon</code> or <code>.mcworld</code> file to import directly into Minecraft.</p>
-            </div>
-        </div>
-    </div>
-
-    <script src="script.js"></script>
+    <script src="./script.js"></script>
 </body>
 </html>
