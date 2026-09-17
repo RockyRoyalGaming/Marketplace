@@ -35,7 +35,7 @@
             <i class="fas fa-bolt"></i> Available DLCs (<span id="availableCount">0</span>)
         </button>
         <button id="tabBtnCatalog" class="main-tab active" onclick="switchMainSection('catalog')">
-            <i class="fas fa-globe"></i> Marketplace Catalog (<span id="catalogNavCount">Loading...</span>)
+            <i class="fas fa-globe"></i> Marketplace Catalog (<span id="catalogNavCount">0</span>)
         </button>
     </div>
 
@@ -62,13 +62,13 @@
         </div>
     </main>
 
-    <!-- ================= SECTION 2: MARKETPLACE CATALOG (PLAYFAB ENGINE) ================= -->
+    <!-- ================= SECTION 2: MARKETPLACE CATALOG (OFFICIAL DATABASE) ================= -->
     <main id="sectionCatalog" class="content-section active">
         <!-- LIVE STREAM PROGRESS BAR -->
         <div id="catalogProgressContainer" class="progress-box">
             <div class="progress-labels">
-                <span id="catalogStreamStatus"><i class="fas fa-satellite-dish fa-spin"></i> Connecting to PlayFab CDN...</span>
-                <span id="catalogStreamStats">0% Loaded</span>
+                <span id="catalogStreamStatus"><i class="fas fa-satellite-dish fa-spin"></i> Initializing Marketplace Catalog...</span>
+                <span id="catalogStreamStats">0 Items (0%)</span>
             </div>
             <div class="progress-track">
                 <div id="catalogProgressBar" class="progress-fill"></div>
@@ -92,13 +92,16 @@
                 <span id="modalTag" class="tag-pill">ADDON</span>
             </div>
 
-            <!-- In-Game Screenshots Track -->
+            <!-- In-Game Screenshots Carousel Track -->
             <div class="carousel-container">
                 <div id="carouselTrack" class="carousel-track"></div>
             </div>
 
-            <!-- Description -->
+            <!-- Price & Description -->
             <div class="desc-box">
+                <div id="modalPriceRow" style="display:none; align-items:center; gap:6px; margin-bottom:8px; color:#fbbf24; font-weight:bold;">
+                    <span id="modalPriceText">🪙 Minecoins</span>
+                </div>
                 <p id="modalDesc">Loading description...</p>
             </div>
 
