@@ -1,0 +1,28 @@
+name: Update Mojang Data
+
+on:
+  workflow_dispatch: # Manually chalane ke liye
+  schedule:
+    - cron: '0 0 * * *' # Roz raat ko Mojang se naya data laayega
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Fetch from Mojang Services
+        run: node fetch-mojang.js
+
+      - name: Commit and push if changed
+        run: |
+          git config --global user.name "Strike-Bot"
+          git config --global user.email "bot@strike.market"
+          git add marketplace-data.json
+          git commit -m "Auto-update official Mojang Marketplace data" || exit 0
+          git push
