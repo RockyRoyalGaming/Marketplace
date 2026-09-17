@@ -22,7 +22,7 @@ let activeCategory = 'all';
 let currentSearch = '';
 let currentPage = 1;
 const TOTAL_PAGES = 78;
-let isFetching = false;
+let isFetchingPage = false;
 let currentModalItem = null;
 
 // DOM Elements
@@ -41,7 +41,7 @@ window.onload = function() {
     closeAllModals();
     loadAvailableDLCs();
     switchMainSection('catalog');
-    startCatalogSync();
+    fetchMarketplacePage(1);
 };
 
 function closeAllModals() {
@@ -113,45 +113,22 @@ function renderAvailableItems(items) {
     });
 }
 
-// 2. DUAL-ENGINE CATALOG SYNC
-async function startCatalogSync() {
-    if (catalogProgressContainer) catalogProgressContainer.style.display = "block";
-    if (catalogStreamStatus) catalogStreamStatus.innerHTML = `<i class="fas fa-satellite-dish fa-spin"></i> Initializing catalog engine...`;
-    
-    // Check local JSON first
-    try {
-        let localRes = await fetch('./marketplace-data.json');
-        if (localRes.ok) {
-            let data = await localRes.json();
-            if (Array.isArray(data) && data.length > 0) {
-                fullCatalog = data;
-                onCatalogSynced();
-                return;
-            }
-        }
-    } catch (e) {
-        // Fallback to direct stream
-    }
-
-    // Direct stream if local JSON is missing
-    fetchCatalogStream(1);
-}
-
-async function fetchCatalogStream(page) {
-    if (isFetching || page > TOTAL_PAGES) return;
-    isFetching = true;
+// 2. FETCH FULL PAGES (ALL ITEMS FROM EACH PAGE)
+async function fetchMarketplacePage(page) {
+    if (isFetchingPage || page > TOTAL_PAGES) return;
+    isFetchingPage = true;
 
     if (catalogScrollLoader) catalogScrollLoader.style.display = "block";
-    if (page === 1 && catalogStreamStatus) {
-        catalogStreamStatus.innerHTML = `<i class="fas fa-download fa-spin"></i> Streaming live marketplace...`;
+    if (catalogStreamStatus) {
+        catalogStreamStatus.innerHTML = `<i class="fas fa-satellite-dish fa-spin"></i> Loading page ${page}/${TOTAL_PAGES}...`;
     }
 
     try {
         const res = await fetch(`https://v5-mcsrc.github.io/data/api/marketplace/page/page-${page}.json`);
-        if (!res.ok) throw new Error("HTTP Error " + res.status);
-
-        const data = await res.json();
-        const rawList = Array.isArray(data) ? data : (data.items || []);
+        if (!res.ok) throw new Error("HTTP error " + res.status);
+        
+        const raw = await res.json();
+        const rawList = Array.isArray(raw) ? raw : (raw.items || []);
 
         const parsed = rawList.map(item => {
             let img = item.thumbnail || item.image || item.keyArt || "";
@@ -160,13 +137,14 @@ async function fetchCatalogStream(page) {
             }
             return {
                 id: item.id || item.uuid,
-                title: item.title || item.name || "Minecraft DLC",
+                title: item.title || item.name || "Minecraft Item",
                 creator: item.author || item.creator || item.creatorName || "Mojang Partner",
                 category: (item.packType || item.category || item.type || "addon").toLowerCase(),
                 rating: item.rating ? Number(item.rating).toFixed(1) : "4.8",
-                views: item.views ? Number(item.views).toLocaleString() : Math.floor(Math.random() * 2000 + 200).toLocaleString(),
+                views: item.totalRatings ? Number(item.totalRatings).toLocaleString() : (item.views ? Number(item.views).toLocaleString() : "1,800"),
                 desc: item.description || item.snippet || item.desc || "Official Minecraft Marketplace DLC.",
                 image: img,
+                coinPrice: item.price || item.coins || 660,
                 panorama: item.panorama || ""
             };
         });
@@ -176,56 +154,33 @@ async function fetchCatalogStream(page) {
 
         let pct = Math.floor((currentPage / TOTAL_PAGES) * 100);
         if (catalogProgressBar) catalogProgressBar.style.width = pct + "%";
-        if (catalogStreamStats) catalogStreamStats.innerText = `${fullCatalog.length.toLocaleString()} Loaded (${pct}%)`;
+        if (catalogStreamStats) catalogStreamStats.innerText = `${fullCatalog.length.toLocaleString()} Items (${pct}%)`;
         if (catalogNavCount) catalogNavCount.innerText = fullCatalog.length.toLocaleString();
 
-        if (page === 1) {
-            if (catalogProgressContainer) {
-                setTimeout(() => catalogProgressContainer.style.display = "none", 1200);
-            }
-        }
+        appendCardsToGrid(parsed);
 
-        applyCatalogFilters();
+        if (page === 1 && catalogProgressContainer) {
+            setTimeout(() => catalogProgressContainer.style.display = "none", 1000);
+        }
 
     } catch (err) {
-        console.error("Stream error:", err);
-        if (catalogStreamStatus) {
-            catalogStreamStatus.innerHTML = `<span style="color:#ef4444;"><i class="fas fa-exclamation-triangle"></i> Stream retry. <a href="javascript:fetchCatalogStream(${page})" style="color:#38bdf8;">Retry</a></span>`;
-        }
+        console.error("Fetch page error:", err);
     }
 
-    isFetching = false;
+    isFetchingPage = false;
     if (catalogScrollLoader) catalogScrollLoader.style.display = "none";
 }
 
-function onCatalogSynced() {
-    const total = fullCatalog.length;
-    if (catalogNavCount) catalogNavCount.innerText = total.toLocaleString();
-    if (catalogStreamStats) catalogStreamStats.innerText = `${total.toLocaleString()} Items Active`;
-    if (catalogProgressBar) catalogProgressBar.style.width = "100%";
-    if (catalogStreamStatus) catalogStreamStatus.innerHTML = `<i class="fas fa-check-circle" style="color:#10b981;"></i> Synced`;
-
-    setTimeout(() => {
-        if (catalogProgressContainer) catalogProgressContainer.style.display = "none";
-    }, 700);
-
-    applyCatalogFilters();
-}
-
-// 3. RENDER ITEMS
-function renderCatalogBatch(itemsToRender) {
+// 3. RENDER CARDS DIRECTLY
+function appendCardsToGrid(items) {
     if (!catalogGrid) return;
-    if (currentPage === 1 && !currentSearch && activeCategory === 'all') {
-        catalogGrid.innerHTML = "";
-    }
-
-    itemsToRender.forEach(item => {
+    items.forEach(item => {
         let card = document.createElement('div');
         card.className = "item-card";
 
         card.innerHTML = `
             <div class="card-img-wrap">
-                <img src="${item.image}" alt="${item.title}" loading="lazy" onerror="this.onerror=null; this.src='https://content2.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${item.id}/${item.id}_Thumbnail_0.jpg';">
+                <img src="${item.image}" alt="${item.title}" loading="lazy" onerror="this.onerror=null; this.src='https://content2.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${item.id}/Thumbnail_0.jpg';">
                 <span class="card-badge" style="background:#10b981;">${item.category.toUpperCase()}</span>
             </div>
             <div class="card-body">
@@ -244,40 +199,33 @@ function renderCatalogBatch(itemsToRender) {
     });
 }
 
-// Infinite Scroll
+// Robust Infinite Scroll for Mobile & Desktop
 window.addEventListener('scroll', () => {
     if (activeSection === 'catalog') {
-        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 900) {
-            if (!isFetching && currentPage < TOTAL_PAGES) {
-                fetchCatalogStream(currentPage + 1);
+        const scrollPosition = window.innerHeight + window.pageYOffset;
+        const threshold = document.documentElement.scrollHeight - 1200;
+        if (scrollPosition >= threshold) {
+            if (!isFetchingPage && currentPage < TOTAL_PAGES) {
+                fetchMarketplacePage(currentPage + 1);
             }
         }
     }
-});
+}, { passive: true });
 
-// 4. MODAL POPUP
-function openItemModal(item, isCatalogItem) {
+// 4. MODAL POPUP WITH FULL SCREENSHOTS, COINS & PANORAMA
+async function openItemModal(item, isCatalogItem) {
     currentModalItem = item;
     document.getElementById('modalTitle').innerText = item.title;
     document.getElementById('modalTag').innerText = item.category.toUpperCase();
     document.getElementById('modalDesc').innerText = item.desc;
 
+    // Reset Carousel & Panorama
     const track = document.getElementById('carouselTrack');
-    track.innerHTML = "";
-    let im = document.createElement('img');
-    im.src = item.image;
-    im.className = "carousel-img";
-    track.appendChild(im);
+    track.innerHTML = `<img src="${item.image}" class="carousel-img">`;
 
-    // Panorama
     const panoSec = document.getElementById('panoramaSection');
     const panoImg = document.getElementById('panoramaImg');
-    if (item.panorama && panoSec && panoImg) {
-        panoImg.src = item.panorama;
-        panoSec.style.display = "block";
-    } else if (panoSec) {
-        panoSec.style.display = "none";
-    }
+    if (panoSec) panoSec.style.display = "none";
 
     const dwnSec = document.getElementById('modalDownloadSection');
     const reqSec = document.getElementById('modalRequestSection');
@@ -285,6 +233,9 @@ function openItemModal(item, isCatalogItem) {
     if (isCatalogItem) {
         if (dwnSec) dwnSec.style.display = "none";
         if (reqSec) reqSec.style.display = "block";
+
+        // Fetch PDP Details (Screenshots, Panorama & Real Coins)
+        fetchItemDetails(item.id);
     } else {
         if (dwnSec) dwnSec.style.display = "block";
         if (reqSec) reqSec.style.display = "none";
@@ -292,6 +243,56 @@ function openItemModal(item, isCatalogItem) {
     }
 
     if (itemModal) itemModal.style.display = "flex";
+}
+
+// Fetch Full Screenshots, Panorama, and Minicoins for the Item
+async function fetchItemDetails(uuid) {
+    if (!uuid) return;
+    try {
+        const res = await fetch(`https://v5-mcsrc.github.io/data/api/marketplace/item?id=${uuid}.json`);
+        if (!res.ok) return;
+        const details = await res.json();
+
+        // 1. Extra In-Game Screenshots
+        const track = document.getElementById('carouselTrack');
+        if (details.images && details.images.length > 0) {
+            track.innerHTML = "";
+            details.images.forEach(img => {
+                let imgUrl = typeof img === 'string' ? img : (img.url || "");
+                if (imgUrl) {
+                    let im = document.createElement('img');
+                    im.src = imgUrl;
+                    im.className = "carousel-img";
+                    track.appendChild(im);
+                }
+            });
+        }
+
+        // 2. Panorama 360 View
+        const panoSec = document.getElementById('panoramaSection');
+        const panoImg = document.getElementById('panoramaImg');
+        let panoramaUrl = details.panorama || (details.images && details.images.find(im => im.type === 'Panorama' || (im.url && im.url.includes('Panorama'))));
+        if (typeof panoramaUrl === 'object') panoramaUrl = panoramaUrl.url;
+
+        if (panoramaUrl && panoSec && panoImg) {
+            panoImg.src = panoramaUrl;
+            panoSec.style.display = "block";
+        }
+
+        // 3. Minicoins Display in Modal
+        let descBox = document.getElementById('modalDesc');
+        if (details.price || details.coinPrice) {
+            let coins = details.price || details.coinPrice;
+            descBox.innerHTML = `
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px; color:#fbbf24; font-weight:bold;">
+                    <span>🪙 ${coins} Minecoins</span>
+                </div>
+                ${details.description || details.desc || item.desc}
+            `;
+        }
+    } catch (e) {
+        console.warn("Could not load item details:", e);
+    }
 }
 
 function renderModalDownloadLinks(item) {
@@ -369,7 +370,7 @@ function applyCatalogFilters() {
     });
 
     if (catalogGrid) catalogGrid.innerHTML = "";
-    renderCatalogBatch(displayedList);
+    appendCardsToGrid(displayedList);
 }
 
 function closeModal() { if (itemModal) itemModal.style.display = "none"; }
