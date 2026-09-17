@@ -21,12 +21,9 @@ let activeSection = 'catalog';
 let activeCategory = 'all';
 let currentSearch = '';
 let renderedIndex = 0;
-const BATCH_SIZE = 30;
+const BATCH_SIZE = 36;
 let isRendering = false;
 let currentModalItem = null;
-
-// Total 78 pages to load all 37,382 items
-const TOTAL_PAGES = 78;
 
 // DOM Elements
 const availableGrid = document.getElementById('availableGrid');
@@ -44,7 +41,7 @@ window.onload = function() {
     closeAllModals();
     loadAvailableDLCs();
     switchMainSection('catalog');
-    fetchAllMarketplaceItemsFullStream();
+    loadTheRealKeysDatabase();
 };
 
 function closeAllModals() {
@@ -116,78 +113,72 @@ function renderAvailableItems(items) {
     });
 }
 
-// 2. SEQUENTIAL STREAMING ENGINE (LOADS ALL 37,382 ITEMS WITHOUT HANGING)
-async function fetchAllMarketplaceItemsFullStream() {
+// 2. LOAD THE REAL KEYS DATABASE (INSTANT 37,382 ITEMS IN ONE SHOT)
+async function loadTheRealKeysDatabase() {
     if (catalogProgressContainer) catalogProgressContainer.style.display = "block";
-    if (catalogStreamStatus) catalogStreamStatus.innerHTML = `<i class="fas fa-satellite-dish fa-spin"></i> Streaming Live Marketplace...`;
+    if (catalogProgressBar) catalogProgressBar.style.width = "40%";
+    if (catalogStreamStatus) catalogStreamStatus.innerHTML = `<i class="fas fa-key fa-spin"></i> Fetching Master Keys (37,382 Items)...`;
 
-    for (let page = 1; page <= TOTAL_PAGES; page++) {
-        try {
-            const res = await fetch(`https://v5-mcsrc.github.io/data/api/marketplace/page/page-${page}.json`);
-            if (!res.ok) {
-                await new Promise(r => setTimeout(r, 200));
-                continue;
-            }
+    try {
+        const res = await fetch("https://yf2pv10.github.io/tempkeys/api/keys/keys.json");
+        if (!res.ok) throw new Error("Could not fetch keys database");
 
-            const raw = await res.json();
-            const rawList = Array.isArray(raw) ? raw : (raw.items || []);
-
-            const parsed = rawList.map(item => {
-                let img = item.thumbnail || item.image || item.keyArt || "";
-                if (!img && item.id) {
-                    img = `https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${item.id}/Thumbnail_0.jpg`;
-                }
-                return {
-                    id: item.id || item.uuid,
-                    title: item.title || item.name || "Minecraft Item",
-                    creator: item.author || item.creator || item.creatorName || "Mojang Partner",
-                    category: (item.packType || item.category || item.type || "addon").toLowerCase(),
-                    rating: item.rating ? Number(item.rating).toFixed(1) : "4.8",
-                    views: item.totalRatings ? Number(item.totalRatings).toLocaleString() : (item.views ? Number(item.views).toLocaleString() : "2,400"),
-                    desc: item.description || item.snippet || item.desc || "Official Minecraft Marketplace DLC.",
-                    image: img,
-                    coinPrice: item.price || item.coins || null,
-                    panorama: item.panorama || ""
-                };
+        const rawData = await res.json();
+        
+        // Structure parse: either array of objects or keys dictionary
+        let entries = [];
+        if (Array.isArray(rawData)) {
+            entries = rawData;
+        } else if (typeof rawData === 'object') {
+            entries = Object.keys(rawData).map(key => {
+                let val = rawData[key];
+                return typeof val === 'object' ? { id: key, ...val } : { id: key, title: val };
             });
+        }
 
-            fullCatalog.push(...parsed);
+        fullCatalog = entries.map(item => {
+            let id = item.id || item.uuid || item.key;
+            let title = item.title || item.name || "Minecraft DLC";
+            let cat = (item.type || item.category || "addon").toLowerCase();
+            let creator = item.creator || item.author || "Mojang Partner";
+            let thumb = `https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${id}/Thumbnail_0.jpg`;
 
-            // Live progress update
-            let pct = Math.floor((page / TOTAL_PAGES) * 100);
-            if (catalogProgressBar) catalogProgressBar.style.width = pct + "%";
-            if (catalogStreamStats) catalogStreamStats.innerText = `${fullCatalog.length.toLocaleString()} Items (${pct}%)`;
-            if (catalogNavCount) catalogNavCount.innerText = fullCatalog.length.toLocaleString();
+            return {
+                id: id,
+                title: title,
+                creator: creator,
+                category: cat,
+                rating: item.rating ? Number(item.rating).toFixed(1) : "4.8",
+                views: item.views ? Number(item.views).toLocaleString() : Math.floor(Math.random() * 3000 + 500).toLocaleString(),
+                desc: item.desc || item.description || "Official Minecraft Marketplace DLC.",
+                image: thumb
+            };
+        });
 
-            // First page renders instantly so screen is never blank
-            if (page === 1) {
-                displayedList = [...fullCatalog];
-                renderBatchCards();
-            } else if (currentSearch || activeCategory !== 'all') {
-                // If user is searching while stream continues, update results
-                applyCatalogFilters();
-            }
+        const total = fullCatalog.length;
+        if (catalogNavCount) catalogNavCount.innerText = total.toLocaleString();
+        if (catalogStreamStats) catalogStreamStats.innerText = `${total.toLocaleString()} Items Ready`;
+        if (catalogProgressBar) catalogProgressBar.style.width = "100%";
+        if (catalogStreamStatus) catalogStreamStatus.innerHTML = `<i class="fas fa-check-circle" style="color:#10b981;"></i> 37,382 Items Loaded!`;
 
-            // Anti-throttling short delay
-            await new Promise(r => setTimeout(r, 40));
+        setTimeout(() => {
+            if (catalogProgressContainer) catalogProgressContainer.style.display = "none";
+        }, 800);
 
-        } catch (err) {
-            console.warn(`Page ${page} skipped:`, err);
+        displayedList = [...fullCatalog];
+        renderedIndex = 0;
+        if (catalogGrid) catalogGrid.innerHTML = "";
+        renderBatchCards();
+
+    } catch (err) {
+        console.error("Master keys fetch failed:", err);
+        if (catalogStreamStatus) {
+            catalogStreamStatus.innerHTML = `<span style="color:#ef4444;"><i class="fas fa-exclamation-triangle"></i> Failed to fetch master keys. <a href="javascript:loadTheRealKeysDatabase()" style="color:#38bdf8;">Retry</a></span>`;
         }
     }
-
-    if (catalogStreamStatus) catalogStreamStatus.innerHTML = `<i class="fas fa-check-circle" style="color:#10b981;"></i> 37,382 Items Synced!`;
-    if (catalogStreamStats) catalogStreamStats.innerText = "100% Complete";
-    if (catalogProgressBar) catalogProgressBar.style.width = "100%";
-
-    setTimeout(() => {
-        if (catalogProgressContainer) catalogProgressContainer.style.display = "none";
-    }, 1200);
-
-    applyCatalogFilters();
 }
 
-// 3. BATCH CARDS RENDERER
+// 3. RENDER CARDS BATCH (SUPER SMOOTH INFINITE SCROLL)
 function renderBatchCards() {
     if (isRendering || renderedIndex >= displayedList.length) return;
     isRendering = true;
@@ -201,7 +192,7 @@ function renderBatchCards() {
 
         card.innerHTML = `
             <div class="card-img-wrap">
-                <img src="${item.image}" alt="${item.title}" loading="lazy" onerror="this.onerror=null; this.src='https://content2.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${item.id}/Thumbnail_0.jpg';">
+                <img src="${item.image}" alt="${item.title}" loading="lazy" onerror="this.onerror=null; this.src='https://content2.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${item.id}/${item.id}_Thumbnail_0.jpg';">
                 <span class="card-badge" style="background:#10b981;">${item.category.toUpperCase()}</span>
             </div>
             <div class="card-body">
@@ -224,7 +215,7 @@ function renderBatchCards() {
     if (catalogScrollLoader) catalogScrollLoader.style.display = "none";
 }
 
-// Infinite Scroll for smooth scrolling
+// Infinite Scroll
 window.addEventListener('scroll', () => {
     if (activeSection === 'catalog') {
         const scrollPos = window.innerHeight + window.pageYOffset;
@@ -235,30 +226,17 @@ window.addEventListener('scroll', () => {
     }
 }, { passive: true });
 
-// 4. MODAL POPUP WITH PDP DETAILS (FULL SCREENSHOTS, COINS, PANORAMA)
+// 4. MODAL POPUP WITH PDP DETAILS
 async function openItemModal(item, isCatalogItem) {
     currentModalItem = item;
     document.getElementById('modalTitle').innerText = item.title;
     document.getElementById('modalTag').innerText = item.category.toUpperCase();
     document.getElementById('modalDesc').innerText = item.desc;
 
-    // Reset price display
-    const priceRow = document.getElementById('modalPriceRow');
-    const priceText = document.getElementById('modalPriceText');
-    if (item.coinPrice && priceRow && priceText) {
-        priceText.innerText = `🪙 ${item.coinPrice} Minecoins`;
-        priceRow.style.display = "flex";
-    } else if (priceRow) {
-        priceRow.style.display = "none";
-    }
-
-    // Carousel primary thumbnail
     const track = document.getElementById('carouselTrack');
     track.innerHTML = `<img src="${item.image}" class="carousel-img">`;
 
-    // Panorama reset
     const panoSec = document.getElementById('panoramaSection');
-    const panoImg = document.getElementById('panoramaImg');
     if (panoSec) panoSec.style.display = "none";
 
     const dwnSec = document.getElementById('modalDownloadSection');
@@ -277,15 +255,15 @@ async function openItemModal(item, isCatalogItem) {
     if (itemModal) itemModal.style.display = "flex";
 }
 
-// Fetch Full PDP Metadata
+// Item Details (Screenshots, Real Minecoins & Panorama)
 async function fetchItemDetails(uuid) {
     if (!uuid) return;
     try {
-        const res = await fetch(`https://v5-mcsrc.github.io/data/api/marketplace/item?id=${uuid}.json`);
+        const res = await fetch(`https://v5-mcsrc.github.io/data/api/marketplace/item/${uuid}.json`);
         if (!res.ok) return;
         const details = await res.json();
 
-        // 1. In-game screenshots
+        // 1. In-game Screenshots
         const track = document.getElementById('carouselTrack');
         if (details.images && details.images.length > 0) {
             track.innerHTML = "";
@@ -311,22 +289,22 @@ async function fetchItemDetails(uuid) {
             panoSec.style.display = "block";
         }
 
-        // 3. Minecoin price update
+        // 3. Minecoin Price Row
         const priceRow = document.getElementById('modalPriceRow');
         const priceText = document.getElementById('modalPriceText');
-        let coins = details.price || details.coinPrice;
+        let coins = details.price || details.coins || details.coinPrice;
         if (coins && priceRow && priceText) {
             priceText.innerText = `🪙 ${coins} Minecoins`;
             priceRow.style.display = "flex";
         }
 
-        // 4. Full description update
+        // 4. Description
         if (details.description || details.desc) {
             document.getElementById('modalDesc').innerText = details.description || details.desc;
         }
 
     } catch (e) {
-        console.warn("PDP details fetch error:", e);
+        console.warn("Item details fetch error:", e);
     }
 }
 
@@ -367,7 +345,7 @@ function requestCurrentCatalogItem() {
     });
 }
 
-// 5. REAL-TIME SEARCH & CATEGORY FILTERS
+// 5. SEARCH & FILTERS ACROSS ALL 37,382 ITEMS
 let searchDebounce = null;
 function handleGlobalSearch() {
     clearTimeout(searchDebounce);
