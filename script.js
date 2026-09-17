@@ -13,7 +13,7 @@ var firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 var database = firebase.database();
 
-// --- CORE ENGINE CONFIG ---
+// --- ENGINE CONFIG ---
 const MARKETPLACE_API = 'https://v5-mcsrc.github.io/data/api/marketplace';
 const MARKETPLACE_ITEM_API = 'https://v5-mcsrc.github.io/data/api/marketplace/item';
 const MARKETPLACE_IDB_NAME = 'marketplace_db';
@@ -230,7 +230,7 @@ async function initMarketplaceEngine() {
                     category: (item.packType || item.category || item.type || "addon").toLowerCase(),
                     rating: item.rating ? Number(item.rating).toFixed(1) : "4.8",
                     views: item.totalRatings ? Number(item.totalRatings).toLocaleString() : (item.views ? Number(item.views).toLocaleString() : "2,100"),
-                    desc: item.description || item.snippet || item.desc || "Official Minecraft Marketplace DLC.",
+                    desc: item.longDescription || item.description || item.snippet || item.desc || "Official Minecraft Marketplace DLC.",
                     image: img,
                     panorama: item.panorama || ""
                 });
@@ -332,13 +332,14 @@ window.addEventListener('scroll', () => {
     }
 }, { passive: true });
 
-// 6. MODAL & COMPLETE SCREENSHOTS/PANORAMA RESOLVER
+// 6. MODAL & FULL MEDIA CAROUSEL ENGINE
 async function openItemModal(item, isCatalogItem) {
     currentModalItem = item;
     document.getElementById('modalTitle').innerText = item.title;
     document.getElementById('modalTag').innerText = item.category.toUpperCase();
     document.getElementById('modalDesc').innerText = item.desc;
 
+    // First image in carousel is ALWAYS the main thumbnail
     const track = document.getElementById('carouselTrack');
     track.innerHTML = `<img src="${item.image}" class="carousel-img">`;
 
@@ -365,14 +366,17 @@ async function fetchItemDetails(uuid) {
     if (!uuid) return;
     try {
         const res = await fetch(`${MARKETPLACE_ITEM_API}/${uuid}.json`);
-        if (!res.ok) return;
-        const details = await res.json();
-        const data = details.item || details;
+        let data = {};
+        if (res.ok) {
+            const details = await res.json();
+            data = details.item || details;
+        }
 
-        // 1. Extra Screenshots
+        // 1. In-game Screenshots (Thumb is preserved at index 0)
         const track = document.getElementById('carouselTrack');
         let imageList = [];
 
+        // Primary thumbnail is always slot 0
         if (currentModalItem && currentModalItem.image) {
             imageList.push(currentModalItem.image);
         }
@@ -380,6 +384,13 @@ async function fetchItemDetails(uuid) {
         if (Array.isArray(data.images)) imageList.push(...data.images);
         if (Array.isArray(data.extraImages)) imageList.push(...data.extraImages);
         if (Array.isArray(data.imageUrls)) imageList.push(...data.imageUrls);
+
+        // Fallback Mojang CDN Screenshots for packs like Actions & Stuff
+        if (imageList.length <= 1) {
+            imageList.push(`https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${uuid}/Screenshot_0.jpg`);
+            imageList.push(`https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${uuid}/Screenshot_1.jpg`);
+            imageList.push(`https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${uuid}/KeyArt.jpg`);
+        }
 
         const validUrls = [...new Set(imageList.map(img => typeof img === 'string' ? img : (img.url || "")).filter(Boolean))];
 
@@ -389,27 +400,25 @@ async function fetchItemDetails(uuid) {
                 let im = document.createElement('img');
                 im.src = url;
                 im.className = "carousel-img";
+                im.onerror = function() { this.remove(); }; // Remove if not found on server
                 track.appendChild(im);
             });
         }
 
-        // 2. Panorama View (Official or Banner Fallback)
+        // 2. Panorama 360 View (Only for packs that actually have it, like Worlds & Maps)
         const panoSec = document.getElementById('panoramaSection');
         const panoImg = document.getElementById('panoramaImg');
-        
         let panoUrl = data.panoramaUrl || data.panoramaImage || data.panorama;
         if (typeof panoUrl === 'object') panoUrl = panoUrl?.url;
-
-        if (!panoUrl && validUrls.length > 0) {
-            panoUrl = validUrls[0];
-        }
 
         if (panoUrl && panoSec && panoImg) {
             panoImg.src = panoUrl;
             panoSec.style.display = "block";
+        } else if (panoSec) {
+            panoSec.style.display = "none";
         }
 
-        // 3. Minecoin Price
+        // 3. Real Minecoin Price
         const priceRow = document.getElementById('modalPriceRow');
         const priceText = document.getElementById('modalPriceText');
         let coins = data.price || data.coins || data.coinPrice;
@@ -418,8 +427,10 @@ async function fetchItemDetails(uuid) {
             priceRow.style.display = "flex";
         }
 
-        if (data.description || data.desc) {
-            document.getElementById('modalDesc').innerText = data.description || data.desc;
+        // 4. Complete Uncut Description
+        const fullDesc = data.longDescription || data.description || data.desc || (currentModalItem ? currentModalItem.desc : "");
+        if (fullDesc) {
+            document.getElementById('modalDesc').innerText = fullDesc;
         }
 
     } catch (e) {
