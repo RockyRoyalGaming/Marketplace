@@ -55,16 +55,15 @@
         </div>
     </div>
 
-    <!-- ================= SECTION 1: AVAILABLE DLCS (FIREBASE) ================= -->
+    <!-- SECTION 1: AVAILABLE DLCS -->
     <main id="sectionAvailable" class="content-section">
         <div id="availableGrid" class="items-grid">
             <div class="loader-spinner"><i class="fas fa-spinner fa-spin"></i> Loading Available DLCs...</div>
         </div>
     </main>
 
-    <!-- ================= SECTION 2: MARKETPLACE CATALOG (OFFICIAL DATABASE) ================= -->
+    <!-- SECTION 2: MARKETPLACE CATALOG -->
     <main id="sectionCatalog" class="content-section active">
-        <!-- LIVE STREAM PROGRESS BAR -->
         <div id="catalogProgressContainer" class="progress-box">
             <div class="progress-labels">
                 <span id="catalogStreamStatus"><i class="fas fa-satellite-dish fa-spin"></i> Initializing Marketplace Catalog...</span>
@@ -82,7 +81,7 @@
         </div>
     </main>
 
-    <!-- ================= ITEM MODAL (DOWNLOAD, PREVIEW & PANORAMA) ================= -->
+    <!-- ITEM MODAL -->
     <div id="itemModal" class="modal-overlay">
         <div class="modal-content">
             <button class="modal-close" onclick="closeModal()">&times;</button>
@@ -92,16 +91,26 @@
                 <span id="modalTag" class="tag-pill">ADDON</span>
             </div>
 
-            <!-- In-Game Screenshots Carousel Track -->
+            <!-- Video/Main Image Player Screen -->
             <div class="carousel-container">
-                <div id="carouselTrack" class="carousel-track"></div>
+                <div id="mediaStage" class="media-stage"></div>
             </div>
 
-            <!-- Price & Description -->
-            <div class="desc-box">
-                <div id="modalPriceRow" style="display:none; align-items:center; gap:6px; margin-bottom:8px; color:#fbbf24; font-weight:bold;">
-                    <span id="modalPriceText">🪙 Minecoins</span>
+            <!-- Multi-Image & Video Strip -->
+            <div id="thumbStrip" class="thumb-strip-row"></div>
+
+            <!-- Price & Ratings Bar -->
+            <div class="pdp-meta-bar">
+                <div class="price-badge" id="modalPriceRow">
+                    <span id="modalPriceText">🪙 1690 Minecoins</span>
                 </div>
+                <div class="rating-badge" id="modalRatingRow">
+                    <span id="modalRatingStars">⭐⭐⭐⭐⭐</span>
+                    <span id="modalRatingVotes">156,920</span>
+                </div>
+            </div>
+
+            <div class="desc-box">
                 <p id="modalDesc">Loading description...</p>
             </div>
 
@@ -113,13 +122,13 @@
                 </div>
             </div>
 
-            <!-- DOWNLOAD SECTION (FOR AVAILABLE DLCS) -->
+            <!-- DOWNLOAD SECTION -->
             <div id="modalDownloadSection" style="display: none;">
                 <div class="section-title">DOWNLOAD FILES</div>
                 <div id="modalLinksContainer"></div>
             </div>
 
-            <!-- REQUEST SECTION (FOR CATALOG ITEMS) -->
+            <!-- REQUEST SECTION -->
             <div id="modalRequestSection" style="display: none;">
                 <button class="request-action-btn" onclick="requestCurrentCatalogItem()">
                     <i class="fas fa-paper-plane"></i> ⚡ REQUEST THIS DLC FOR FREE
@@ -129,7 +138,7 @@
         </div>
     </div>
 
-    <!-- ================= SETTINGS MODAL ================= -->
+    <!-- SETTINGS MODAL -->
     <div id="settingsModal" class="modal-overlay">
         <div class="modal-content small-modal">
             <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
@@ -148,7 +157,7 @@
         </div>
     </div>
 
-    <!-- ================= TUTORIAL MODAL ================= -->
+    <!-- TUTORIAL MODAL -->
     <div id="tutorialModal" class="modal-overlay">
         <div class="modal-content small-modal">
             <button class="modal-close" onclick="closeTutorialModal()">&times;</button>
