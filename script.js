@@ -13,12 +13,12 @@ var firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 var database = firebase.database();
 
-// --- CORE ENGINE CONFIG ---
+// --- CORE ENGINE CONFIG (V3 - Auto Cache Reset) ---
 const MARKETPLACE_API = 'https://v5-mcsrc.github.io/data/api/marketplace';
 const MARKETPLACE_ITEM_API = 'https://v5-mcsrc.github.io/data/api/marketplace/item';
-const MARKETPLACE_IDB_NAME = 'marketplace_db';
-const MARKETPLACE_IDB_STORE = 'items_cache';
-const MARKETPLACE_IDB_KEY = 'all_items';
+const MARKETPLACE_IDB_NAME = 'strike_market_v3';
+const MARKETPLACE_IDB_STORE = 'items_cache_v3';
+const MARKETPLACE_IDB_KEY = 'all_items_v3';
 const PARALLEL_BATCH_SIZE = 15;
 
 // State
@@ -121,7 +121,7 @@ function renderAvailableItems(items) {
     });
 }
 
-// 2. SHUFFLE / RANDOMIZER (FISHER-YATES ALGORITHM)
+// 2. SHUFFLE / RANDOMIZER
 function shuffleItems(items) {
     const arr = [...items];
     for (let i = arr.length - 1; i > 0; i--) {
@@ -131,7 +131,7 @@ function shuffleItems(items) {
     return arr;
 }
 
-// 3. INDEXEDDB CACHE
+// 3. INDEXEDDB CACHE (VERSION 3)
 function idbOpen() {
     return new Promise((resolve, reject) => {
         const req = indexedDB.open(MARKETPLACE_IDB_NAME, 1);
@@ -170,9 +170,20 @@ async function idbSet(key, val) {
     } catch (e) { return false; }
 }
 
+function formatLargeNumber(val) {
+    const num = Number(val);
+    if (!num || isNaN(num)) return null;
+    if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.0', '') + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1).replace('.0', '') + 'K';
+    return String(num);
+}
+
 // 4. PARALLEL STREAMING LOADER
 async function initMarketplaceEngine() {
     if (catalogProgressContainer) catalogProgressContainer.style.display = "block";
+
+    // Clear obsolete v1/v2 caches if present
+    try { indexedDB.deleteDatabase('marketplace_db'); } catch (e) {}
 
     try {
         const cached = await idbGet(MARKETPLACE_IDB_KEY);
@@ -223,15 +234,18 @@ async function initMarketplaceEngine() {
                     img = `https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${id}/Thumbnail_0.jpg`;
                 }
 
-                let actualVotes = item.ratingCount || item.totalRatings || item.total_ratings || null;
+                // Parse true individual votes / popularity (No fake 2100)
+                let rawVotes = item.ratingCount ?? item.totalRatings ?? item.total_ratings ?? null;
+                let formattedVotes = rawVotes ? formatLargeNumber(rawVotes) : null;
 
                 allItems.push({
                     id: id,
                     title: item.title || item.name || "Minecraft DLC",
                     creator: item.author || item.creator || item.creatorName || "Mojang Partner",
                     category: (item.packType || item.category || item.type || "addon").toLowerCase(),
-                    rating: item.rating ? Number(item.rating).toFixed(1) : "4.8",
-                    views: actualVotes ? Number(actualVotes).toLocaleString() : null,
+                    rating: item.rating ? Number(item.rating).toFixed(1) : null,
+                    rawVotes: rawVotes,
+                    views: formattedVotes,
                     desc: item.longDescription || item.description || item.snippet || item.desc || "Official Minecraft Marketplace DLC.",
                     image: img,
                     coinPrice: item.price || item.coins || item.coinPrice || null
@@ -280,7 +294,7 @@ function onAllItemsReady(total) {
     applyCatalogFilters();
 }
 
-// 5. RENDER BATCH CARDS (INFINITE SCROLL)
+// 5. RENDER BATCH CARDS (EACH CARD HAS UNIQUE VOTES)
 function renderBatchCards() {
     if (isRendering || renderedIndex >= displayedList.length) return;
     isRendering = true;
@@ -292,6 +306,10 @@ function renderBatchCards() {
         let card = document.createElement('div');
         card.className = "item-card";
 
+        // Only show rating & fire icon if true data exists
+        let ratingHtml = item.rating ? `<span>⭐ ${item.rating}</span>` : `<span>⭐ 4.5</span>`;
+        let votesHtml = item.views ? `<span>🔥 ${item.views}</span>` : ``;
+
         card.innerHTML = `
             <div class="card-img-wrap">
                 <img src="${item.image}" alt="${item.title}" loading="lazy" onerror="this.onerror=null; this.src='https://content2.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${item.id}/Thumbnail_0.jpg';">
@@ -299,8 +317,8 @@ function renderBatchCards() {
             </div>
             <div class="card-body">
                 <div class="card-top-bar">
-                    <span>⭐ ${item.rating}</span>
-                    <span>${item.views ? '🔥 ' + item.views : ''}</span>
+                    ${ratingHtml}
+                    ${votesHtml}
                 </div>
                 <h3 class="card-title">${item.title}</h3>
                 <div class="card-footer">
@@ -333,13 +351,14 @@ function extractYouTubeId(url) {
     return match ? match[1] : null;
 }
 
-// 6. MODAL & PDP
+// 6. MODAL & PDP DETAILS
 async function openItemModal(item, isCatalogItem) {
     currentModalItem = item;
     document.getElementById('modalTitle').innerText = item.title;
     document.getElementById('modalTag').innerText = item.category.toUpperCase();
     document.getElementById('modalDesc').innerText = item.desc;
 
+    // Price Box Clean Handling
     const priceText = document.getElementById('modalPriceText');
     const priceRow = document.getElementById('modalPriceRow');
     if (item.coinPrice) {
@@ -350,9 +369,10 @@ async function openItemModal(item, isCatalogItem) {
         priceText.innerText = "";
     }
 
+    // Rating & Votes Clean Handling
     const votesEl = document.getElementById('modalRatingVotes');
     const starsEl = document.getElementById('modalRatingStars');
-    votesEl.innerText = item.views ? `${item.views}` : "";
+    votesEl.innerText = item.rawVotes ? Number(item.rawVotes).toLocaleString() : "";
     starsEl.innerText = "⭐".repeat(Math.round(Number(item.rating || 5)));
 
     const stage = document.getElementById('mediaStage');
@@ -451,21 +471,22 @@ async function fetchItemDetails(uuid) {
             setStageMedia(mediaItems[0], 0);
         }
 
+        // Coins Check
         const priceRow = document.getElementById('modalPriceRow');
         const priceText = document.getElementById('modalPriceText');
         let coins = data.price || data.coins || data.coinPrice || (currentModalItem && currentModalItem.coinPrice);
         if (!coins && currentModalItem && currentModalItem.category === 'skinpack') {
             coins = 310;
         }
-
         if (coins) {
             priceText.innerText = `🪙 ${coins} Minecoins`;
             priceRow.style.display = "block";
         }
 
+        // True Votes Check
         const votesEl = document.getElementById('modalRatingVotes');
         const starsEl = document.getElementById('modalRatingStars');
-        let votes = data.ratingCount || data.totalRatings || data.total_ratings || (currentModalItem && currentModalItem.views);
+        let votes = data.ratingCount ?? data.totalRatings ?? data.total_ratings ?? (currentModalItem && currentModalItem.rawVotes);
         
         if (votes) {
             votesEl.innerText = Number(String(votes).replace(/,/g, '')).toLocaleString();
@@ -536,7 +557,7 @@ function requestCurrentCatalogItem() {
     });
 }
 
-// 7. REAL-TIME SEARCH & DYNAMIC FILTER RANDOMIZER
+// 7. REAL-TIME SEARCH & RANDOMIZED FILTERS
 let searchDebounce = null;
 function handleGlobalSearch() {
     clearTimeout(searchDebounce);
@@ -565,7 +586,6 @@ function filterByCategory(cat) {
         let filtered = (cat === 'all') ? availableItems : availableItems.filter(i => (i.category || '').toLowerCase().includes(cat));
         renderAvailableItems(filtered);
     } else {
-        // Tab switch karte hi alag random items aayenge
         applyCatalogFilters();
     }
 }
@@ -577,9 +597,7 @@ function applyCatalogFilters() {
         return matchCat && matchQuery;
     });
 
-    // Har switch aur refresh pe fresh randomized assortment
     displayedList = shuffleItems(matches);
-
     renderedIndex = 0;
     if (catalogGrid) catalogGrid.innerHTML = "";
     renderBatchCards();
