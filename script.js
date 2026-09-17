@@ -229,10 +229,11 @@ async function initMarketplaceEngine() {
                     creator: item.author || item.creator || item.creatorName || "Mojang Partner",
                     category: (item.packType || item.category || item.type || "addon").toLowerCase(),
                     rating: item.rating ? Number(item.rating).toFixed(1) : "4.8",
-                    views: item.totalRatings ? Number(item.totalRatings).toLocaleString() : (item.views ? Number(item.views).toLocaleString() : "2,100"),
+                    views: item.ratingCount ? Number(item.ratingCount).toLocaleString() : (item.totalRatings ? Number(item.totalRatings).toLocaleString() : (item.views ? Number(item.views).toLocaleString() : "2,100")),
                     desc: item.longDescription || item.description || item.snippet || item.desc || "Official Minecraft Marketplace DLC.",
                     image: img,
-                    panorama: item.panorama || ""
+                    coinPrice: item.price || item.coins || null,
+                    rawItem: item
                 });
             });
 
@@ -332,21 +333,35 @@ window.addEventListener('scroll', () => {
     }
 }, { passive: true });
 
-// 6. YOUTUBE EXTRACTOR HELPER
 function extractYouTubeId(url) {
     if (!url) return null;
     const match = url.match(/(?:youtube\.com\/(?:embed\/|v\/|watch\?v=)|youtu\.be\/)([^"&?/\s]{11})/);
     return match ? match[1] : null;
 }
 
-// 7. MODAL WITH FULL MEDIA (TRAILER, SCREENSHOTS & THUMBNAILS)
+// 6. MODAL & DYNAMIC PDP FETCHER (CLEAN RESETS)
 async function openItemModal(item, isCatalogItem) {
     currentModalItem = item;
     document.getElementById('modalTitle').innerText = item.title;
     document.getElementById('modalTag').innerText = item.category.toUpperCase();
     document.getElementById('modalDesc').innerText = item.desc;
 
-    // Reset Media Stage
+    // 1. Reset Price Box cleanly
+    const priceText = document.getElementById('modalPriceText');
+    const priceRow = document.getElementById('modalPriceRow');
+    if (item.coinPrice) {
+        priceText.innerText = `🪙 ${item.coinPrice} Minecoins`;
+        priceRow.style.display = "block";
+    } else {
+        priceRow.style.display = "none";
+        priceText.innerText = "";
+    }
+
+    // 2. Reset Rating Box cleanly
+    const votesEl = document.getElementById('modalRatingVotes');
+    votesEl.innerText = item.views ? `${item.views}` : "1,200";
+
+    // 3. Reset Media Stage
     const stage = document.getElementById('mediaStage');
     const strip = document.getElementById('thumbStrip');
     if (stage) stage.innerHTML = `<img src="${item.image}" alt="Preview">`;
@@ -394,7 +409,7 @@ async function fetchItemDetails(uuid) {
             });
         }
 
-        // Main thumbnail
+        // Main thumbnail is always slot 0 / primary
         if (currentModalItem && currentModalItem.image) {
             mediaItems.push({ type: 'image', url: currentModalItem.image, thumb: currentModalItem.image });
         }
@@ -405,7 +420,6 @@ async function fetchItemDetails(uuid) {
         if (Array.isArray(data.extraImages)) extra.push(...data.extraImages);
         if (Array.isArray(data.imageUrls)) extra.push(...data.imageUrls);
 
-        // Fallback for packs like Actions & Stuff
         if (extra.length === 0) {
             extra.push(`https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${uuid}/Screenshot_0.jpg`);
             extra.push(`https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${uuid}/Screenshot_1.jpg`);
@@ -417,52 +431,55 @@ async function fetchItemDetails(uuid) {
             if (u) mediaItems.push({ type: 'image', url: u, thumb: u });
         });
 
-        // Render Media Stage & Thumb Strip
         const stage = document.getElementById('mediaStage');
         const strip = document.getElementById('thumbStrip');
         if (stage && strip && mediaItems.length > 0) {
             strip.innerHTML = "";
 
-            const setStageMedia = (item, activeIndex) => {
-                if (item.type === 'video') {
-                    stage.innerHTML = `<iframe src="${item.embed}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+            const setStageMedia = (mediaItem, activeIndex) => {
+                if (mediaItem.type === 'video') {
+                    stage.innerHTML = `<iframe src="${mediaItem.embed}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
                 } else {
-                    stage.innerHTML = `<img src="${item.url}" alt="Screen">`;
+                    stage.innerHTML = `<img src="${mediaItem.url}" alt="Screen">`;
                 }
                 strip.querySelectorAll('.thumb-strip-item').forEach((el, i) => {
                     el.classList.toggle('active', i === activeIndex);
                 });
             };
 
-            mediaItems.forEach((item, index) => {
+            mediaItems.forEach((mediaItem, index) => {
                 const thumbBtn = document.createElement('div');
                 thumbBtn.className = `thumb-strip-item ${index === 0 ? 'active' : ''}`;
                 thumbBtn.innerHTML = `
-                    <img src="${item.thumb}" alt="thumb" onerror="this.parentElement.remove();">
-                    ${item.type === 'video' ? '<div class="video-play-icon"><i class="fas fa-play"></i></div>' : ''}
+                    <img src="${mediaItem.thumb}" alt="thumb" onerror="this.parentElement.remove();">
+                    ${mediaItem.type === 'video' ? '<div class="video-play-icon"><i class="fas fa-play"></i></div>' : ''}
                 `;
-                thumbBtn.onclick = () => setStageMedia(item, index);
+                thumbBtn.onclick = () => setStageMedia(mediaItem, index);
                 strip.appendChild(thumbBtn);
             });
 
-            // Play trailer or display first image
             setStageMedia(mediaItems[0], 0);
         }
 
-        // 2. Official Minecoins Price
+        // 2. Real Minecoins Price
         const priceRow = document.getElementById('modalPriceRow');
         const priceText = document.getElementById('modalPriceText');
         let coins = data.price || data.coins || data.coinPrice || (currentModalItem && currentModalItem.coinPrice);
-        if (coins && priceRow && priceText) {
+        if (coins) {
             priceText.innerText = `🪙 ${coins} Minecoins`;
             priceRow.style.display = "block";
         }
 
-        // 3. Ratings & Total Votes
+        // 3. Real Votes & Star Rating
         const votesEl = document.getElementById('modalRatingVotes');
-        let votes = data.totalRatings || data.ratingCount || data.total_ratings;
+        const starsEl = document.getElementById('modalRatingStars');
+        let votes = data.ratingCount || data.totalRatings || data.total_ratings || (currentModalItem ? currentModalItem.views : null);
         if (votes && votesEl) {
-            votesEl.innerText = Number(votes).toLocaleString();
+            votesEl.innerText = Number(String(votes).replace(/,/g, '')).toLocaleString();
+        }
+        if (data.rating && starsEl) {
+            let numStars = Math.round(Number(data.rating));
+            starsEl.innerText = "⭐".repeat(Math.max(1, Math.min(5, numStars)));
         }
 
         // 4. Complete Description
@@ -525,7 +542,7 @@ function requestCurrentCatalogItem() {
     });
 }
 
-// 8. REAL-TIME SEARCH & FILTERS
+// 7. REAL-TIME SEARCH & FILTERS
 let searchDebounce = null;
 function handleGlobalSearch() {
     clearTimeout(searchDebounce);
