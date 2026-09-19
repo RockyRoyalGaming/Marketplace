@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BlockBay - Marketplace</title>
+    <title>Strike Market - Minecraft Bedrock Hub</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Firebase SDKs for Available Items & Requests -->
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
@@ -16,16 +16,16 @@
     <!-- SIDE DRAWER OVERLAY -->
     <div class="drawer-overlay" id="drawerOverlay" onclick="toggleDrawer()"></div>
 
-    <!-- SIDE DRAWER NAVIGATION (TOOLCOIN BLOCKBAY STYLE) -->
+    <!-- SIDE DRAWER -->
     <aside class="side-drawer" id="sideDrawer">
         <div class="drawer-brand">
             <i class="fas fa-cube brand-icon"></i>
-            <span>BlockBay</span>
+            <span>STRIKE MARKET</span>
         </div>
 
         <div class="drawer-group-label">EXPLORE</div>
         <div class="drawer-item active" onclick="navigateCategory('all')">
-            <i class="fas fa-home"></i> <span>Discover</span>
+            <i class="fas fa-home"></i> <span>Discover All</span>
         </div>
         <div class="drawer-item" onclick="navigateCategory('addons')">
             <i class="fas fa-puzzle-piece"></i> <span>Add-Ons</span>
@@ -39,26 +39,16 @@
         <div class="drawer-item" onclick="navigateCategory('textures')">
             <i class="fas fa-hammer"></i> <span>Textures</span>
         </div>
-        <div class="drawer-item" onclick="navigateCategory('mashups')">
-            <i class="fas fa-layer-group"></i> <span>Mashups</span>
-        </div>
 
-        <div class="drawer-group-label">SPECIAL FILTERS</div>
-        <div class="drawer-item" onclick="applySpecialFilter('scary')">
-            <i class="fas fa-ghost"></i> <span>Scary</span>
+        <div class="drawer-group-label">FILTERS</div>
+        <div class="drawer-item" onclick="filterByAvailability(true)">
+            <i class="fas fa-check-circle" style="color: #a855f7;"></i> <span>Downloadable Only</span>
         </div>
-        <div class="drawer-item" onclick="applySpecialFilter('vibrant')">
-            <i class="fas fa-star"></i> <span>Vibrant Visuals</span>
-        </div>
-        <div class="drawer-item" onclick="applySpecialFilter('available')">
-            <i class="fas fa-check-circle" style="color: #22c55e;"></i> <span>Available Only</span>
-        </div>
-        <div class="drawer-item" onclick="applySpecialFilter('unfiltered')">
-            <i class="fas fa-ban"></i> <span>Unfiltered</span>
+        <div class="drawer-item" onclick="filterByAvailability(false)">
+            <i class="fas fa-infinity"></i> <span>Show All DLCs</span>
         </div>
     </aside>
 
-    <!-- MAIN APP WRAPPER -->
     <div class="app-layout">
         
         <!-- HEADER -->
@@ -68,63 +58,60 @@
             </button>
             <div class="header-logo">
                 <i class="fas fa-cube"></i>
-                <span>BlockBay</span>
+                <span>STRIKE MARKET</span>
             </div>
-            <div style="width: 36px;"></div> <!-- Spacer -->
+            <button class="header-req-btn" onclick="openRequestModal()">
+                <i class="fas fa-paper-plane"></i>
+            </button>
         </header>
 
         <!-- SEARCH BAR -->
         <div class="search-section">
             <div class="search-input-box">
                 <i class="fas fa-search"></i>
-                <input type="text" id="globalSearch" placeholder="Search..." onkeyup="handleSearch()">
+                <input type="text" id="globalSearch" placeholder="Search 37,000+ addons, worlds, skins..." onkeyup="handleSearch()">
             </div>
         </div>
 
-        <!-- HERO SPOTLIGHT CAROUSEL -->
-        <div class="spotlight-slider-card" id="spotlightCard">
+        <!-- SPOTLIGHT HERO -->
+        <div class="spotlight-card" id="spotlightCard">
             <div class="spotlight-overlay">
                 <div class="spotlight-badge">
-                    <span class="type-pill" id="spotType">Add-On</span>
-                    <span class="rating-pill" id="spotRating">★ 4.2</span>
+                    <span class="type-pill">FEATURED SPOTLIGHT</span>
+                    <span class="rating-pill">★ 4.9</span>
                 </div>
-                <h2 id="spotTitle">AI Players Add-On</h2>
-                <p id="spotCreator">By Gamemode One</p>
+                <h2>Villager News 1.0 Add-On</h2>
+                <p>By Oreville Studios</p>
             </div>
         </div>
 
-        <!-- CATEGORY QUICK CHIPS -->
+        <!-- CATEGORY CHIPS -->
         <div class="chips-row">
             <button class="chip active" onclick="navigateCategory('all')"><i class="fas fa-infinity"></i> All</button>
             <button class="chip" onclick="navigateCategory('addons')"><i class="fas fa-puzzle-piece"></i> Add-Ons</button>
-            <button class="chip" onclick="navigateCategory('worlds')"><i class="fas fa-globe"></i> World</button>
-            <button class="chip" onclick="navigateCategory('textures')"><i class="fas fa-hammer"></i> Texture Packs</button>
+            <button class="chip" onclick="navigateCategory('worlds')"><i class="fas fa-globe"></i> Worlds</button>
+            <button class="chip" onclick="navigateCategory('textures')"><i class="fas fa-hammer"></i> Textures</button>
             <button class="chip" onclick="navigateCategory('skins')"><i class="fas fa-tshirt"></i> Skins</button>
         </div>
 
-        <!-- LATEST RELEASES CONTAINER -->
+        <!-- CATALOG SECTION -->
         <div class="section-container">
             <div class="section-bar">
-                <h3 id="currentSectionTitle">LATEST RELEASES</h3>
-                <span class="more-link" id="itemCountLabel">37,382 ITEMS</span>
+                <h3 id="currentSectionTitle">MARKETPLACE CATALOG</h3>
+                <span class="item-count" id="itemCountLabel">37,382 ITEMS</span>
             </div>
 
             <!-- CARDS GRID -->
-            <div class="blockbay-grid" id="itemsGrid"></div>
+            <div class="strike-grid" id="itemsGrid"></div>
 
             <div class="loading-more" id="scrollLoader">
-                <i class="fas fa-spinner fa-spin"></i> Loading...
+                <i class="fas fa-spinner fa-spin"></i> Loading more packs...
             </div>
         </div>
 
     </div>
 
-    <!-- FLOATING DOWNLOAD MANAGER BUTTON (BOTTOM RIGHT) -->
-    <div class="floating-dl-btn" id="floatingDlBtn" onclick="toggleDlManager()">
-        <i class="fas fa-arrow-down"></i>
-    </div>
-
-    <!-- IN-APP LIVE DOWNLOAD TOAST NOTIFICATION -->
+    <!-- IN-APP LIVE DOWNLOAD PROGRESS TOAST -->
     <div class="download-toast" id="downloadToast">
         <div class="toast-header">
             <span class="toast-title" id="toastItemName">Downloading...</span>
@@ -140,7 +127,7 @@
         </div>
     </div>
 
-    <!-- FULL PDP MODAL (DETAILS, HOW TO, FAQ) -->
+    <!-- FULL PDP MODAL (Description, How To, FAQ, Shorteners) -->
     <div class="modal-overlay" id="pdpModal">
         <div class="pdp-wrapper">
             <div class="pdp-header">
@@ -158,8 +145,8 @@
             <!-- Stats Bar -->
             <div class="pdp-meta-bar">
                 <div class="meta-left">
-                    <span class="stars" id="pdpStars">★ 4.0</span>
-                    <span class="votes" id="pdpVotes">(19)</span>
+                    <span class="stars" id="pdpStars">★ 4.8</span>
+                    <span class="votes" id="pdpVotes">(0)</span>
                     <span class="coins" id="pdpCoins">🪙 830</span>
                 </div>
                 <div class="meta-right">
@@ -190,10 +177,10 @@
                 <div class="accordion-box" id="faqAccordion"></div>
             </div>
 
-            <!-- Download Button or Request Section -->
+            <!-- Action Section: Shorteners vs Request -->
             <div class="pdp-action-footer">
                 <div id="downloadContainer" style="display: none;">
-                    <div class="dl-notice">MONETIZED DIRECT MIRRORS</div>
+                    <div class="dl-notice">AVAILABLE DOWNLOAD MIRRORS</div>
                     <div class="shortener-links" id="shortenerLinks"></div>
                 </div>
 
@@ -201,7 +188,7 @@
                     <button class="request-btn" onclick="submitRequest()">
                         <i class="fas fa-paper-plane"></i> ⚡ REQUEST THIS DLC FOR FREE
                     </button>
-                    <p class="sub-hint">This pack is not decrypted yet. Request it to get it uploaded!</p>
+                    <p class="sub-hint">Admin will decrypt and upload this pack upon request!</p>
                 </div>
             </div>
 
