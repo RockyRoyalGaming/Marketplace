@@ -1,7 +1,4 @@
-// --- 1. DIRECT PLAYFAB ENDPOINT (YOUR WORKER) ---
-const OFFICIAL_PLAYFAB_WORKER = 'https://damp-snowflake-b822.rockyroyalgaming.workers.dev';
-
-// --- 2. FIREBASE CONFIGURATION (FOR DOWNLOAD LINKS & REQUESTS) ---
+// --- FIREBASE CONFIGURATION ---
 var firebaseConfig = {
   apiKey: "AIzaSyDOnkkfPgIX9rlEXefUKnZ3atV6zdBu1RU",
   authDomain: "strikemarket-32a5e.firebaseapp.com",
@@ -16,12 +13,21 @@ var firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 var database = firebase.database();
 
-// --- 3. CUSTOM MONETIZATION SHORTENERS ---
-// Apne IDs yahan replace kar sakte hain
+// --- RESILIENT MULTI-SOURCE ENGINE ---
+const OFFICIAL_PLAYFAB_WORKER = 'https://damp-snowflake-b822.rockyroyalgaming.workers.dev';
+const FALLBACK_CATALOG_API = 'https://v5-mcsrc.github.io/data/api/marketplace';
+const PDP_ITEM_API = 'https://v5-mcsrc.github.io/data/api/marketplace/item';
+
+const IDB_NAME = 'strike_market_core_v7';
+const IDB_STORE = 'catalog_store';
+const IDB_KEY = 'all_packs';
+const BATCH_SIZE = 30;
+
+// SHORTENER CONFIGURATION
 const SHORTENERS = {
-    linkvertise: (id, url) => `https://link-target.net/your_id/download?url=${encodeURIComponent(url || id)}`,
-    workink: (id, url) => `https://work.ink/your_id/${encodeURIComponent(url || id)}`,
-    lootlabs: (id, url) => `https://loot-link.com/s?your_id=${encodeURIComponent(url || id)}`
+    linkvertise: (id, link) => `https://link-target.net/your_id/download?url=${encodeURIComponent(link || id)}`,
+    workink: (id, link) => `https://work.ink/your_id/${encodeURIComponent(link || id)}`,
+    lootlabs: (id, link) => `https://loot-link.com/s?your_id=${encodeURIComponent(link || id)}`
 };
 
 // State
@@ -29,9 +35,9 @@ let fullCatalog = [];
 let displayedList = [];
 let availableDb = new Map();
 let activeCategory = 'all';
+let onlyAvailable = false;
 let currentSearch = '';
 let renderedIndex = 0;
-const BATCH_SIZE = 30;
 let isRendering = false;
 let currentModalItem = null;
 
@@ -46,15 +52,15 @@ const downloadToast = document.getElementById('downloadToast');
 
 window.onload = function() {
     loadAvailableDatabase();
-    fetchOfficialPlayFabMarketplace();
+    initCatalogEngine();
 };
 
 function toggleDrawer() {
-    if (sideDrawer) sideDrawer.classList.toggle('active');
-    if (drawerOverlay) drawerOverlay.classList.toggle('active');
+    sideDrawer.classList.toggle('active');
+    drawerOverlay.classList.toggle('active');
 }
 
-// 4. FIREBASE CHECK: Available DLCs Map
+// 1. Firebase Available Items (Checkmarks)
 function loadAvailableDatabase() {
     database.ref('market_items').on('value', snapshot => {
         availableDb.clear();
@@ -69,123 +75,240 @@ function loadAvailableDatabase() {
     });
 }
 
-// 5. DIRECT OFFICIAL PLAYFAB AUTO-FETCH (NO THIRD-PARTY API)
-async function fetchOfficialPlayFabMarketplace() {
-    if (scrollLoader) scrollLoader.style.display = 'block';
-
-    try {
-        const response = await fetch(OFFICIAL_PLAYFAB_WORKER);
-        const playFabItems = await response.json();
-
-        fullCatalog = playFabItems.map(item => {
-            let custom = {};
-            try {
-                custom = item.CustomData ? JSON.parse(item.CustomData) : {};
-            } catch (e) {}
-
-            let cat = (item.ItemClass || custom.packType || 'addon').toLowerCase();
-            let categoryClean = 'addons';
-            if (cat.includes('world')) categoryClean = 'worlds';
-            else if (cat.includes('skin')) categoryClean = 'skins';
-            else if (cat.includes('texture')) categoryClean = 'textures';
-            else if (cat.includes('mashup')) categoryClean = 'mashups';
-
-            return {
-                id: item.ItemId,
-                title: item.DisplayName || "Minecraft DLC",
-                creator: custom.creatorName || item.Tags?.[0] || "Mojang Partner",
-                category: categoryClean,
-                displayType: (item.ItemClass || categoryClean).toUpperCase(),
-                coins: item.VirtualCurrencyPrices?.MC || custom.price || 830,
-                rating: custom.rating ? Number(custom.rating).toFixed(1) : "4.8",
-                votes: custom.totalRatings || 42,
-                desc: item.Description || "Official Minecraft Marketplace pack.",
-                image: `https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${item.ItemId}/Thumbnail_0.jpg`,
-                rawCustom: custom
-            };
-        });
-
-        applyCategoryFilter(activeCategory);
-
-    } catch (err) {
-        console.error("Direct PlayFab Connection Failed:", err);
-    } finally {
-        if (scrollLoader) scrollLoader.style.display = 'none';
-    }
+function mapCategoryKey(rawType) {
+    let t = String(rawType || '').toLowerCase().trim();
+    if (t.includes('world')) return 'worlds';
+    if (t.includes('skin')) return 'skins';
+    if (t.includes('texture')) return 'textures';
+    return 'addons';
 }
 
-// 6. RENDER CARDS WITH BLOCKBAY BADGES
-function renderCards(reset = false) {
-    if (!itemsGrid) return;
+// 2. IndexedDB Cache
+function idbOpen() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
 
-    if (reset) {
-        renderedIndex = 0;
-        itemsGrid.innerHTML = "";
+async function idbGet(key) {
+    try {
+        const db = await idbOpen();
+        return new Promise((resolve) => {
+            const tx = db.transaction(IDB_STORE, 'readonly');
+            const req = tx.objectStore(IDB_STORE).get(key);
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => resolve(null);
+        });
+    } catch { return null; }
+}
+
+async function idbSet(key, val) {
+    try {
+        const db = await idbOpen();
+        return new Promise((resolve) => {
+            const tx = db.transaction(IDB_STORE, 'readwrite');
+            tx.objectStore(IDB_STORE).put(val, key);
+            tx.oncomplete = () => resolve(true);
+            tx.onerror = () => resolve(false);
+        });
+    } catch { return false; }
+}
+
+// 3. Bulletproof Catalog Loader (PlayFab Worker + Zero-Downtime Fallback)
+async function initCatalogEngine() {
+    // 1. Check local persistent DB
+    try {
+        const cached = await idbGet(IDB_KEY);
+        if (cached && Array.isArray(cached.items) && cached.items.length >= 20000) {
+            fullCatalog = cached.items;
+            applyFilters();
+            return;
+        }
+    } catch {}
+
+    // 2. Try Official PlayFab Worker first
+    let loadedItems = [];
+    try {
+        const res = await fetch(OFFICIAL_PLAYFAB_WORKER);
+        if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data) && data.length > 50) {
+                loadedItems = data.map(item => {
+                    let custom = {};
+                    try { custom = item.CustomData ? JSON.parse(item.CustomData) : {}; } catch(e){}
+                    return {
+                        id: item.ItemId,
+                        title: item.DisplayName || "Minecraft DLC",
+                        creator: custom.creatorName || item.Tags?.[0] || "Mojang Partner",
+                        category: mapCategoryKey(item.ItemClass || custom.packType),
+                        coins: item.VirtualCurrencyPrices?.MC || custom.price || 830,
+                        rating: custom.rating ? Number(custom.rating).toFixed(1) : "4.8",
+                        votes: custom.totalRatings || 24,
+                        desc: item.Description || "Official Minecraft Marketplace DLC.",
+                        image: `https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${item.ItemId}/Thumbnail_0.jpg`
+                    };
+                });
+            }
+        }
+    } catch (e) {}
+
+    // 3. Fallback Streamer if worker is warming up / rate-limited
+    if (loadedItems.length === 0) {
+        let currentPage = 1;
+        const BATCH_PAGES = 15;
+        const TOTAL_ITEMS = 37382;
+
+        while (true) {
+            const pages = Array.from({ length: BATCH_PAGES }, (_, i) => currentPage + i);
+            try {
+                const results = await Promise.all(pages.map(async p => {
+                    try {
+                        const r = await fetch(`${FALLBACK_CATALOG_API}/page/page-${p}.json`);
+                        if (!r.ok) return [];
+                        const j = await r.json();
+                        return Array.isArray(j) ? j : (j.items || []);
+                    } catch { return []; }
+                }));
+
+                const flat = results.flat();
+                if (flat.length === 0 || loadedItems.length >= TOTAL_ITEMS) break;
+
+                flat.forEach(item => {
+                    let id = item.id || item.uuid;
+                    if (!id) return;
+                    let img = item.thumbnail || item.image || item.keyArt || `https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${id}/Thumbnail_0.jpg`;
+                    loadedItems.push({
+                        id: id,
+                        title: item.title || item.name || "Minecraft DLC",
+                        creator: item.author || item.creator || item.creatorName || "Mojang Partner",
+                        category: mapCategoryKey(item.type || item.packType || item.category),
+                        rating: item.rating ? Number(item.rating).toFixed(1) : "4.8",
+                        votes: item.ratingCount || item.totalRatings || 32,
+                        desc: item.longDescription || item.description || item.desc || "Official Minecraft Marketplace DLC.",
+                        image: img,
+                        coins: item.price || item.coins || null
+                    });
+                });
+
+                const seen = new Set();
+                fullCatalog = loadedItems.filter(el => {
+                    const dup = seen.has(el.id);
+                    seen.add(el.id);
+                    return !dup;
+                });
+
+                if (currentPage === 1 && fullCatalog.length > 0) {
+                    applyFilters();
+                }
+
+                currentPage += BATCH_PAGES;
+                idbSet(IDB_KEY, { items: fullCatalog, at: Date.now() });
+
+            } catch {
+                currentPage += BATCH_PAGES;
+            }
+            await new Promise(r => setTimeout(r, 60));
+        }
+    } else {
+        fullCatalog = loadedItems;
+        idbSet(IDB_KEY, { items: fullCatalog, at: Date.now() });
     }
 
+    applyFilters();
+}
+
+// 4. Render Cards (Checkmark vs Unavailable Overlay)
+function renderCards(reset = false) {
+    if (reset) {
+        renderedIndex = 0;
+        if (itemsGrid) itemsGrid.innerHTML = "";
+    }
     if (isRendering || renderedIndex >= displayedList.length) return;
     isRendering = true;
+    if (scrollLoader) scrollLoader.style.display = "block";
 
     const slice = displayedList.slice(renderedIndex, renderedIndex + BATCH_SIZE);
 
     slice.forEach(item => {
-        let isAvail = availableDb.has(String(item.id).toLowerCase());
-        
-        // Exact Unavailable Badge from BlockBay
-        let badgeHtml = isAvail 
-            ? `<div class="card-available-check"><i class="fas fa-check"></i></div>` 
-            : `<div class="unavailable-badge-overlay"><i class="fas fa-ban"></i><span>Unavailable</span></div>`;
-
         let card = document.createElement('div');
-        card.className = "bb-card";
+        card.className = "item-card";
+        
+        let isAvail = availableDb.has(String(item.id).toLowerCase());
+        let badgeHtml = isAvail 
+            ? `<div class="available-badge"><i class="fas fa-check"></i></div>` 
+            : `<div class="unavailable-overlay"><i class="fas fa-ban"></i><span>Unavailable</span></div>`;
+
         card.innerHTML = `
-            <div class="bb-thumb-wrap">
-                <img src="${item.image}" alt="${item.title}" loading="lazy" onerror="this.src='https://placehold.co/300x170/141218/22c55e?text=Minecraft+DLC'">
+            <div class="thumb-holder">
+                <img src="${item.image}" alt="${item.title}" loading="lazy" onerror="this.src='https://content2.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${item.id}/Thumbnail_0.jpg'">
                 ${badgeHtml}
             </div>
-            <div class="bb-card-body">
-                <h4 class="bb-card-title">${item.title}</h4>
-                <div class="bb-card-creator">By ${item.creator}</div>
+            <div class="item-card-body">
+                <h4 class="card-title">${item.title}</h4>
+                <div class="card-creator">By ${item.creator}</div>
             </div>
         `;
+
         card.onclick = () => openPdp(item);
         itemsGrid.appendChild(card);
     });
 
     renderedIndex += slice.length;
     isRendering = false;
+    if (scrollLoader) scrollLoader.style.display = "none";
 }
 
-// Infinite Scroll
 window.addEventListener('scroll', () => {
     if (window.innerHeight + window.pageYOffset >= document.documentElement.scrollHeight - 700) {
         renderCards();
     }
 }, { passive: true });
 
-// 7. FILTERS & SEARCH
+// 5. Filters & Shuffle
 function navigateCategory(cat) {
-    applyCategoryFilter(cat);
-    if (sideDrawer && sideDrawer.classList.contains('active')) toggleDrawer();
-}
-
-function applyCategoryFilter(cat) {
     activeCategory = cat;
-
     document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.drawer-item').forEach(d => d.classList.remove('active'));
+    
+    if (event && event.target) {
+        event.target.closest('.chip')?.classList.add('active');
+        event.target.closest('.drawer-item')?.classList.add('active');
+    }
+    if (sideDrawer.classList.contains('active')) toggleDrawer();
+    applyFilters();
+}
 
-    displayedList = fullCatalog.filter(i => {
-        let matchCat = (cat === 'all') || (i.category === cat);
-        let matchSearch = !currentSearch || i.title.toLowerCase().includes(currentSearch) || i.creator.toLowerCase().includes(currentSearch);
-        return matchCat && matchSearch;
+function filterByAvailability(status) {
+    onlyAvailable = status;
+    toggleDrawer();
+    applyFilters();
+}
+
+function handleSearch() {
+    currentSearch = document.getElementById('globalSearch').value.toLowerCase().trim();
+    applyFilters();
+}
+
+function applyFilters() {
+    let filtered = fullCatalog.filter(i => {
+        let matchCat = (activeCategory === 'all') || (i.category === activeCategory);
+        let matchQuery = !currentSearch || i.title.toLowerCase().includes(currentSearch) || i.creator.toLowerCase().includes(currentSearch);
+        let matchAvail = !onlyAvailable || availableDb.has(String(i.id).toLowerCase());
+        return matchCat && matchQuery && matchAvail;
     });
 
-    // Shuffle for discovery
-    for (let i = displayedList.length - 1; i > 0; i--) {
+    // Shuffled discovery
+    for (let i = filtered.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [displayedList[i], displayedList[j]] = [displayedList[j], displayedList[i]];
+        [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
     }
+    displayedList = filtered;
 
     if (itemCountLabel) {
         itemCountLabel.innerText = `${displayedList.length.toLocaleString()} ITEMS`;
@@ -194,12 +317,7 @@ function applyCategoryFilter(cat) {
     renderCards(true);
 }
 
-function handleSearch() {
-    currentSearch = document.getElementById('globalSearch').value.toLowerCase().trim();
-    applyCategoryFilter(activeCategory);
-}
-
-// 8. RICH PDP MODAL WITH MONETIZED MIRRORS
+// 6. PDP Modal
 function switchTab(tabName) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-body').forEach(t => t.style.display = 'none');
@@ -211,16 +329,17 @@ function switchTab(tabName) {
     if (tabName === 'faq') document.getElementById('tabFaq').style.display = 'block';
 }
 
-function openPdp(item) {
+async function openPdp(item) {
     currentModalItem = item;
     document.getElementById('pdpTitle').innerText = item.title;
     document.getElementById('pdpDescription').innerText = item.desc;
     document.getElementById('pdpStars').innerText = `★ ${item.rating}`;
     document.getElementById('pdpVotes').innerText = `(${item.votes})`;
-    document.getElementById('pdpCoins').innerText = `🪙 ${item.coins}`;
+    document.getElementById('pdpCoins').innerText = item.coins ? `🪙 ${item.coins}` : '🪙 830';
 
     const stage = document.getElementById('pdpStage');
-    if (stage) stage.innerHTML = `<img src="${item.image}">`;
+    stage.innerHTML = `<img src="${item.image}" alt="cover">`;
+    document.getElementById('pdpThumbs').innerHTML = "";
 
     let isAvail = availableDb.has(String(item.id).toLowerCase());
     const dlBox = document.getElementById('downloadContainer');
@@ -228,8 +347,8 @@ function openPdp(item) {
     const linksList = document.getElementById('shortenerLinks');
 
     if (isAvail) {
-        let data = availableDb.get(String(item.id).toLowerCase());
-        let directUrl = data.fileBlocks?.[0]?.mainLink?.url || "";
+        let availData = availableDb.get(String(item.id).toLowerCase());
+        let directUrl = (availData.fileBlocks && availData.fileBlocks[0]?.mainLink?.url) || "";
 
         linksList.innerHTML = `
             <a href="${SHORTENERS.linkvertise(item.id, directUrl)}" target="_blank" onclick="simulateDownload('${item.title}')" class="short-btn linkvertise">
@@ -252,24 +371,59 @@ function openPdp(item) {
         reqBox.style.display = 'block';
     }
 
-    if (pdpModal) {
-        pdpModal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-    }
+    pdpModal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    // Fetch Rich PDP Data
+    try {
+        const res = await fetch(`${PDP_ITEM_API}/${item.id}.json`);
+        if (!res.ok) return;
+        const details = await res.json();
+        const d = details.item || details;
+
+        if (d.version) document.getElementById('pdpVersion').innerText = `# ${d.version}`;
+        if (d.creationDate) document.getElementById('pdpDate').innerHTML = `<i class="far fa-calendar-alt"></i> ${d.creationDate.split('T')[0]}`;
+        if (d.contentSize) document.getElementById('pdpSize').innerHTML = `<i class="fas fa-download"></i> ${(d.contentSize / (1024 * 1024)).toFixed(1)} MB`;
+
+        // HowTo Accordion
+        const howToContainer = document.getElementById('howToAccordion');
+        howToContainer.innerHTML = "";
+        if (Array.isArray(d.howToEntries) && d.howToEntries.length > 0) {
+            d.howToEntries.forEach((entry, idx) => {
+                let det = document.createElement('details');
+                det.open = (idx === 0);
+                det.innerHTML = `<summary>${entry.heading || 'Step ' + (idx + 1)}</summary><p>${entry.content || ''}</p>`;
+                howToContainer.appendChild(det);
+            });
+        } else {
+            howToContainer.innerHTML = "<p>No gameplay guide available.</p>";
+        }
+
+        // FAQ Accordion
+        const faqContainer = document.getElementById('faqAccordion');
+        faqContainer.innerHTML = "";
+        if (Array.isArray(d.faqEntries) && d.faqEntries.length > 0) {
+            d.faqEntries.forEach((faq, idx) => {
+                let det = document.createElement('details');
+                det.open = (idx === 0);
+                det.innerHTML = `<summary>${faq.heading || faq.question || 'Question'}</summary><p>${faq.content || faq.answer || ''}</p>`;
+                faqContainer.appendChild(det);
+            });
+        } else {
+            faqContainer.innerHTML = "<p>No FAQ questions available.</p>";
+        }
+
+    } catch (e) {}
 }
 
 function closePdp() {
-    if (pdpModal) {
-        pdpModal.style.display = 'none';
-        document.body.style.overflow = '';
-    }
+    pdpModal.style.display = 'none';
+    document.body.style.overflow = '';
 }
 
-// 9. LIVE DOWNLOAD SIMULATOR TOAST
+// 7. Live Download Simulator Toast
 function simulateDownload(name) {
     closePdp();
-    if (!downloadToast) return;
-
     document.getElementById('toastItemName').innerText = name;
     document.getElementById('toastStatusText').innerText = "Downloading...";
     downloadToast.classList.add('active');
@@ -282,8 +436,8 @@ function simulateDownload(name) {
     let interval = setInterval(() => {
         pct += 5;
         let currMb = ((pct / 100) * totalMb).toFixed(1);
-        if (bar) bar.style.width = pct + "%";
-        if (nums) nums.innerText = `${currMb} MB / ${totalMb} MB (${pct}%)`;
+        bar.style.width = pct + "%";
+        nums.innerText = `${currMb} MB / ${totalMb} MB (${pct}%)`;
 
         if (pct >= 100) {
             clearInterval(interval);
@@ -294,12 +448,12 @@ function simulateDownload(name) {
 }
 
 function closeToast() {
-    if (downloadToast) downloadToast.classList.remove('active');
+    downloadToast.classList.remove('active');
 }
 
 function submitRequest() {
     if (!currentModalItem) return;
-    let name = prompt("Enter your Name or Discord ID:");
+    let name = prompt("Enter your Name or Discord ID to request this pack:");
     if (!name) return;
 
     database.ref('requests').push().set({
@@ -312,4 +466,18 @@ function submitRequest() {
         alert("✅ Request sent to Admin!");
         closePdp();
     });
+}
+
+function openRequestModal() {
+    let pack = prompt("Which Minecraft DLC do you want?");
+    if (!pack) return;
+    let user = prompt("Your Discord or WhatsApp ID:");
+    if (!user) return;
+
+    database.ref('requests').push().set({
+        addon: pack,
+        user: user,
+        status: "pending",
+        timestamp: Date.now()
+    }).then(() => alert("✅ Request received!"));
 }
