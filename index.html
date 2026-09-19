@@ -2,162 +2,209 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STRIKE MARKET - Minecraft Bedrock Hub</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BlockBay - Marketplace</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Firebase SDKs -->
+    <!-- Firebase SDKs for Available Items & Requests -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
 
-    <!-- TOP HEADER -->
-    <header class="main-header">
-        <div class="brand">
+    <!-- SIDE DRAWER OVERLAY -->
+    <div class="drawer-overlay" id="drawerOverlay" onclick="toggleDrawer()"></div>
+
+    <!-- SIDE DRAWER NAVIGATION (TOOLCOIN BLOCKBAY STYLE) -->
+    <aside class="side-drawer" id="sideDrawer">
+        <div class="drawer-brand">
             <i class="fas fa-cube brand-icon"></i>
-            <span class="brand-name">STRIKE MARKET</span>
+            <span>BlockBay</span>
         </div>
-        <div class="header-actions">
-            <button class="icon-btn" onclick="openSettingsModal()" title="Settings">
-                <i class="fas fa-cog"></i>
+
+        <div class="drawer-group-label">EXPLORE</div>
+        <div class="drawer-item active" onclick="navigateCategory('all')">
+            <i class="fas fa-home"></i> <span>Discover</span>
+        </div>
+        <div class="drawer-item" onclick="navigateCategory('addons')">
+            <i class="fas fa-puzzle-piece"></i> <span>Add-Ons</span>
+        </div>
+        <div class="drawer-item" onclick="navigateCategory('worlds')">
+            <i class="fas fa-globe"></i> <span>Worlds</span>
+        </div>
+        <div class="drawer-item" onclick="navigateCategory('skins')">
+            <i class="fas fa-tshirt"></i> <span>Skins</span>
+        </div>
+        <div class="drawer-item" onclick="navigateCategory('textures')">
+            <i class="fas fa-hammer"></i> <span>Textures</span>
+        </div>
+        <div class="drawer-item" onclick="navigateCategory('mashups')">
+            <i class="fas fa-layer-group"></i> <span>Mashups</span>
+        </div>
+
+        <div class="drawer-group-label">SPECIAL FILTERS</div>
+        <div class="drawer-item" onclick="applySpecialFilter('scary')">
+            <i class="fas fa-ghost"></i> <span>Scary</span>
+        </div>
+        <div class="drawer-item" onclick="applySpecialFilter('vibrant')">
+            <i class="fas fa-star"></i> <span>Vibrant Visuals</span>
+        </div>
+        <div class="drawer-item" onclick="applySpecialFilter('available')">
+            <i class="fas fa-check-circle" style="color: #22c55e;"></i> <span>Available Only</span>
+        </div>
+        <div class="drawer-item" onclick="applySpecialFilter('unfiltered')">
+            <i class="fas fa-ban"></i> <span>Unfiltered</span>
+        </div>
+    </aside>
+
+    <!-- MAIN APP WRAPPER -->
+    <div class="app-layout">
+        
+        <!-- HEADER -->
+        <header class="app-header">
+            <button class="menu-burger-btn" onclick="toggleDrawer()">
+                <i class="fas fa-bars"></i>
             </button>
-            <button class="request-btn" onclick="openGeneralRequestModal()">
-                <i class="fas fa-paper-plane"></i> Request
-            </button>
-        </div>
-    </header>
+            <div class="header-logo">
+                <i class="fas fa-cube"></i>
+                <span>BlockBay</span>
+            </div>
+            <div style="width: 36px;"></div> <!-- Spacer -->
+        </header>
 
-    <!-- SECTION SWITCHER TABS -->
-    <div class="main-nav-tabs">
-        <button id="tabBtnAvailable" class="main-tab" onclick="switchMainSection('available')">
-            <i class="fas fa-bolt"></i> Available DLCs (<span id="availableCount">0</span>)
-        </button>
-        <button id="tabBtnCatalog" class="main-tab active" onclick="switchMainSection('catalog')">
-            <i class="fas fa-globe"></i> Marketplace Catalog (<span id="catalogNavCount">37,382</span>)
-        </button>
-    </div>
-
-    <!-- SEARCH & CATEGORY PILLS -->
-    <div class="controls-container">
-        <div class="search-box">
-            <i class="fas fa-search search-icon"></i>
-            <input type="text" id="globalSearch" placeholder="Search item, creator, UUID..." onkeyup="handleGlobalSearch()">
+        <!-- SEARCH BAR -->
+        <div class="search-section">
+            <div class="search-input-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="globalSearch" placeholder="Search..." onkeyup="handleSearch()">
+            </div>
         </div>
 
-        <div class="category-pills">
-            <button class="cat-pill active" onclick="filterByCategory('all')"><i class="fas fa-infinity"></i> All</button>
-            <button class="cat-pill" onclick="filterByCategory('world')"><i class="fas fa-globe"></i> Worlds</button>
-            <button class="cat-pill" onclick="filterByCategory('addon')"><i class="fas fa-puzzle-piece"></i> Addons</button>
-            <button class="cat-pill" onclick="filterByCategory('texture')"><i class="fas fa-image"></i> Textures</button>
-            <button class="cat-pill" onclick="filterByCategory('skin')"><i class="fas fa-tshirt"></i> Skins</button>
+        <!-- HERO SPOTLIGHT CAROUSEL -->
+        <div class="spotlight-slider-card" id="spotlightCard">
+            <div class="spotlight-overlay">
+                <div class="spotlight-badge">
+                    <span class="type-pill" id="spotType">Add-On</span>
+                    <span class="rating-pill" id="spotRating">★ 4.2</span>
+                </div>
+                <h2 id="spotTitle">AI Players Add-On</h2>
+                <p id="spotCreator">By Gamemode One</p>
+            </div>
         </div>
-        <div class="filter-count-badge" id="categoryFilterCount">37,382 ITEMS</div>
-    </div>
 
-    <!-- SECTION 1: AVAILABLE DLCS (FIREBASE) -->
-    <main id="sectionAvailable" class="content-section">
-        <div id="availableGrid" class="items-grid">
-            <div class="loader-spinner"><i class="fas fa-spinner fa-spin"></i> Loading Available DLCs...</div>
+        <!-- CATEGORY QUICK CHIPS -->
+        <div class="chips-row">
+            <button class="chip active" onclick="navigateCategory('all')"><i class="fas fa-infinity"></i> All</button>
+            <button class="chip" onclick="navigateCategory('addons')"><i class="fas fa-puzzle-piece"></i> Add-Ons</button>
+            <button class="chip" onclick="navigateCategory('worlds')"><i class="fas fa-globe"></i> World</button>
+            <button class="chip" onclick="navigateCategory('textures')"><i class="fas fa-hammer"></i> Texture Packs</button>
+            <button class="chip" onclick="navigateCategory('skins')"><i class="fas fa-tshirt"></i> Skins</button>
         </div>
-    </main>
 
-    <!-- SECTION 2: 37,000+ CATALOG -->
-    <main id="sectionCatalog" class="content-section active">
-        <div id="catalogGrid" class="items-grid"></div>
-
-        <div id="catalogScrollLoader" class="scroll-loader">
-            <i class="fas fa-spinner fa-spin"></i> Loading more packs...
-        </div>
-    </main>
-
-    <!-- ITEM DETAIL MODAL -->
-    <div id="itemModal" class="modal-overlay">
-        <div class="modal-content">
-            <button class="modal-close" onclick="closeModal()">&times;</button>
-            
-            <div class="modal-header">
-                <h2 id="modalTitle">Item Title</h2>
-                <span id="modalTag" class="tag-pill">ADDON</span>
+        <!-- LATEST RELEASES CONTAINER -->
+        <div class="section-container">
+            <div class="section-bar">
+                <h3 id="currentSectionTitle">LATEST RELEASES</h3>
+                <span class="more-link" id="itemCountLabel">37,382 ITEMS</span>
             </div>
 
-            <!-- Video / Screenshots Viewer -->
-            <div class="carousel-container">
-                <div id="mediaStage" class="media-stage"></div>
+            <!-- CARDS GRID -->
+            <div class="blockbay-grid" id="itemsGrid"></div>
+
+            <div class="loading-more" id="scrollLoader">
+                <i class="fas fa-spinner fa-spin"></i> Loading...
+            </div>
+        </div>
+
+    </div>
+
+    <!-- FLOATING DOWNLOAD MANAGER BUTTON (BOTTOM RIGHT) -->
+    <div class="floating-dl-btn" id="floatingDlBtn" onclick="toggleDlManager()">
+        <i class="fas fa-arrow-down"></i>
+    </div>
+
+    <!-- IN-APP LIVE DOWNLOAD TOAST NOTIFICATION -->
+    <div class="download-toast" id="downloadToast">
+        <div class="toast-header">
+            <span class="toast-title" id="toastItemName">Downloading...</span>
+            <button class="toast-close" onclick="closeToast()">&times;</button>
+        </div>
+        <div class="toast-status" id="toastStatusText">Connecting mirror...</div>
+        <div class="toast-progress-track">
+            <div class="toast-progress-bar" id="toastBar"></div>
+        </div>
+        <div class="toast-meta">
+            <span id="toastProgressNums">0 MB / 0 MB (0%)</span>
+            <span id="toastSpeed">1.4 MB/s</span>
+        </div>
+    </div>
+
+    <!-- FULL PDP MODAL (DETAILS, HOW TO, FAQ) -->
+    <div class="modal-overlay" id="pdpModal">
+        <div class="pdp-wrapper">
+            <div class="pdp-header">
+                <button class="back-btn" onclick="closePdp()"><i class="fas fa-arrow-left"></i></button>
+                <h2 id="pdpTitle">Item Title</h2>
             </div>
 
-            <!-- Thumbnail Strip -->
-            <div id="thumbStrip" class="thumb-strip-row"></div>
+            <!-- Main Screen Carousel -->
+            <div class="pdp-screen">
+                <div class="screen-stage" id="pdpStage"></div>
+            </div>
 
-            <!-- Price & Ratings Row -->
+            <div class="pdp-thumbs" id="pdpThumbs"></div>
+
+            <!-- Stats Bar -->
             <div class="pdp-meta-bar">
-                <div class="price-badge" id="modalPriceRow">
-                    <span id="modalPriceText">🪙 990 Minecoins</span>
+                <div class="meta-left">
+                    <span class="stars" id="pdpStars">★ 4.0</span>
+                    <span class="votes" id="pdpVotes">(19)</span>
+                    <span class="coins" id="pdpCoins">🪙 830</span>
                 </div>
-                <div class="rating-badge" id="modalRatingRow">
-                    <span id="modalRatingStars">⭐⭐⭐⭐⭐</span>
-                    <span id="modalRatingVotes"></span>
-                </div>
-            </div>
-
-            <div class="desc-box">
-                <p id="modalDesc">Loading description...</p>
-            </div>
-
-            <!-- 360 PANORAMA SECTION -->
-            <div id="panoramaSection" class="panorama-section" style="display: none;">
-                <div class="section-title"><i class="fas fa-vr-cardboard"></i> 360° Panorama View</div>
-                <div class="panorama-wrapper">
-                    <img id="panoramaImg" src="" alt="Panorama 360">
+                <div class="meta-right">
+                    <span class="size" id="pdpSize"><i class="fas fa-download"></i> 37 MB</span>
                 </div>
             </div>
 
-            <!-- DOWNLOAD SECTION -->
-            <div id="modalDownloadSection" style="display: none;">
-                <div class="section-title">DOWNLOAD MIRRORS</div>
-                <div id="modalLinksContainer"></div>
+            <!-- Tabs Nav -->
+            <div class="pdp-tabs">
+                <button class="tab-btn active" onclick="switchTab('desc')"><i class="fas fa-file-alt"></i> Description</button>
+                <button class="tab-btn" onclick="switchTab('howto')"><i class="fas fa-book"></i> How To</button>
+                <button class="tab-btn" onclick="switchTab('faq')"><i class="fas fa-question-circle"></i> FAQ</button>
             </div>
 
-            <!-- REQUEST SECTION -->
-            <div id="modalRequestSection" style="display: none;">
-                <button class="request-action-btn" onclick="requestCurrentCatalogItem()">
-                    <i class="fas fa-paper-plane"></i> ⚡ REQUEST THIS DLC FOR FREE
-                </button>
-                <p class="request-hint">Admin will get notified and upload download mirrors soon!</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- SETTINGS MODAL -->
-    <div id="settingsModal" class="modal-overlay">
-        <div class="modal-content small-modal">
-            <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
-            <h2 class="modal-title-center"><i class="fas fa-cog"></i> Settings & Community</h2>
-            
-            <div class="social-row">
-                <a href="https://discord.gg/yourserver" target="_blank" class="soc-pill discord"><i class="fab fa-discord"></i> Discord</a>
-                <a href="https://youtube.com/@StrikeMafia" target="_blank" class="soc-pill youtube"><i class="fab fa-youtube"></i> YouTube</a>
-                <a href="https://chat.whatsapp.com/JdeFaKUFV9E3rtpYgk6XdP" target="_blank" class="soc-pill whatsapp"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+            <div class="tab-body" id="tabDesc">
+                <p id="pdpDescription">Loading description...</p>
+                <div class="meta-tags-list">
+                    <span class="tag-pill" id="pdpVersion"># v1.0.0</span>
+                    <span class="tag-pill" id="pdpDate"><i class="far fa-calendar-alt"></i> 2026-09-01</span>
+                </div>
             </div>
 
-            <button class="menu-list-btn" onclick="openTutorialModal()">
-                <span><i class="fas fa-book-open"></i> How to Download & Install</span>
-                <i class="fas fa-chevron-right"></i>
-            </button>
-        </div>
-    </div>
-
-    <!-- TUTORIAL MODAL -->
-    <div id="tutorialModal" class="modal-overlay">
-        <div class="modal-content small-modal">
-            <button class="modal-close" onclick="closeTutorialModal()">&times;</button>
-            <h2 class="modal-title-center"><i class="fas fa-graduation-cap"></i> Download Guide</h2>
-            <div class="guide-text">
-                <p><strong>1.</strong> Select an item from Available DLCs and tap Download.</p>
-                <p><strong>2.</strong> Complete the quick shortener verification to unlock your file.</p>
-                <p><strong>3.</strong> Open the downloaded <code>.mcaddon</code>, <code>.mcpack</code>, or <code>.mcworld</code> file to launch Minecraft directly.</p>
+            <div class="tab-body" id="tabHowTo" style="display: none;">
+                <div class="accordion-box" id="howToAccordion"></div>
             </div>
+
+            <div class="tab-body" id="tabFaq" style="display: none;">
+                <div class="accordion-box" id="faqAccordion"></div>
+            </div>
+
+            <!-- Download Button or Request Section -->
+            <div class="pdp-action-footer">
+                <div id="downloadContainer" style="display: none;">
+                    <div class="dl-notice">MONETIZED DIRECT MIRRORS</div>
+                    <div class="shortener-links" id="shortenerLinks"></div>
+                </div>
+
+                <div id="unavailableContainer" style="display: none;">
+                    <button class="request-btn" onclick="submitRequest()">
+                        <i class="fas fa-paper-plane"></i> ⚡ REQUEST THIS DLC FOR FREE
+                    </button>
+                    <p class="sub-hint">This pack is not decrypted yet. Request it to get it uploaded!</p>
+                </div>
+            </div>
+
         </div>
     </div>
 
