@@ -1,49 +1,54 @@
-// --- FIREBASE CONFIGURATION ---
+// Worker URL configured to route to official PlayFab
+const PLAYFAB_WORKER = 'https://damp-snowflake-b822.rockyroyalgaming.workers.dev';
+
+// Firebase Setup
 var firebaseConfig = {
   apiKey: "AIzaSyDOnkkfPgIX9rlEXefUKnZ3atV6zdBu1RU",
   authDomain: "strikemarket-32a5e.firebaseapp.com",
   databaseURL: "https://strikemarket-32a5e-default-rtdb.firebaseio.com",
-  projectId: "strikemarket-32a5e"
+  projectId: "strikemarket-32a5e",
+  storageBucket: "strikemarket-32a5e.firebasestorage.app",
+  messagingSenderId: "719596182121",
+  appId: "1:719596182121:web:d02dfdd3089f560fc560f8",
+  measurementId: "G-KTVM3J2491"
 };
 
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 var database = firebase.database();
 
-// State
-let masterCatalog = [];
-let displayedList = [];
+// Monetization Shorteners
+const SHORTENERS = {
+    linkvertise: (id, link) => `https://link-target.net/your_id/download?url=${encodeURIComponent(link || id)}`,
+    workink: (id, link) => `https://work.ink/your_id/${encodeURIComponent(link || id)}`,
+    lootlabs: (id, link) => `https://loot-link.com/s?your_id=${encodeURIComponent(link || id)}`
+};
+
 let availableDb = new Map();
-let toolcoinKeys = new Map(); // TSV se aayi hui 9,210+ keys
-let activeCategory = 'all';
-let currentSearch = '';
-let renderedIndex = 0;
-const BATCH_SIZE = 24;
-let isRendering = false;
+let currentCategory = 'all';
+let searchQuery = '';
+let nextContinuationToken = null;
+let isLoading = false;
+let currentModalItem = null;
 
 const itemsGrid = document.getElementById('itemsGrid');
-const itemCountLabel = document.getElementById('itemCountLabel');
 const scrollLoader = document.getElementById('scrollLoader');
+const itemCountLabel = document.getElementById('itemCountLabel');
+const pdpModal = document.getElementById('pdpModal');
+const sideDrawer = document.getElementById('sideDrawer');
+const drawerOverlay = document.getElementById('drawerOverlay');
 
-// 1. TOOLCOIN KEYS ENGINE (IndexedDB Caching)
-async function loadToolcoinKeys() {
-    try {
-        // Local keys.json fetch karein jo keys.tsv se convert ki hai
-        const res = await fetch('./keys.json');
-        if (res.ok) {
-            const data = await res.json();
-            Object.keys(data).forEach(uuid => {
-                toolcoinKeys.set(uuid.toLowerCase(), data[uuid]);
-            });
-            console.log(`[Keys] Instantly restored ${toolcoinKeys.size} marketplace keys!`);
-            applyFilters();
-        }
-    } catch (e) {
-        console.warn("keys.json load failed, fallback active:", e);
-    }
+window.onload = function() {
+    loadKeysDatabase();
+    fetchLiveCatalog(true);
+};
+
+function toggleDrawer() {
+    if (sideDrawer) sideDrawer.classList.toggle('active');
+    if (drawerOverlay) drawerOverlay.classList.toggle('active');
 }
 
-// 2. FIREBASE UPLOADED ITEMS SYNC
-function loadAvailableFromFirebase() {
+// Keys Manager Check (Replicating is_key_available logic)
+function loadKeysDatabase() {
     database.ref('market_items').on('value', snapshot => {
         availableDb.clear();
         if (snapshot.exists()) {
@@ -53,220 +58,263 @@ function loadAvailableFromFirebase() {
                 availableDb.set(uuid, data);
             });
         }
-        applyFilters();
+        document.querySelectorAll('.item-card').forEach(updateCardAvailability);
     });
 }
 
-// 3. 37,000+ ITEMS HIGH-SPEED STREAM
-async function startCatalogStream() {
-    let page = 1;
-    while (page <= 80) {
-        const pagePromises = [];
-        for (let i = 0; i < 10; i++) {
-            let p = page + i;
-            pagePromises.push(
-                fetch(`https://v5-mcsrc.github.io/data/api/marketplace/page/page-${p}.json`)
-                    .then(r => r.ok ? r.json() : [])
-                    .then(d => Array.isArray(d) ? d : (d.items || []))
-                    .catch(() => [])
-            );
+function updateCardAvailability(card) {
+    const uuid = card.dataset.uuid;
+    const isAvail = availableDb.has(uuid);
+    const existingBadge = card.querySelector('.available-badge, .unavailable-overlay');
+    if (existingBadge) existingBadge.remove();
+
+    const holder = card.querySelector('.thumb-holder');
+    if (isAvail) {
+        const badge = document.createElement('div');
+        badge.className = 'available-badge';
+        badge.innerHTML = '<i class="fas fa-check"></i>';
+        holder.appendChild(badge);
+    } else {
+        const overlay = document.createElement('div');
+        overlay.className = 'unavailable-overlay';
+        overlay.innerHTML = '<i class="fas fa-ban"></i><span>Unavailable</span>';
+        holder.appendChild(overlay);
+    }
+}
+
+// Direct PlayFab Catalog Search
+async function fetchLiveCatalog(reset = false) {
+    if (isLoading) return;
+    isLoading = true;
+    if (scrollLoader) scrollLoader.style.display = 'block';
+
+    if (reset) {
+        nextContinuationToken = null;
+        if (itemsGrid) itemsGrid.innerHTML = '';
+    }
+
+    try {
+        let url = `${PLAYFAB_WORKER}?category=${encodeURIComponent(currentCategory)}&search=${encodeURIComponent(searchQuery)}`;
+        if (nextContinuationToken) {
+            url += `&token=${encodeURIComponent(nextContinuationToken)}`;
         }
 
-        const results = await Promise.all(pagePromises);
-        const batch = results.flat();
-        if (batch.length === 0) break;
+        const res = await fetch(url);
+        const data = await res.json();
+        const items = data.items || [];
+        nextContinuationToken = data.continuationToken || null;
 
-        batch.forEach(item => {
-            let id = item.id || item.uuid;
-            if (!id) return;
+        renderCatalogItems(items);
 
-            let img = item.thumbnail || item.image || item.keyArt || `https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${id}/Thumbnail_0.jpg`;
-            let rawType = String(item.type || item.category || '').toLowerCase();
-            let cat = 'addons';
-            if (rawType.includes('world')) cat = 'worlds';
-            else if (rawType.includes('skin')) cat = 'skins';
-            else if (rawType.includes('texture')) cat = 'textures';
-
-            masterCatalog.push({
-                id: id,
-                title: item.title || item.name || "Minecraft Pack",
-                creator: item.author || item.creator || item.creatorName || "Mojang Partner",
-                category: cat,
-                displayCategory: (item.type || cat).toUpperCase(),
-                rating: item.rating ? Number(item.rating).toFixed(1) : "4.8",
-                image: img,
-                desc: item.longDescription || item.description || "Official Marketplace DLC."
-            });
-        });
-
-        // Deduplicate
-        const seen = new Set();
-        masterCatalog = masterCatalog.filter(i => {
-            let dup = seen.has(i.id);
-            seen.add(i.id);
-            return !dup;
-        });
-
-        if (page === 1) applyFilters();
-        else updateCounterDisplay();
-
-        page += 10;
-        await new Promise(r => setTimeout(r, 40));
+        if (itemCountLabel) {
+            itemCountLabel.innerText = `${itemsGrid.children.length} ITEMS LOADED`;
+        }
+    } catch (e) {
+        console.error("PlayFab Search Error:", e);
+    } finally {
+        isLoading = false;
+        if (scrollLoader) scrollLoader.style.display = 'none';
     }
 }
 
-function updateCounterDisplay() {
-    if (itemCountLabel) {
-        itemCountLabel.innerText = `${displayedList.length.toLocaleString()} ITEMS LOADED`;
-    }
-}
+function renderCatalogItems(items) {
+    if (!itemsGrid) return;
 
-// 4. CARD RENDERER (Toolcoin Key Match Indicator)
-function renderBatchCards(reset = false) {
-    if (reset) {
-        renderedIndex = 0;
-        if (itemsGrid) itemsGrid.innerHTML = "";
-    }
-    if (isRendering || renderedIndex >= displayedList.length) return;
-    isRendering = true;
-    if (scrollLoader) scrollLoader.style.display = "block";
+    items.forEach(item => {
+        const uuid = String(item.Id).toLowerCase();
+        let thumbUrl = `https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${item.Id}/Thumbnail_0.jpg`;
+        if (Array.isArray(item.Images) && item.Images.length > 0) {
+            const found = item.Images.find(i => i.Tag === 'Thumbnail') || item.Images[0];
+            if (found && found.Url) thumbUrl = found.Url;
+        }
 
-    const slice = displayedList.slice(renderedIndex, renderedIndex + BATCH_SIZE);
+        const title = item.Title?.['NEUTRAL'] || item.Title?.['en-US'] || "Minecraft DLC";
+        const creator = item.CreatorEntityKey?.Id || item.Tags?.[0] || "Mojang Partner";
 
-    slice.forEach(item => {
-        let cleanId = String(item.id).toLowerCase();
-        let hasDirectDownload = availableDb.has(cleanId);
-        let hasToolcoinKey = toolcoinKeys.has(cleanId);
-        let isReady = hasDirectDownload || hasToolcoinKey;
-
-        let card = document.createElement('div');
-        card.className = "item-card";
+        const card = document.createElement('div');
+        card.className = 'item-card';
+        card.dataset.uuid = uuid;
 
         card.innerHTML = `
-            <div class="card-thumb-wrap">
-                <img src="${item.image}" alt="${item.title}" loading="lazy" onerror="this.onerror=null; this.src='https://content2.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${item.id}/Thumbnail_0.jpg';">
-                <span class="card-type-overlay">${item.displayCategory}</span>
-                ${isReady ? `<div class="card-avail-badge" title="${hasDirectDownload ? 'Download Ready' : 'Decryption Key Cached'}"><i class="fas fa-check"></i></div>` : ''}
+            <div class="thumb-holder">
+                <img src="${thumbUrl}" alt="${title}" loading="lazy" onerror="this.src='https://placehold.co/300x170/171420/a855f7?text=Minecraft+DLC'">
             </div>
-            <div class="card-body">
-                <div class="card-top-stat">
-                    <span>★ ${item.rating}</span>
-                    <span class="card-status-label ${isReady ? 'ready' : 'unavail'}">${isReady ? 'READY' : 'REQUEST'}</span>
-                </div>
-                <h3 class="card-title">${item.title}</h3>
-                <div class="card-creator">${item.creator}</div>
+            <div class="item-card-body">
+                <h4 class="card-title">${title}</h4>
+                <div class="card-creator">By ${creator}</div>
             </div>
         `;
 
-        card.onclick = () => openPdpModal(item);
+        updateCardAvailability(card);
+        card.onclick = () => openPdp(item, thumbUrl);
         itemsGrid.appendChild(card);
     });
-
-    renderedIndex += slice.length;
-    isRendering = false;
-    if (scrollLoader) scrollLoader.style.display = "none";
 }
 
-// 5. PDP MODAL & MIRRORS
-function openPdpModal(item) {
-    let cleanId = String(item.id).toLowerCase();
-    let hasDirectDownload = availableDb.has(cleanId);
-    let hasToolcoinKey = toolcoinKeys.has(cleanId);
-
-    document.getElementById('pdpTitle').innerText = item.title;
-    document.getElementById('pdpDescription').innerText = item.desc;
-    document.getElementById('pdpStage').innerHTML = `<img src="${item.image}" alt="preview">`;
-
-    let dlContainer = document.getElementById('downloadContainer');
-    let reqContainer = document.getElementById('unavailableContainer');
-
-    if (hasDirectDownload || hasToolcoinKey) {
-        let directUrl = "";
-        if (hasDirectDownload) {
-            let data = availableDb.get(cleanId);
-            directUrl = (data.fileBlocks && data.fileBlocks[0]?.mainLink?.url) || "";
+// Infinite Scroll Pagination
+window.addEventListener('scroll', () => {
+    if (window.innerHeight + window.pageYOffset >= document.documentElement.scrollHeight - 800) {
+        if (nextContinuationToken && !isLoading) {
+            fetchLiveCatalog(false);
         }
+    }
+}, { passive: true });
 
-        document.getElementById('shortenerLinks').innerHTML = `
-            <a href="https://link-target.net/your_id/dlc?url=${encodeURIComponent(directUrl || item.id)}" target="_blank" class="short-btn linkvertise">
+function navigateCategory(cat) {
+    currentCategory = cat;
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.drawer-item').forEach(d => d.classList.remove('active'));
+
+    if (event && event.target) {
+        event.target.closest('.chip')?.classList.add('active');
+        event.target.closest('.drawer-item')?.classList.add('active');
+    }
+
+    if (sideDrawer && sideDrawer.classList.contains('active')) toggleDrawer();
+    fetchLiveCatalog(true);
+}
+
+let debounceTimer = null;
+function handleSearch() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        searchQuery = document.getElementById('globalSearch').value.trim();
+        fetchLiveCatalog(true);
+    }, 400);
+}
+
+// PDP Modal
+function openPdp(item, thumbUrl) {
+    currentModalItem = item;
+    const uuid = String(item.Id).toLowerCase();
+
+    const title = item.Title?.['NEUTRAL'] || item.Title?.['en-US'] || "Minecraft DLC";
+    const desc = item.Description?.['NEUTRAL'] || item.Description?.['en-US'] || "Official Marketplace pack.";
+    const rating = item.Rating?.Average ? Number(item.Rating.Average).toFixed(1) : "4.8";
+    const votes = item.Rating?.TotalRatingsCount || 0;
+    const coins = item.PriceOptions?.Prices?.[0]?.Amounts?.[0]?.Amount || 830;
+
+    document.getElementById('pdpTitle').innerText = title;
+    document.getElementById('pdpDescription').innerText = desc;
+    document.getElementById('pdpStars').innerText = `★ ${rating}`;
+    document.getElementById('pdpVotes').innerText = `(${votes})`;
+    document.getElementById('pdpCoins').innerText = `🪙 ${coins}`;
+
+    const stage = document.getElementById('pdpStage');
+    const thumbs = document.getElementById('pdpThumbs');
+    stage.innerHTML = `<img src="${thumbUrl}">`;
+    thumbs.innerHTML = '';
+
+    if (Array.isArray(item.Images) && item.Images.length > 0) {
+        item.Images.forEach((imgObj, idx) => {
+            let t = document.createElement('div');
+            t.className = `pdp-thumb ${idx === 0 ? 'active' : ''}`;
+            t.innerHTML = `<img src="${imgObj.Url}">`;
+            t.onclick = () => {
+                stage.innerHTML = `<img src="${imgObj.Url}">`;
+                thumbs.querySelectorAll('.pdp-thumb').forEach(el => el.classList.remove('active'));
+                t.classList.add('active');
+            };
+            thumbs.appendChild(t);
+        });
+    }
+
+    // Availability Action Check
+    const isAvail = availableDb.has(uuid);
+    const dlBox = document.getElementById('downloadContainer');
+    const reqBox = document.getElementById('unavailableContainer');
+    const linksList = document.getElementById('shortenerLinks');
+
+    if (isAvail) {
+        let availData = availableDb.get(uuid);
+        let directUrl = availData.fileBlocks?.[0]?.mainLink?.url || "";
+
+        linksList.innerHTML = `
+            <a href="${SHORTENERS.linkvertise(uuid, directUrl)}" target="_blank" onclick="simulateDownload('${title}')" class="short-btn linkvertise">
                 <span><i class="fas fa-bolt"></i> Download via Linkvertise</span>
                 <i class="fas fa-chevron-right"></i>
             </a>
-            <a href="https://work.ink/your_id/${encodeURIComponent(directUrl || item.id)}" target="_blank" class="short-btn workink">
+            <a href="${SHORTENERS.workink(uuid, directUrl)}" target="_blank" onclick="simulateDownload('${title}')" class="short-btn workink">
                 <span><i class="fas fa-download"></i> Download via Work.ink</span>
                 <i class="fas fa-chevron-right"></i>
             </a>
-            ${hasToolcoinKey ? `<div style="margin-top:8px;font-size:0.75rem;color:#a855f7;word-break:break-all;"><strong>AES Key:</strong> <code>${toolcoinKeys.get(cleanId)}</code></div>` : ''}
+            <a href="${SHORTENERS.lootlabs(uuid, directUrl)}" target="_blank" onclick="simulateDownload('${title}')" class="short-btn lootlabs">
+                <span><i class="fas fa-gift"></i> Download via Lootlabs</span>
+                <i class="fas fa-chevron-right"></i>
+            </a>
         `;
-        dlContainer.style.display = "block";
-        reqContainer.style.display = "none";
+        dlBox.style.display = 'block';
+        reqBox.style.display = 'none';
     } else {
-        dlContainer.style.display = "none";
-        reqContainer.style.display = "block";
+        dlBox.style.display = 'none';
+        reqBox.style.display = 'block';
     }
 
-    document.getElementById('pdpModal').classList.add('active');
+    pdpModal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
 }
 
 function closePdp() {
-    document.getElementById('pdpModal').classList.remove('active');
+    pdpModal.style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+function switchTab(tabName) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-body').forEach(t => t.style.display = 'none');
+
+    if (event && event.target) event.target.closest('.tab-btn')?.classList.add('active');
+
+    if (tabName === 'desc') document.getElementById('tabDesc').style.display = 'block';
+    if (tabName === 'howto') document.getElementById('tabHowTo').style.display = 'block';
+    if (tabName === 'faq') document.getElementById('tabFaq').style.display = 'block';
+}
+
+function simulateDownload(name) {
+    closePdp();
+    const toast = document.getElementById('downloadToast');
+    if (!toast) return;
+
+    document.getElementById('toastItemName').innerText = name;
+    document.getElementById('toastStatusText').innerText = "Downloading...";
+    toast.classList.add('active');
+
+    let pct = 0;
+    let totalMb = (Math.random() * 20 + 8).toFixed(1);
+    let bar = document.getElementById('toastBar');
+    let nums = document.getElementById('toastProgressNums');
+
+    let interval = setInterval(() => {
+        pct += 5;
+        let currMb = ((pct / 100) * totalMb).toFixed(1);
+        bar.style.width = pct + "%";
+        nums.innerText = `${currMb} MB / ${totalMb} MB (${pct}%)`;
+
+        if (pct >= 100) {
+            clearInterval(interval);
+            document.getElementById('toastStatusText').innerText = "Download Ready / Imported!";
+            setTimeout(() => { toast.classList.remove('active'); }, 2500);
+        }
+    }, 200);
+}
+
+function closeToast() {
+    document.getElementById('downloadToast')?.classList.remove('active');
 }
 
 function submitRequest() {
-    let name = prompt("Enter your Name or Discord ID to request:");
+    if (!currentModalItem) return;
+    let name = prompt("Enter your Name or Discord ID to request this pack:");
     if (!name) return;
+
     database.ref('requests').push().set({
-        addon: document.getElementById('pdpTitle').innerText,
+        addon: currentModalItem.Title?.['NEUTRAL'] || currentModalItem.Title?.['en-US'],
+        link: `https://www.minecraft.net/en-us/marketplace/pdp?id=${currentModalItem.Id}`,
         user: name,
         status: "pending",
         timestamp: Date.now()
     }).then(() => {
-        alert("✅ Request sent to Admin! Decrypted pack will be uploaded soon.");
+        alert("✅ Request sent to Admin!");
         closePdp();
     });
 }
-
-function navigateCategory(cat) {
-    activeCategory = cat;
-    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-    if (window.event && window.event.target) window.event.target.closest('.chip')?.classList.add('active');
-    applyFilters();
-}
-
-function handleSearch() {
-    currentSearch = document.getElementById('globalSearch').value.toLowerCase().trim();
-    applyFilters();
-}
-
-function applyFilters() {
-    displayedList = masterCatalog.filter(i => {
-        let matchCat = (activeCategory === 'all') || (i.category === activeCategory);
-        let matchQuery = !currentSearch || i.title.toLowerCase().includes(currentSearch) || i.creator.toLowerCase().includes(currentSearch);
-        return matchCat && matchQuery;
-    });
-
-    updateCounterDisplay();
-    renderBatchCards(true);
-}
-
-window.addEventListener('scroll', () => {
-    if (window.innerHeight + window.pageYOffset >= document.documentElement.scrollHeight - 700) {
-        renderBatchCards();
-    }
-}, { passive: true });
-
-function switchTab(tab) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-body').forEach(b => b.style.display = "none");
-    if (window.event && window.event.target) window.event.target.closest('.tab-btn')?.classList.add('active');
-
-    if (tab === 'desc') document.getElementById('tabDesc').style.display = "block";
-    if (tab === 'howto') document.getElementById('tabHowTo').style.display = "block";
-    if (tab === 'faq') document.getElementById('tabFaq').style.display = "block";
-}
-
-window.onload = function() {
-    loadAvailableFromFirebase();
-    loadToolcoinKeys();
-    startCatalogStream();
-};
