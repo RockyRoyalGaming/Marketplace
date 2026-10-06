@@ -706,3 +706,139 @@ body {
     text-align: center;
     margin-top: 6px;
 }
+
+/* --- STRIKE MARKET FIXED GRID & COMPACT CARDS --- */
+.strike-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    margin-top: 10px;
+}
+
+@media (min-width: 600px) {
+    .strike-grid {
+        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)) !important;
+        gap: 14px !important;
+    }
+}
+
+.item-card {
+    background: #171420 !important;
+    border: 1px solid #282236 !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    position: relative !important;
+    height: auto !important;
+    min-height: 0 !important;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.item-card:hover {
+    transform: translateY(-2px);
+    border-color: #a855f7 !important;
+}
+
+/* THUMBNAIL CONTAINER - FIXED ASPECT RATIO (NO STRETCH) */
+.thumb-holder {
+    position: relative !important;
+    width: 100% !important;
+    aspect-ratio: 16 / 9 !important;
+    height: auto !important;
+    background: #09080d !important;
+    overflow: hidden !important;
+}
+
+.thumb-holder img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    display: block !important;
+}
+
+/* TOOLCOIN STYLE UNAVAILABLE OVERLAY */
+.unavailable-overlay {
+    position: absolute !important;
+    inset: 0 !important;
+    background: rgba(10, 8, 14, 0.7) !important;
+    backdrop-filter: blur(1.5px);
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 3px !important;
+    color: #ffffff !important;
+    font-size: 0.68rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.5px !important;
+    text-transform: uppercase !important;
+    z-index: 2;
+}
+
+.unavailable-overlay i {
+    font-size: 1.1rem !important;
+    color: #ef4444 !important;
+}
+
+/* AVAILABLE BADGE (PURPLE CHECK) */
+.available-badge {
+    position: absolute !important;
+    top: 6px !important;
+    right: 6px !important;
+    background: #a855f7 !important;
+    color: white !important;
+    width: 20px !important;
+    height: 20px !important;
+    border-radius: 5px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0.7rem !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+    z-index: 3;
+}
+
+/* CARD DETAILS */
+.item-card-body {
+    padding: 8px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    background: #171420 !important;
+}
+
+.card-title {
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    color: #ffffff !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    margin-bottom: 2px !important;
+}
+
+.card-creator {
+    font-size: 0.65rem !important;
+    color: #9ca3af !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+/* MODAL SCREENSHOT VIEWPORT FIX */
+.pdp-screen {
+    width: 100% !important;
+    aspect-ratio: 16 / 9 !important;
+    max-height: 230px !important;
+    background: #000 !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    margin-bottom: 10px !important;
+}
+
+.screen-stage, .screen-stage img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+}
