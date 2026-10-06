@@ -1,5 +1,5 @@
-// Worker URL configured to route to official PlayFab
-const PLAYFAB_WORKER = 'https://damp-snowflake-b822.rockyroyalgaming.workers.dev';
+// --- WORKER ENDPOINT ---
+const PLAYFAB_WORKER = 'https://shy-wind-42b7.rockyroyalgaming.workers.dev';
 
 // Firebase Setup
 var firebaseConfig = {
@@ -16,7 +16,7 @@ var firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 var database = firebase.database();
 
-// Monetization Shorteners
+// Shorteners Configuration
 const SHORTENERS = {
     linkvertise: (id, link) => `https://link-target.net/your_id/download?url=${encodeURIComponent(link || id)}`,
     workink: (id, link) => `https://work.ink/your_id/${encodeURIComponent(link || id)}`,
@@ -47,7 +47,7 @@ function toggleDrawer() {
     if (drawerOverlay) drawerOverlay.classList.toggle('active');
 }
 
-// Keys Manager Check (Replicating is_key_available logic)
+// Firebase Keys Loader (Toolcoin is_key_available replication)
 function loadKeysDatabase() {
     database.ref('market_items').on('value', snapshot => {
         availableDb.clear();
@@ -69,6 +69,8 @@ function updateCardAvailability(card) {
     if (existingBadge) existingBadge.remove();
 
     const holder = card.querySelector('.thumb-holder');
+    if (!holder) return;
+
     if (isAvail) {
         const badge = document.createElement('div');
         badge.className = 'available-badge';
@@ -82,7 +84,7 @@ function updateCardAvailability(card) {
     }
 }
 
-// Direct PlayFab Catalog Search
+// Live PlayFab Catalog Request
 async function fetchLiveCatalog(reset = false) {
     if (isLoading) return;
     isLoading = true;
@@ -101,7 +103,7 @@ async function fetchLiveCatalog(reset = false) {
 
         const res = await fetch(url);
         const data = await res.json();
-        const items = data.items || [];
+        const items = Array.isArray(data.items) ? data.items : [];
         nextContinuationToken = data.continuationToken || null;
 
         renderCatalogItems(items);
@@ -122,14 +124,19 @@ function renderCatalogItems(items) {
 
     items.forEach(item => {
         const uuid = String(item.Id).toLowerCase();
+        
         let thumbUrl = `https://content1.prod.catalog.playfab.com/pf-namespace-b63a0803d3653643/${item.Id}/Thumbnail_0.jpg`;
         if (Array.isArray(item.Images) && item.Images.length > 0) {
             const found = item.Images.find(i => i.Tag === 'Thumbnail') || item.Images[0];
             if (found && found.Url) thumbUrl = found.Url;
         }
 
-        const title = item.Title?.['NEUTRAL'] || item.Title?.['en-US'] || "Minecraft DLC";
-        const creator = item.CreatorEntityKey?.Id || item.Tags?.[0] || "Mojang Partner";
+        let title = "Minecraft DLC";
+        if (item.Title) {
+            title = item.Title['NEUTRAL'] || item.Title['neutral'] || item.Title['en-US'] || Object.values(item.Title)[0] || title;
+        }
+
+        let creator = item.CreatorEntityKey?.Id || (item.Tags && item.Tags[0]) || "Mojang Partner";
 
         const card = document.createElement('div');
         card.className = 'item-card';
@@ -183,13 +190,21 @@ function handleSearch() {
     }, 400);
 }
 
-// PDP Modal
+// PDP Modal Display
 function openPdp(item, thumbUrl) {
     currentModalItem = item;
     const uuid = String(item.Id).toLowerCase();
 
-    const title = item.Title?.['NEUTRAL'] || item.Title?.['en-US'] || "Minecraft DLC";
-    const desc = item.Description?.['NEUTRAL'] || item.Description?.['en-US'] || "Official Marketplace pack.";
+    let title = "Minecraft DLC";
+    if (item.Title) {
+        title = item.Title['NEUTRAL'] || item.Title['neutral'] || item.Title['en-US'] || Object.values(item.Title)[0] || title;
+    }
+
+    let desc = "Official Marketplace pack.";
+    if (item.Description) {
+        desc = item.Description['NEUTRAL'] || item.Description['neutral'] || item.Description['en-US'] || Object.values(item.Description)[0] || desc;
+    }
+
     const rating = item.Rating?.Average ? Number(item.Rating.Average).toFixed(1) : "4.8";
     const votes = item.Rating?.TotalRatingsCount || 0;
     const coins = item.PriceOptions?.Prices?.[0]?.Amounts?.[0]?.Amount || 830;
@@ -219,7 +234,6 @@ function openPdp(item, thumbUrl) {
         });
     }
 
-    // Availability Action Check
     const isAvail = availableDb.has(uuid);
     const dlBox = document.getElementById('downloadContainer');
     const reqBox = document.getElementById('unavailableContainer');
@@ -307,8 +321,10 @@ function submitRequest() {
     let name = prompt("Enter your Name or Discord ID to request this pack:");
     if (!name) return;
 
+    let title = currentModalItem.Title ? (currentModalItem.Title['NEUTRAL'] || Object.values(currentModalItem.Title)[0]) : "Minecraft DLC";
+
     database.ref('requests').push().set({
-        addon: currentModalItem.Title?.['NEUTRAL'] || currentModalItem.Title?.['en-US'],
+        addon: title,
         link: `https://www.minecraft.net/en-us/marketplace/pdp?id=${currentModalItem.Id}`,
         user: name,
         status: "pending",
