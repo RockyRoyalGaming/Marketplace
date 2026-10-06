@@ -25,8 +25,10 @@ let loadedItems = [];
 let availableDb = new Map();
 let currentCategory = 'all';
 let searchQuery = '';
-let continuationToken = null;
+let currentSkip = 0;
+const PAGE_TOP = 40;
 let isFetching = false;
+let totalServerCount = 0;
 let currentModalItem = null;
 
 const itemsGrid = document.getElementById('itemsGrid');
@@ -38,7 +40,7 @@ const drawerOverlay = document.getElementById('drawerOverlay');
 
 window.onload = function() {
     loadKeysDatabase();
-    loadCatalogStream(true);
+    loadCatalogPage(true);
 };
 
 function toggleDrawer() {
@@ -83,56 +85,46 @@ function updateCardBadge(card) {
     }
 }
 
-// 2. PlayFab Continuous Catalog Stream
-async function loadCatalogStream(reset = false) {
+// 2. PlayFab Catalog Stream with Toolcoin Skip/Top Pagination
+async function loadCatalogPage(reset = false) {
     if (isFetching) return;
     isFetching = true;
     if (scrollLoader) scrollLoader.style.display = 'block';
 
     if (reset) {
-        continuationToken = null;
+        currentSkip = 0;
         loadedItems = [];
         if (itemsGrid) itemsGrid.innerHTML = '';
     }
 
     try {
-        let url = `${PLAYFAB_WORKER}?category=${encodeURIComponent(currentCategory)}&search=${encodeURIComponent(searchQuery)}`;
-        if (continuationToken) {
-            url += `&token=${encodeURIComponent(continuationToken)}`;
-        }
-
+        let url = `${PLAYFAB_WORKER}?category=${encodeURIComponent(currentCategory)}&search=${encodeURIComponent(searchQuery)}&top=${PAGE_TOP}&skip=${currentSkip}`;
         const res = await fetch(url);
         const data = await res.json();
         const rawItems = Array.isArray(data.items) ? data.items : [];
-        continuationToken = data.continuationToken || null;
+        totalServerCount = Number(data.totalCount) || totalServerCount;
 
         if (rawItems.length > 0) {
-            if (reset) {
+            if (reset && rawItems[0]) {
                 updateSpotlightBanner(rawItems[0]);
             }
             renderItems(rawItems);
+            currentSkip += rawItems.length;
         }
 
         if (itemCountLabel) {
-            itemCountLabel.innerText = `${loadedItems.length} ITEMS LOADED`;
-        }
-
-        // Agar screen par kam items hain toh automatic agla batch pull karein
-        if (continuationToken && loadedItems.length < 80) {
-            isFetching = false;
-            loadCatalogStream(false);
-            return;
+            itemCountLabel.innerText = `${totalServerCount > 0 ? totalServerCount.toLocaleString() : loadedItems.length} ITEMS`;
         }
 
     } catch (err) {
-        console.error("PlayFab fetch error:", err);
+        console.error("PlayFab load error:", err);
     } finally {
         isFetching = false;
         if (scrollLoader) scrollLoader.style.display = 'none';
     }
 }
 
-// 3. Spotlight
+// 3. Spotlight Banner
 function updateSpotlightBanner(firstItem) {
     const card = document.getElementById('spotlightCard');
     if (!card) return;
@@ -146,38 +138,36 @@ function updateSpotlightBanner(firstItem) {
     const p = card.querySelector('p');
     if (h2) h2.innerText = title;
     if (p) p.innerText = `By ${creator}`;
-    card.onclick = () => openPdp(firstItem);
+    card.onclick = () => openPdp(firstItem.Id || firstItem.id, firstItem);
 }
 
-// 4. Data Extraction Helpers (Real Names & Working CDN Images)
+// 4. Toolcoin Clean Data Extraction
 function getValidThumb(item) {
     if (Array.isArray(item.Images) && item.Images.length > 0) {
-        // Thumbnail or KeyArt first
         const thumb = item.Images.find(i => i.Tag === 'Thumbnail' || i.Tag === 'KeyArt');
         if (thumb && thumb.Url) return thumb.Url;
-        
-        // Exclude Panorama strips
-        const screen = item.Images.find(i => i.Tag !== 'Panorama');
-        if (screen && screen.Url) return screen.Url;
-
+        const nonPano = item.Images.find(i => i.Tag !== 'Panorama');
+        if (nonPano && nonPano.Url) return nonPano.Url;
         if (item.Images[0]?.Url) return item.Images[0].Url;
     }
-    // Official Xbox CDN backup link format
-    return `https://xforgeassets002.xboxlive.com/serviceid-15954734-${item.Id}/Thumbnail_0.jpg`;
+    const id = item.Id || item.id;
+    return `https://xforgeassets002.xboxlive.com/serviceid-15954734-${id}/Thumbnail_0.jpg`;
 }
 
 function getItemTitle(item) {
-    if (!item.Title) return "Minecraft Pack";
-    return item.Title['neutral'] || item.Title['NEUTRAL'] || item.Title['en-US'] || Object.values(item.Title)[0] || "Minecraft Pack";
+    if (item.Title) {
+        return item.Title['neutral'] || item.Title['NEUTRAL'] || item.Title['en-US'] || Object.values(item.Title)[0];
+    }
+    return item.title || item.DisplayName || "Minecraft Pack";
 }
 
 function getItemCreator(item) {
-    // Creator name extraction
     if (item.DisplayProperties && item.DisplayProperties.creatorName) {
         return item.DisplayProperties.creatorName;
     }
     if (Array.isArray(item.Tags) && item.Tags.length > 0) {
-        return item.Tags[0];
+        const tag = item.Tags.find(t => !['addon', 'world', 'skin_pack', 'texture_pack'].includes(t.toLowerCase()));
+        if (tag) return tag;
     }
     return "Mojang Creator";
 }
@@ -188,7 +178,8 @@ function renderItems(items) {
 
     items.forEach(item => {
         loadedItems.push(item);
-        const uuid = String(item.Id).toLowerCase();
+        const id = item.Id || item.id;
+        const uuid = String(id).toLowerCase();
         const title = getItemTitle(item);
         const creator = getItemCreator(item);
         const thumb = getValidThumb(item);
@@ -199,7 +190,7 @@ function renderItems(items) {
 
         card.innerHTML = `
             <div class="thumb-holder">
-                <img src="${thumb}" alt="${title}" loading="lazy" onerror="this.onerror=null;this.src='https://xforgeassets001.xboxlive.com/serviceid-15954734-${item.Id}/Thumbnail_0.jpg'">
+                <img src="${thumb}" alt="${title}" loading="lazy" onerror="this.onerror=null;this.src='https://xforgeassets001.xboxlive.com/serviceid-15954734-${id}/Thumbnail_0.jpg'">
             </div>
             <div class="item-card-body">
                 <h4 class="card-title">${title}</h4>
@@ -208,16 +199,16 @@ function renderItems(items) {
         `;
 
         updateCardBadge(card);
-        card.onclick = () => openPdp(item);
+        card.onclick = () => openPdp(id, item);
         itemsGrid.appendChild(card);
     });
 }
 
-// Infinite Scroll Trigger
+// Infinite Scroll Pagination
 window.addEventListener('scroll', () => {
     if (window.innerHeight + window.pageYOffset >= document.documentElement.scrollHeight - 900) {
-        if (continuationToken && !isFetching) {
-            loadCatalogStream(false);
+        if (!isFetching && currentSkip < totalServerCount) {
+            loadCatalogPage(false);
         }
     }
 }, { passive: true });
@@ -233,7 +224,7 @@ function navigateCategory(cat) {
     }
 
     if (sideDrawer && sideDrawer.classList.contains('active')) toggleDrawer();
-    loadCatalogStream(true);
+    loadCatalogPage(true);
 }
 
 let searchTimer = null;
@@ -241,64 +232,29 @@ function handleSearch() {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => {
         searchQuery = document.getElementById('globalSearch').value.trim();
-        loadCatalogStream(true);
+        loadCatalogPage(true);
     }, 400);
 }
 
-// 6. PDP Modal With Working Images
-function openPdp(item) {
-    currentModalItem = item;
-    const uuid = String(item.Id).toLowerCase();
-    const title = getItemTitle(item);
-    
-    let desc = "Official Minecraft Marketplace DLC.";
-    if (item.Description) {
-        desc = item.Description['neutral'] || item.Description['NEUTRAL'] || item.Description['en-US'] || Object.values(item.Description)[0] || desc;
-    }
+// 6. PDP Modal with Real GetPublishedItem Details
+async function openPdp(id, fallbackItem) {
+    currentModalItem = fallbackItem;
+    const uuid = String(id).toLowerCase();
+    const fallbackTitle = getItemTitle(fallbackItem);
 
-    const rating = item.Rating?.Average ? Number(item.Rating.Average).toFixed(1) : "4.8";
-    const votes = item.Rating?.TotalRatingsCount || 0;
-    const coins = item.PriceOptions?.Prices?.[0]?.Amounts?.[0]?.Amount || 830;
+    document.getElementById('pdpTitle').innerText = fallbackTitle;
+    document.getElementById('pdpDescription').innerText = "Loading official marketplace details...";
+    document.getElementById('pdpStars').innerText = `★ 4.8`;
+    document.getElementById('pdpVotes').innerText = `(42)`;
+    document.getElementById('pdpCoins').innerText = `🪙 830`;
 
-    document.getElementById('pdpTitle').innerText = title;
-    document.getElementById('pdpDescription').innerText = desc;
-    document.getElementById('pdpStars').innerText = `★ ${rating}`;
-    document.getElementById('pdpVotes').innerText = `(${votes})`;
-    document.getElementById('pdpCoins').innerText = `🪙 ${coins}`;
-
-    const version = item.DisplayProperties?.package_version || "v1.0.0";
-    const date = item.CreationDate ? item.CreationDate.split('T')[0] : "2026-08-20";
-    document.getElementById('pdpVersion').innerText = `# ${version}`;
-    document.getElementById('pdpDate').innerHTML = `<i class="far fa-calendar-alt"></i> ${date}`;
-
-    // Clean Stage & Screenshots
     const stage = document.getElementById('pdpStage');
     const thumbs = document.getElementById('pdpThumbs');
+    const defaultThumb = getValidThumb(fallbackItem);
+    stage.innerHTML = `<img src="${defaultThumb}">`;
     thumbs.innerHTML = '';
 
-    let galleryImages = [];
-    if (Array.isArray(item.Images) && item.Images.length > 0) {
-        galleryImages = item.Images.filter(img => img.Tag !== 'Panorama');
-    }
-    if (galleryImages.length === 0) {
-        galleryImages.push({ Url: getValidThumb(item) });
-    }
-
-    stage.innerHTML = `<img src="${galleryImages[0].Url}" alt="preview">`;
-
-    galleryImages.forEach((imgObj, idx) => {
-        let t = document.createElement('div');
-        t.className = `pdp-thumb ${idx === 0 ? 'active' : ''}`;
-        t.innerHTML = `<img src="${imgObj.Url}">`;
-        t.onclick = () => {
-            stage.innerHTML = `<img src="${imgObj.Url}" alt="preview">`;
-            thumbs.querySelectorAll('.pdp-thumb').forEach(el => el.classList.remove('active'));
-            t.classList.add('active');
-        };
-        thumbs.appendChild(t);
-    });
-
-    // Check Availability
+    // Availability Box Check
     const isAvail = availableDb.has(uuid);
     const dlBox = document.getElementById('downloadContainer');
     const reqBox = document.getElementById('unavailableContainer');
@@ -307,7 +263,6 @@ function openPdp(item) {
     if (isAvail) {
         let availData = availableDb.get(uuid);
         let directUrl = availData.fileBlocks?.[0]?.mainLink?.url || "";
-
         linksList.innerHTML = `
             <a href="${SHORTENERS.linkvertise(uuid, directUrl)}" target="_blank" class="short-btn linkvertise">
                 <span><i class="fas fa-bolt"></i> Download via Linkvertise</span>
@@ -331,6 +286,58 @@ function openPdp(item) {
 
     pdpModal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
+
+    // Toolcoin Single Item Deep Fetch
+    try {
+        const res = await fetch(`${PLAYFAB_WORKER}?action=item&id=${id}`);
+        const fullItem = await res.json();
+        const item = fullItem.Id ? fullItem : fallbackItem;
+        currentModalItem = item;
+
+        let desc = "Official Minecraft Marketplace DLC.";
+        if (item.Description) {
+            desc = item.Description['neutral'] || item.Description['NEUTRAL'] || item.Description['en-US'] || Object.values(item.Description)[0] || desc;
+        }
+        document.getElementById('pdpDescription').innerText = desc;
+
+        if (item.Rating?.Average) {
+            document.getElementById('pdpStars').innerText = `★ ${Number(item.Rating.Average).toFixed(1)}`;
+            document.getElementById('pdpVotes').innerText = `(${item.Rating.TotalRatingsCount || 0})`;
+        }
+
+        if (item.PriceOptions?.Prices?.[0]?.Amounts?.[0]?.Amount) {
+            document.getElementById('pdpCoins').innerText = `🪙 ${item.PriceOptions.Prices[0].Amounts[0].Amount}`;
+        }
+
+        const version = item.DisplayProperties?.package_version || "1.0.0";
+        const date = item.CreationDate ? item.CreationDate.split('T')[0] : "2026-08-20";
+        document.getElementById('pdpVersion').innerText = `# v${version}`;
+        document.getElementById('pdpDate').innerHTML = `<i class="far fa-calendar-alt"></i> ${date}`;
+
+        // Screenshots Carousel
+        let gallery = [];
+        if (Array.isArray(item.Images) && item.Images.length > 0) {
+            gallery = item.Images.filter(i => i.Tag !== 'Panorama');
+        }
+        if (gallery.length === 0) gallery.push({ Url: defaultThumb });
+
+        stage.innerHTML = `<img src="${gallery[0].Url}">`;
+        thumbs.innerHTML = '';
+        gallery.forEach((imgObj, idx) => {
+            let t = document.createElement('div');
+            t.className = `pdp-thumb ${idx === 0 ? 'active' : ''}`;
+            t.innerHTML = `<img src="${imgObj.Url}">`;
+            t.onclick = () => {
+                stage.innerHTML = `<img src="${imgObj.Url}">`;
+                thumbs.querySelectorAll('.pdp-thumb').forEach(el => el.classList.remove('active'));
+                t.classList.add('active');
+            };
+            thumbs.appendChild(t);
+        });
+
+    } catch (e) {
+        console.error("Deep item fetch error:", e);
+    }
 }
 
 function closePdp() {
@@ -355,10 +362,11 @@ function submitRequest() {
     if (!name) return;
 
     let title = getItemTitle(currentModalItem);
+    const id = currentModalItem.Id || currentModalItem.id;
 
     database.ref('requests').push().set({
         addon: title,
-        link: `https://www.minecraft.net/en-us/marketplace/pdp?id=${currentModalItem.Id}`,
+        link: `https://www.minecraft.net/en-us/marketplace/pdp?id=${id}`,
         user: name,
         status: "pending",
         timestamp: Date.now()
